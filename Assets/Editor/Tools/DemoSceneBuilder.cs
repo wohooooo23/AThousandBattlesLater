@@ -2200,6 +2200,9 @@ public static class DemoSceneBuilder
             heroRoot.layer = HeroPhysicsLayer;
 
             // Per-combo-step attack SFX. HeroAttackAudio auto-configures its AudioSource at runtime.
+            // A missing/unimported clip must NOT abort the whole map rebuild — the SFX is cosmetic.
+            // Keep the array index-aligned (null for a missing clip); HeroAttackAudio.Play skips nulls,
+            // so a missing 3rd clip just leaves that combo step silent instead of blocking Rebuild.
             GetOrAdd<AudioSource>(heroRoot);
             HeroAttackAudio attackAudio = GetOrAdd<HeroAttackAudio>(heroRoot);
             AudioClip[] slashClips = new AudioClip[HeroAttackSfxPaths.Length];
@@ -2207,7 +2210,7 @@ public static class DemoSceneBuilder
             {
                 slashClips[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(HeroAttackSfxPaths[i]);
                 if (slashClips[i] == null)
-                    throw new InvalidOperationException("Missing hero attack SFX clip at " + HeroAttackSfxPaths[i] + ".");
+                    Debug.LogWarning("Hero attack SFX clip missing or not yet imported (skipped): " + HeroAttackSfxPaths[i]);
             }
             SetSerializedObjectArray(attackAudio, "clips", slashClips);
 
