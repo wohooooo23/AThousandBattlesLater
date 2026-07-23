@@ -251,8 +251,8 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 2147483895
-  grounddistance: 2.7
-  walldistance: 1.3
+  grounddistance: 0.7
+  walldistance: 0.3
   wallcheck1: {fileID: 4378193913021842423}
   wallcheck2: {fileID: 1500094226665205974}
   groundcheck: {fileID: 7162464420519927723}
