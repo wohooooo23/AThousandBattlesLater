@@ -1271,7 +1271,10 @@ public static class DemoSceneBuilder
         minimapCamera.orthographic = true;
         minimapCamera.orthographicSize = viewSize;
         minimapCamera.aspect = 1f;
-        minimapCamera.cullingMask = (1 << 0) | (1 << MinimapMarkerLayer);
+        // Map collision tilemaps were normalised onto the ground layer (SetupFullMapCollision), so the
+        // minimap camera must render layer 6 too — otherwise the map itself drops out and only the
+        // layer-31 markers remain over a black disc.
+        minimapCamera.cullingMask = (1 << 0) | (1 << GroundPhysicsLayer) | (1 << MinimapMarkerLayer);
         minimapCamera.targetTexture = texture;
 
         GameObject markerRoot = new GameObject("Minimap Markers");

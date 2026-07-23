@@ -17,9 +17,6 @@ public static class AlphaUiBuilder
     private const string ItemSlotPrefabPath = "Assets/Prefab/ItemSlot.prefab";
     private const string GoldCoinItemPath = "Assets/Prefab/GoldCoin.asset";
     /// <summary>Size of the top-right bag/forge entry icons (was 78 — too large on screen).</summary>
-    private const float EntryIconSize = 40f;
-    private static readonly Vector2 BagEntryPosition = new Vector2(30f, -125f);
-    private static readonly Vector2 ForgeEntryPosition = new Vector2(78f, -125f);
 
     private const string GeneratedUiFolder = "Assets/GeneratedUI";
     private const string GoldCoinIconPath = GeneratedUiFolder + "/GoldCoinIcon.png";
@@ -93,10 +90,12 @@ public static class AlphaUiBuilder
                 throw new InvalidOperationException(scenePath + " ForgeButton must reference the current scene forge panel.");
 
             BagButton bagButton = UnityEngine.Object.FindFirstObjectByType<BagButton>(FindObjectsInactive.Include);
-            ValidateTopLeftEntry(scenePath, bagButton != null ? bagButton.transform as RectTransform : null,
-                BagEntryPosition, "Bag");
-            ValidateTopLeftEntry(scenePath, forgeButton.transform as RectTransform,
-                ForgeEntryPosition, "Forge");
+            if (bagButton == null || bagButton.mPanels == null || bagButton.mPanels.Length != 3)
+                throw new InvalidOperationException(scenePath + " BagButton must keep its three-panel wiring.");
+            // The clickable entry icons were removed (B/N keys are the only entry). The routing
+            // components stay, but the icons must be invisible and non-clickable.
+            ValidateEntryHidden(scenePath, bagButton.gameObject, "Bag");
+            ValidateEntryHidden(scenePath, forgeButton.gameObject, "Forge");
 
             PlayerProgression progression = UnityEngine.Object.FindFirstObjectByType<PlayerProgression>(FindObjectsInactive.Include);
             if (progression != null)
@@ -177,12 +176,9 @@ public static class AlphaUiBuilder
             FillArtImage(inventory.GetComponent<Image>());
             FillArtImage(equipment.GetComponent<Image>());
 
-            RectTransform bagEntryRect = (RectTransform)bagButton.transform;
-            bagEntryRect.anchorMin = bagEntryRect.anchorMax = bagEntryRect.pivot = new Vector2(0f, 1f);
-            bagEntryRect.anchoredPosition = BagEntryPosition;
-            bagEntryRect.sizeDelta = new Vector2(EntryIconSize, EntryIconSize);
-            bagEntryRect.localScale = Vector3.one;   // the prefab carried a 0.8 scale that fought sizeDelta
-            bagButton.transform.SetAsLastSibling();
+            // The clickable bag icon is gone — B/N keys are the only entry now. The BagButton
+            // component (and its mPanels wiring below) stays as an invisible routing host.
+            HideEntryIcon(bagButton.gameObject);
 
             // Grid sits exactly over the printed 5x4 cells (centered in the sprite).
             float invSpacing = (invPitch - invCell) * invScale;
@@ -210,23 +206,14 @@ public static class AlphaUiBuilder
             BuildItemDetailPanel(root.transform);
 
             bagButton.mPanels = new[] { background.gameObject, inventory.gameObject, equipment.gameObject };
-            ConfigureButton(bagButton.gameObject);
 
             ForgeButton forgeButton = root.GetComponentInChildren<ForgeButton>(true);
             ForgeSystemController forge = root.GetComponentInChildren<ForgeSystemController>(true);
             if (forgeButton == null || forge == null)
                 throw new InvalidOperationException("Canvas.prefab is missing ForgeButton or ForgeSystemController.");
             forgeButton.mForgePanel = forge.gameObject;
-            ConfigureButton(forgeButton.gameObject);
-            RectTransform forgeEntryRect = (RectTransform)forgeButton.transform;
-            forgeEntryRect.anchorMin = forgeEntryRect.anchorMax = forgeEntryRect.pivot = new Vector2(0f, 1f);
-            forgeEntryRect.anchoredPosition = ForgeEntryPosition;
-            forgeEntryRect.sizeDelta = new Vector2(EntryIconSize, EntryIconSize);
-            forgeEntryRect.localScale = Vector3.one;
-            forgeButton.transform.SetAsLastSibling();
-            Image forgeEntryImage = forgeButton.GetComponent<Image>();
-            forgeEntryImage.color = Color.white;
-            forgeEntryImage.preserveAspect = true;
+            // Same as the bag: hide the clickable forge icon, keep the routing component.
+            HideEntryIcon(forgeButton.gameObject);
 
             ConfigureEquipmentSlot(forge.transform, "Left_EquipPanel/Slot_Weapon", new Color(0.86f, 0.26f, 0.20f, 1f));
             ConfigureEquipmentSlot(forge.transform, "Left_EquipPanel/Slot_Armor", new Color(0.20f, 0.55f, 0.92f, 1f));
@@ -325,17 +312,33 @@ public static class AlphaUiBuilder
         button.interactable = true;
     }
 
-    private static void ValidateTopLeftEntry(string scenePath, RectTransform rect,
-        Vector2 expectedPosition, string label)
+    /// <summary>
+    /// Turns a bag/forge entry into an invisible, non-clickable routing host: the BagButton/
+    /// ForgeButton component (and its panel wiring) stays so UIManager's B/N keys keep working,
+    /// but the icon itself is gone from the screen.
+    /// </summary>
+    private static void HideEntryIcon(GameObject entry)
     {
-        Vector2 topLeft = new Vector2(0f, 1f);
-        if (rect == null || Vector2.Distance(rect.anchorMin, topLeft) > 0.001f ||
-            Vector2.Distance(rect.anchorMax, topLeft) > 0.001f ||
-            Vector2.Distance(rect.pivot, topLeft) > 0.001f ||
-            Vector2.Distance(rect.anchoredPosition, expectedPosition) > 0.01f ||
-            Vector2.Distance(rect.sizeDelta, Vector2.one * EntryIconSize) > 0.01f)
+        Button button = entry.GetComponent<Button>();
+        if (button != null)
+            UnityEngine.Object.DestroyImmediate(button);
+        Image image = entry.GetComponent<Image>();
+        if (image != null)
+        {
+            image.enabled = false;
+            image.raycastTarget = false;
+        }
+    }
+
+    private static void ValidateEntryHidden(string scenePath, GameObject entry, string label)
+    {
+        if (entry.GetComponent<Button>() != null)
             throw new InvalidOperationException(scenePath + " " + label +
-                " entry must be a compact icon below the top-left health bar.");
+                " entry must not be clickable — the icon was removed, only the B/N key routing stays.");
+        Image image = entry.GetComponent<Image>();
+        if (image != null && image.enabled)
+            throw new InvalidOperationException(scenePath + " " + label +
+                " entry icon must be hidden (Image disabled).");
     }
 
     private static void ConfigurePanelImage(Image image)

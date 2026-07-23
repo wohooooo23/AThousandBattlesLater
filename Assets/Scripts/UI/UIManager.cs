@@ -16,6 +16,7 @@ public sealed class UIManager : MonoBehaviour
     private readonly HashSet<GameObject> openPanels = new HashSet<GameObject>();
     private BagButton bagButton;
     private ForgeButton forgeButton;
+    private GameObject minimapHud;
 
     public bool HasOpenPanel => openPanels.Count > 0;
 
@@ -24,6 +25,11 @@ public sealed class UIManager : MonoBehaviour
         Instance = this;
         bagButton = GetComponentInChildren<BagButton>(true);
         forgeButton = GetComponentInChildren<ForgeButton>(true);
+        // The minimap is a Canvas-order sibling that always draws on top; hide it whenever a panel
+        // is open so it stops covering the bag/forge. Only stage1_full has one, so null elsewhere.
+        Transform minimap = transform.Find("Minimap HUD");
+        if (minimap != null)
+            minimapHud = minimap.gameObject;
         CloseAllPanels();
     }
 
@@ -109,6 +115,9 @@ public sealed class UIManager : MonoBehaviour
 
     private void UpdatePauseState()
     {
-        Time.timeScale = openPanels.Count > 0 ? 0f : 1f;
+        bool anyOpen = openPanels.Count > 0;
+        Time.timeScale = anyOpen ? 0f : 1f;
+        if (minimapHud != null)
+            minimapHud.SetActive(!anyOpen);
     }
 }
