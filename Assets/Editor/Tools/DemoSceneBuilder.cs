@@ -794,6 +794,11 @@ public static class DemoSceneBuilder
             throw new InvalidOperationException("The arena Boss is missing its independent bullet-pattern scripts.");
         if (arena.BossRoot.GetComponent<EnemyHealth>() == null || arena.BossRoot.GetComponent<EnemyPlatformNavigator>() == null)
             throw new InvalidOperationException("The arena Boss is missing its health or platform navigator.");
+        Entity_VFX bossFlash = arena.BossRoot.GetComponent<Entity_VFX>();
+        if (bossFlash == null || new SerializedObject(bossFlash).FindProperty("onDamageMaterial").objectReferenceValue == null)
+            throw new InvalidOperationException("The arena Boss is missing its hit-flash Entity_VFX (with material).");
+        if (arena.BossRoot.GetComponent<BossTeleport>() == null)
+            throw new InvalidOperationException("The arena Boss is missing its BossTeleport blink component.");
 
         GameObject arenaMap = GameObject.Find("Boss Arena");
         if (arenaMap == null || PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(arenaMap) != BossArenaPrefabPath)

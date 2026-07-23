@@ -19,13 +19,18 @@ public sealed class EnemyHealth : CombatHealth
             throw new MissingReferenceException("EnemyHealth requires the scene-authored Victory Overlay.");
         victoryOverlay.SetActive(false);
         stateMachine = GetComponent<BossStateMachine>();
+        entityVFX = GetComponent<Entity_VFX>();
     }
 
     private BossStateMachine stateMachine;
+    private Entity_VFX entityVFX;
 
     protected override void OnDamaged(float amount, Transform source)
     {
         stateMachine?.NotifyHurt();
+        // Same white hit flash the mobs use. Entity_VFX swaps the material while BossSpriteAnimator
+        // only swaps the sprite, so the flash and the animation do not fight over the renderer.
+        entityVFX?.PlayOnDamageVfx();
     }
 
     private void Update()

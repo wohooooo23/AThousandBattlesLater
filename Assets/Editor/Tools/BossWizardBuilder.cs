@@ -18,6 +18,7 @@ public static class BossWizardBuilder
     private const string VisualName = "WizardVisual";
     private const string BossScenePath = "Assets/Scenes/stage1 boss.unity";
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
+    private const string OnDamageMaterialPath = "Assets/Material/OnDamage_Material.mat";
     private const float TargetHeight = 3.2f;   // local height; the 6.25x Boss root produces the enlarged world model
 
     [MenuItem("Tools/Boss/Attach Evil Wizard Model")]
@@ -67,6 +68,9 @@ public static class BossWizardBuilder
             if (stateMachine == null)
                 stateMachine = root.AddComponent<BossStateMachine>();
             AssignAnimator(stateMachine, anim);
+
+            // Hit flash + every-3-attacks blink, on the root so EnemyHealth/EnemyAttackController resolve them.
+            AttachHitFlashAndTeleport(root, renderer);
 
             // ---- each skill declares its cast animation ----
             // Ranged / spell skills raise the staff (Attack1); melee skills slash (Attack2).
@@ -123,6 +127,7 @@ public static class BossWizardBuilder
         if (sceneStateMachine == null)
             sceneStateMachine = boss.AddComponent<BossStateMachine>();
         AssignAnimator(sceneStateMachine, wizardAnimator);
+        AttachHitFlashAndTeleport(boss, wizard.GetComponent<SpriteRenderer>());
 
         SetCastAnim(boss, typeof(LaserAttackPattern), CastAnimation.Attack1);
         SetCastAnim(boss, typeof(FanVolleyAttackPattern), CastAnimation.Attack1);
@@ -145,6 +150,37 @@ public static class BossWizardBuilder
         serialized.FindProperty("animator").objectReferenceValue = animator;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(stateMachine);
+    }
+
+    /// <summary>
+    /// Adds the hit flash (same material swap the mobs use) and the every-3-attacks blink. Both live
+    /// on the Boss root: Entity_VFX is resolved by EnemyHealth via GetComponent, and BossTeleport is
+    /// found the same way by EnemyAttackController. Idempotent, so both the prefab build and the
+    /// scene repair can call it.
+    /// </summary>
+    private static void AttachHitFlashAndTeleport(GameObject root, SpriteRenderer visualRenderer)
+    {
+        Material onDamage = AssetDatabase.LoadAssetAtPath<Material>(OnDamageMaterialPath);
+        if (onDamage == null)
+            throw new MissingReferenceException("Missing hit-flash material at " + OnDamageMaterialPath + ".");
+
+        Entity_VFX vfx = root.GetComponent<Entity_VFX>();
+        if (vfx == null)
+            vfx = root.AddComponent<Entity_VFX>();
+        SerializedObject vfxData = new SerializedObject(vfx);
+        vfxData.FindProperty("targetRenderer").objectReferenceValue = visualRenderer;
+        vfxData.FindProperty("onDamageMaterial").objectReferenceValue = onDamage;
+        vfxData.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(vfx);
+
+        BossTeleport teleport = root.GetComponent<BossTeleport>();
+        if (teleport == null)
+            teleport = root.AddComponent<BossTeleport>();
+        SerializedObject teleportData = new SerializedObject(teleport);
+        teleportData.FindProperty("flash").objectReferenceValue = vfx;
+        teleportData.FindProperty("attacksPerTeleport").intValue = 3;
+        teleportData.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(teleport);
     }
 
     private static void ResaveOrcPrefab()
