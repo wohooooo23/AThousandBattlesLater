@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 3
+  tags:
+  - OneWayPlatform
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - 
+  - Water
+  - UI
+  - ground
+  - item
+  - enemy
+  - hero
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: background
+    uniqueID: 2331253397
+    locked: 0
+  - name: ground
+    uniqueID: 1350182319
+    locked: 0
+  - name: item
+    uniqueID: 1596213402
+    locked: 0
+  - name: enemy
+    uniqueID: 3824758771
+    locked: 0
+  - name: secret
+    uniqueID: 937468725
+    locked: 0
+  - name: Hero
+    uniqueID: 4284979521
+    locked: 0
+  m_RenderingLayers:
+  - Default
+  m_MigratedRenderPipelines: []

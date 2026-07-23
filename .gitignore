@@ -1,0 +1,35 @@
+# This repository intentionally stores only the four Unity project source folders below.
+/*
+!/.gitignore
+!/Assets/
+!/Packages/
+!/ProjectSettings/
+!/UserSettings/
+
+# Keep Unity asset metadata; it is required to preserve GUID references.
+!/**/*.meta
+
+# Never admit generated Unity/editor/build output if it is later placed under an allowed folder.
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Bb]uild/
+**/[Bb]uilds/
+**/[Ll]ogs/
+**/[Mm]emoryCaptures/
+**/[Rr]ecordings/
+**/.vs/
+**/.idea/
+**/.vscode/
+**/*.csproj
+**/*.sln
+**/*.user
+**/*.pidb
+**/*.booproj
+**/*.svd
+**/*.pdb
+**/*.mdb
+**/*.opendb
+**/*.VC.db
+**/sysinfo.txt
+**/crashlytics-build.properties
