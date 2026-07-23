@@ -1,8 +1,16 @@
 using UnityEngine;
+using UnityEngine.Serialization;
+
+public enum BgmTrack
+{
+    Exploration,
+    Boss,
+    Custom
+}
 
 /// <summary>
-/// Scene/prefab-authored looping BGM player. A track can be assigned directly or loaded from
-/// a Resources-relative path without its extension (for example Audio/BGM/Stage1).
+/// Scene/prefab-authored looping BGM player with independent exploration and Boss track slots.
+/// Each slot accepts either an AudioClip or a Resources-relative path without an extension.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(AudioSource))]
@@ -10,19 +18,29 @@ public sealed class BgmPlayer : MonoBehaviour
 {
     private static BgmPlayer instance;
 
-    [SerializeField] private AudioClip bgmClip;
-    [SerializeField] private string resourcesPath = string.Empty;
+    [FormerlySerializedAs("bgmClip")]
+    [SerializeField] private AudioClip explorationClip;
+    [FormerlySerializedAs("resourcesPath")]
+    [SerializeField] private string explorationResourcesPath = string.Empty;
+    [SerializeField] private AudioClip bossClip;
+    [SerializeField] private string bossResourcesPath = string.Empty;
+    [SerializeField] private BgmTrack startingTrack = BgmTrack.Exploration;
     [SerializeField, Range(0f, 1f)] private float volume = 0.65f;
     [SerializeField] private bool playOnStart = true;
-    [SerializeField] private bool persistAcrossScenes = true;
+    [SerializeField] private bool persistAcrossScenes;
 
     private AudioSource source;
     private bool ownsPlayback;
 
     public static BgmPlayer Instance => instance;
     public AudioSource Source => source != null ? source : GetComponent<AudioSource>();
-    public AudioClip ConfiguredClip => bgmClip;
-    public string ResourcesPath => resourcesPath;
+    public AudioClip ConfiguredClip => explorationClip;
+    public string ResourcesPath => explorationResourcesPath;
+    public AudioClip ExplorationClip => explorationClip;
+    public AudioClip BossClip => bossClip;
+    public string ExplorationResourcesPath => explorationResourcesPath;
+    public string BossResourcesPath => bossResourcesPath;
+    public BgmTrack ActiveTrack { get; private set; } = BgmTrack.Exploration;
 
     private void Awake()
     {
@@ -31,7 +49,8 @@ public sealed class BgmPlayer : MonoBehaviour
 
         if (persistAcrossScenes && instance != null && instance != this)
         {
-            instance.AcceptSceneConfiguration(bgmClip, resourcesPath, volume, playOnStart);
+            instance.AcceptSceneConfiguration(explorationClip, explorationResourcesPath, bossClip,
+                bossResourcesPath, startingTrack, volume, playOnStart);
             Destroy(gameObject);
             return;
         }
@@ -45,7 +64,7 @@ public sealed class BgmPlayer : MonoBehaviour
     private void Start()
     {
         if (ownsPlayback && playOnStart)
-            PlayConfiguredTrack();
+            PlayTrack(startingTrack);
     }
 
     private void OnDestroy()
@@ -54,36 +73,30 @@ public sealed class BgmPlayer : MonoBehaviour
             instance = null;
     }
 
-    public bool PlayConfiguredTrack()
+    public bool PlayConfiguredTrack() => PlayExplorationTrack();
+
+    public bool PlayExplorationTrack() => PlayConfiguredSlot(
+        explorationClip, explorationResourcesPath, BgmTrack.Exploration);
+
+    public bool PlayBossTrack() => PlayConfiguredSlot(bossClip, bossResourcesPath, BgmTrack.Boss);
+
+    public bool PlayTrack(BgmTrack track)
     {
-        AudioClip clip = bgmClip;
-        if (clip == null && !string.IsNullOrWhiteSpace(resourcesPath))
-            clip = Resources.Load<AudioClip>(resourcesPath.Trim());
-        return LoadAndPlay(clip);
+        return track == BgmTrack.Boss ? PlayBossTrack() : PlayExplorationTrack();
     }
 
     public bool LoadAndPlay(string resourcePath)
     {
-        resourcesPath = resourcePath == null ? string.Empty : resourcePath.Trim();
-        bgmClip = string.IsNullOrEmpty(resourcesPath) ? null : Resources.Load<AudioClip>(resourcesPath);
-        return LoadAndPlay(bgmClip);
+        AudioClip clip = string.IsNullOrWhiteSpace(resourcePath)
+            ? null
+            : Resources.Load<AudioClip>(resourcePath.Trim());
+        return LoadAndPlay(clip);
     }
 
     public bool LoadAndPlay(AudioClip clip)
     {
-        source = Source;
-        if (clip == null)
-        {
-            source.Stop();
-            source.clip = null;
-            return false;
-        }
-
-        bgmClip = clip;
-        if (source.clip != clip)
-            source.clip = clip;
-        source.Play();
-        return true;
+        ActiveTrack = BgmTrack.Custom;
+        return PlayClip(clip);
     }
 
     public void Stop()
@@ -97,6 +110,31 @@ public sealed class BgmPlayer : MonoBehaviour
         Source.volume = volume;
     }
 
+    private bool PlayConfiguredSlot(AudioClip configuredClip, string resourcePath, BgmTrack track)
+    {
+        AudioClip clip = configuredClip;
+        if (clip == null && !string.IsNullOrWhiteSpace(resourcePath))
+            clip = Resources.Load<AudioClip>(resourcePath.Trim());
+        ActiveTrack = track;
+        return PlayClip(clip);
+    }
+
+    private bool PlayClip(AudioClip clip)
+    {
+        source = Source;
+        if (clip == null)
+        {
+            source.Stop();
+            source.clip = null;
+            return false;
+        }
+
+        if (source.clip != clip)
+            source.clip = clip;
+        source.Play();
+        return true;
+    }
+
     private void ConfigureSource()
     {
         source.playOnAwake = false;
@@ -105,17 +143,17 @@ public sealed class BgmPlayer : MonoBehaviour
         source.volume = volume;
     }
 
-    private void AcceptSceneConfiguration(AudioClip clip, string path, float sceneVolume, bool shouldPlay)
+    private void AcceptSceneConfiguration(AudioClip sceneExplorationClip, string sceneExplorationPath,
+        AudioClip sceneBossClip, string sceneBossPath, BgmTrack sceneStartingTrack, float sceneVolume,
+        bool shouldPlay)
     {
+        explorationClip = sceneExplorationClip;
+        explorationResourcesPath = sceneExplorationPath ?? string.Empty;
+        bossClip = sceneBossClip;
+        bossResourcesPath = sceneBossPath ?? string.Empty;
+        startingTrack = sceneStartingTrack;
         SetVolume(sceneVolume);
-        bool changesTrack = clip != null && clip != bgmClip;
-        changesTrack |= clip == null && !string.IsNullOrWhiteSpace(path) && path != resourcesPath;
-        if (!changesTrack)
-            return;
-
-        bgmClip = clip;
-        resourcesPath = path ?? string.Empty;
         if (shouldPlay)
-            PlayConfiguredTrack();
+            PlayTrack(startingTrack);
     }
 }

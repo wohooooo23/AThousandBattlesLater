@@ -183,7 +183,7 @@ MonoBehaviour:
   itemPrefabs:
   - {fileID: 2182084153566234620, guid: 3892764405c7e7642befd9d614719574, type: 3}
   spawnPoint: {fileID: 8073500530206095878}
-  dropPickupDelay: 1
+  dropPickupDelay: 0.3
   applyPopForce: 1
   upwardForce: 7
   outwardForce: 5

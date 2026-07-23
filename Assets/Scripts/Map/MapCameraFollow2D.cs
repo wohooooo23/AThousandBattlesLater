@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 /// <summary>
@@ -23,7 +22,6 @@ public sealed class MapCameraFollow2D : MonoBehaviour
     public Vector2 LevelMin => levelMin;
     public Vector2 LevelMax => levelMax;
     public float ViewSize => orthographicSize;
-    public bool IsLocked { get; private set; }
 
     private void Awake()
     {
@@ -31,24 +29,6 @@ public sealed class MapCameraFollow2D : MonoBehaviour
         if (target == null || levelMax.x <= levelMin.x || levelMax.y <= levelMin.y)
             throw new MissingReferenceException("MapCameraFollow2D requires a scene-authored Hero and valid map bounds.");
         ApplyCameraSettings();
-        SnapToTarget();
-    }
-
-    /// <summary>
-    /// Confines the camera to a sub-region of the map when the Hero enters the Boss arena. The
-    /// camera keeps following the Hero but can no longer show anything outside that region.
-    ///
-    /// There is deliberately no release: beating the Boss is the run's ending, so the arena is never
-    /// left. Restarting reloads the scene, which restores the authored bounds on its own.
-    /// </summary>
-    public void LockTo(Vector2 minimum, Vector2 maximum, float viewSize)
-    {
-        if (maximum.x <= minimum.x || maximum.y <= minimum.y)
-            throw new ArgumentException("MapCameraFollow2D.LockTo requires a non-empty region.");
-        levelMin = minimum;
-        levelMax = maximum;
-        orthographicSize = Mathf.Max(1f, viewSize);
-        IsLocked = true;
         SnapToTarget();
     }
 

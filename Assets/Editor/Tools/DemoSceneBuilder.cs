@@ -665,6 +665,8 @@ public static class DemoSceneBuilder
         BossArenaController bossArena = SetupBossArena(map, mapBounds, scene);
         // The minimap's Boss marker points at the arena entrance, which is still the authored door.
         SetupFullMapMinimap(mapBounds, hero.transform, rewardChests, bossArena.transform, collisionMaps);
+        SetSerializedObject(bossArena, "minimapHud", GameObject.Find("Minimap HUD"));
+        SetSerializedObject(bossArena, "uiManager", UnityEngine.Object.FindFirstObjectByType<UIManager>());
         NarrativeAudioBuilder.InstallIntoActiveScene();
         BackgroundBuilder.InstallIntoActiveScene();
         EnsureSceneInBuildSettings(FullMapStageScenePath);
@@ -1129,7 +1131,7 @@ public static class DemoSceneBuilder
             throw new InvalidOperationException("Grid.prefab needs its authored 'door' SpriteRenderer for the Boss arena entrance.");
 
         // "Level Portals" is the obsolete cross-scene entrance; drop it when migrating a built scene.
-        foreach (string stale in new[] { "Level Portals", "Boss Arena", "Boss Arena Systems" })
+        foreach (string stale in new[] { "Level Portals", "Boss Arena", "Boss Arena Systems", "Boss Arena Camera" })
         {
             GameObject previous = GameObject.Find(stale);
             if (previous != null)
@@ -1202,12 +1204,30 @@ public static class DemoSceneBuilder
         if (cameraFollow == null)
             throw new InvalidOperationException("SetupFullMapCamera must run before SetupBossArena.");
 
+        GameObject bossCameraObject = UnityEngine.Object.Instantiate(mainCamera.gameObject);
+        bossCameraObject.name = "Boss Arena Camera";
+        bossCameraObject.SetActive(false);
+        MapCameraFollow2D copiedFollow = bossCameraObject.GetComponent<MapCameraFollow2D>();
+        if (copiedFollow != null)
+            UnityEngine.Object.DestroyImmediate(copiedFollow);
+        BossArenaCamera2D bossCamera = bossCameraObject.AddComponent<BossArenaCamera2D>();
+        float bossViewBottom = heroSpawn.y - 5f;
+        float bossViewTop = arenaBounds.max.y;
+        float bossViewCentre = (bossViewBottom + bossViewTop) * 0.5f;
+        SetSerializedObject(bossCamera, "target", UnityEngine.Object.FindFirstObjectByType<HeroHealth>().transform);
+        SetSerializedVector2(bossCamera, "arenaMin", arenaBounds.min);
+        SetSerializedVector2(bossCamera, "arenaMax", arenaBounds.max);
+        SetSerializedFloat(bossCamera, "verticalCentre", bossViewCentre);
+        SetSerializedFloat(bossCamera, "orthographicSize", (bossViewTop - bossViewBottom) * 0.5f);
+        SetSerializedFloat(bossCamera, "smoothTime", 0.16f);
+        bossCameraObject.transform.position = new Vector3(heroSpawn.x, bossViewCentre, mainCamera.transform.position.z);
+
         BossArenaController controller = entrance.AddComponent<BossArenaController>();
-        SetSerializedObject(controller, "mapCamera", cameraFollow);
+        SetSerializedObject(controller, "explorationCamera", cameraFollow);
+        SetSerializedObject(controller, "bossCamera", bossCamera);
         SetSerializedObject(controller, "heroSpawnPoint", spawnPoint.transform);
         SetSerializedVector2(controller, "arenaMin", arenaBounds.min);
         SetSerializedVector2(controller, "arenaMax", arenaBounds.max);
-        SetSerializedFloat(controller, "arenaViewSize", FullMapCameraOrthographicSize);
         SetSerializedObject(controller, "bossRoot", boss);
         SetSerializedObject(controller, "bossHealthBar", bossBar);
         return controller;

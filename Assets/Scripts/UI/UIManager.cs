@@ -17,8 +17,10 @@ public sealed class UIManager : MonoBehaviour
     private BagButton bagButton;
     private ForgeButton forgeButton;
     private GameObject minimapHud;
+    private bool minimapAllowed = true;
 
     public bool HasOpenPanel => openPanels.Count > 0;
+    public GameObject MinimapHud => minimapHud;
 
     private void Awake()
     {
@@ -113,11 +115,22 @@ public sealed class UIManager : MonoBehaviour
         UpdatePauseState();
     }
 
+    public void SetMinimapAllowed(bool allowed)
+    {
+        minimapAllowed = allowed;
+        UpdateMinimapVisibility();
+    }
+
     private void UpdatePauseState()
     {
         bool anyOpen = openPanels.Count > 0;
         Time.timeScale = anyOpen ? 0f : 1f;
+        UpdateMinimapVisibility();
+    }
+
+    private void UpdateMinimapVisibility()
+    {
         if (minimapHud != null)
-            minimapHud.SetActive(!anyOpen);
+            minimapHud.SetActive(minimapAllowed && openPanels.Count == 0);
     }
 }

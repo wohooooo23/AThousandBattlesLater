@@ -1,47 +1,54 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// In-scene Boss arena. The Boss fight used to be its own scene reached through ScenePortal2D;
-/// it now lives inside stage1_full, so entering is a teleport plus a camera lock instead of a
-/// scene load. Every reference is scene-authored — nothing is created or searched for at runtime.
+/// it now lives inside stage1_full, so entering is a teleport plus a switch to a dedicated camera
+/// instead of a scene load. Every reference is scene-authored; nothing is created at runtime.
 ///
-/// Entering is one-way by design: defeating the Boss is the run's ending, so the camera never
-/// unlocks. The arena's own tilemap walls keep the fight contained (no separate gate).
+/// Entering is one-way by design: defeating the Boss is the run's ending, so the exploration
+/// camera does not reactivate until the scene reloads. The arena tilemap walls contain the fight.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
 public sealed class BossArenaController : MonoBehaviour
 {
-    [SerializeField] private MapCameraFollow2D mapCamera;
+    [FormerlySerializedAs("mapCamera")]
+    [SerializeField] private MapCameraFollow2D explorationCamera;
+    [SerializeField] private BossArenaCamera2D bossCamera;
     [SerializeField] private Transform heroSpawnPoint;
     [SerializeField] private Vector2 arenaMin;
     [SerializeField] private Vector2 arenaMax;
-    [SerializeField, Min(1f)] private float arenaViewSize = 28f;
     [SerializeField] private GameObject bossRoot;
     [SerializeField] private BossHealthBarController bossHealthBar;
     [SerializeField] private StoryDialogueController storyController;
+    [SerializeField] private GameObject minimapHud;
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private BgmPlayer bgmPlayer;
 
     private bool entered;
 
     public bool HasEntered => entered;
     public Vector2 ArenaMin => arenaMin;
     public Vector2 ArenaMax => arenaMax;
-    public float ArenaViewSize => arenaViewSize;
+    public BossArenaCamera2D BossCamera => bossCamera;
     public GameObject BossRoot => bossRoot;
+    public GameObject MinimapHud => minimapHud;
 
     private void Awake()
     {
         BoxCollider2D trigger = GetComponent<BoxCollider2D>();
         if (!trigger.isTrigger)
             throw new MissingReferenceException(name + " requires a trigger BoxCollider2D.");
-        if (mapCamera == null || heroSpawnPoint == null || bossRoot == null || bossHealthBar == null || storyController == null)
-            throw new MissingReferenceException(name + " is missing its scene-authored camera, spawn point, Boss, health bar or story controller.");
+        if (explorationCamera == null || bossCamera == null || heroSpawnPoint == null || bossRoot == null || bossHealthBar == null || storyController == null || minimapHud == null || uiManager == null || bgmPlayer == null)
+            throw new MissingReferenceException(name + " is missing its scene-authored cameras, spawn point, Boss, health bar, story controller, minimap HUD, UI manager or BGM player.");
         if (arenaMax.x <= arenaMin.x || arenaMax.y <= arenaMin.y)
             throw new MissingReferenceException(name + " has empty arena bounds.");
 
         // Dormant until the Hero walks in; the arena's own tilemap walls contain the fight.
         bossRoot.SetActive(false);
+        bossCamera.gameObject.SetActive(false);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -64,9 +71,14 @@ public sealed class BossArenaController : MonoBehaviour
         hero.position = heroSpawnPoint.position;
         Physics2D.SyncTransforms();
 
+        // Only one MainCamera and one AudioListener are active at a time. Reloading stage1_full
+        // after victory restores these authored states and therefore the exploration camera.
+        explorationCamera.gameObject.SetActive(false);
+        bossCamera.gameObject.SetActive(true);
+        bossCamera.SnapToTarget();
+        uiManager.SetMinimapAllowed(false);
+        bgmPlayer.PlayBossTrack();
         bossRoot.SetActive(true);
-        // Must run after the teleport: LockTo snaps the camera to the Hero's current position.
-        mapCamera.LockTo(arenaMin, arenaMax, arenaViewSize);
         bool introductionStarted = storyController.PlayBossIntroduction();
         StartCoroutine(RevealHealthBarAfterIntroduction(introductionStarted));
     }

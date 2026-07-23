@@ -15,6 +15,7 @@ public static class NarrativeAudioBuilder
     private const float DialogueWorldScale = 0.041f;
     private const string DialoguePrefabPath = "Assets/Prefab/WorldDialogueBubble.prefab";
     private const string BgmPrefabPath = "Assets/Prefab/BgmPlayer.prefab";
+    private const string BossBgmPath = "Assets/Audio/SFX/monume-tension-tension-music-547908.mp3";
     private const string DialogueFontPath =
         "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private static readonly string[] GameplayScenePaths =
@@ -222,6 +223,7 @@ public static class NarrativeAudioBuilder
         GameObject bgmPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BgmPrefabPath);
         GameObject bgm = (GameObject)PrefabUtility.InstantiatePrefab(bgmPrefab, scene);
         bgm.name = "BGM Player";
+        ConfigureSceneBgm(scene, bgm.GetComponent<BgmPlayer>());
 
         GameObject dialogueRoot = new GameObject("Dialogue Bubbles");
         SceneManager.MoveGameObjectToScene(dialogueRoot, scene);
@@ -236,6 +238,32 @@ public static class NarrativeAudioBuilder
             bossBubble = CreateBubble(dialogueRoot.transform, boss.transform, "Boss Dialogue", CalculateOffset(boss.transform));
 
         SetupStorySystem(scene, hero, boss, heroBubble, bossBubble);
+
+        BossArenaController arena = FindInScene<BossArenaController>(scene).FirstOrDefault();
+        if (arena != null)
+        {
+            SerializedObject arenaData = new SerializedObject(arena);
+            arenaData.FindProperty("bgmPlayer").objectReferenceValue = bgm.GetComponent<BgmPlayer>();
+            arenaData.ApplyModifiedPropertiesWithoutUndo();
+        }
+    }
+
+    private static void ConfigureSceneBgm(Scene scene, BgmPlayer player)
+    {
+        AudioClip tensionTrack = AssetDatabase.LoadAssetAtPath<AudioClip>(BossBgmPath);
+        if (tensionTrack == null)
+            throw new InvalidOperationException("Missing Boss BGM at " + BossBgmPath);
+
+        bool combinedStage = scene.name == "stage1_full";
+        bool bossOnlyStage = scene.name == "stage1 boss";
+        SerializedObject data = new SerializedObject(player);
+        data.FindProperty("explorationClip").objectReferenceValue = combinedStage || bossOnlyStage ? null : tensionTrack;
+        data.FindProperty("explorationResourcesPath").stringValue = string.Empty;
+        data.FindProperty("bossClip").objectReferenceValue = combinedStage || bossOnlyStage ? tensionTrack : null;
+        data.FindProperty("bossResourcesPath").stringValue = string.Empty;
+        data.FindProperty("startingTrack").enumValueIndex = bossOnlyStage ? (int)BgmTrack.Boss : (int)BgmTrack.Exploration;
+        data.FindProperty("persistAcrossScenes").boolValue = false;
+        data.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static WorldDialogueBubble CreateBubble(Transform parent, Transform target, string name, Vector3 offset)
