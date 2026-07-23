@@ -208,6 +208,7 @@ GameObject:
   - component: {fileID: 7686061946284160798}
   - component: {fileID: 6477363684065305827}
   - component: {fileID: 5961062955091991579}
+  - component: {fileID: 314437009800313056}
   m_Layer: 9
   m_Name: Hero
   m_TagString: Untagged
@@ -528,6 +529,23 @@ MonoBehaviour:
   projectileSpeed: 60
   damage: 30
   spawnPoint: {fileID: 0}
+--- !u!114 &314437009800313056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6288944824303020976}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5c72eb02e1ea8e4c84b7d2ed0c4497b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDropThrough
+  checkDistance: 0.2
+  excludeMask:
+    serializedVersion: 2
+    m_Bits: 512
+  dropDuration: 0.5
 --- !u!1 &6422578271653281506
 GameObject:
   m_ObjectHideFlags: 0
