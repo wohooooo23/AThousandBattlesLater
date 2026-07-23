@@ -207,6 +207,7 @@ GameObject:
   - component: {fileID: 3883366657667944747}
   - component: {fileID: 7686061946284160798}
   - component: {fileID: 6477363684065305827}
+  - component: {fileID: 5961062955091991579}
   m_Layer: 9
   m_Name: Hero
   m_TagString: Untagged
@@ -248,9 +249,9 @@ MonoBehaviour:
   facingside: 1
   groundLayer:
     serializedVersion: 2
-    m_Bits: 247
-  grounddistance: 0.18
-  walldistance: 0.2
+    m_Bits: 2147483895
+  grounddistance: 2.7
+  walldistance: 1.3
   wallcheck1: {fileID: 4378193913021842423}
   wallcheck2: {fileID: 1500094226665205974}
   groundcheck: {fileID: 7162464420519927723}
@@ -275,6 +276,7 @@ MonoBehaviour:
   attackduration: 0.1
   attackMoveMultiplier: 0.7
   attackresetduration: 0.2
+  throwmovespeed: 20
   maxJumpCount: 2
   jumpCountRemaining: 2
 --- !u!50 &2409211609458095408
@@ -507,8 +509,25 @@ MonoBehaviour:
   clips:
   - {fileID: 8300000, guid: ba865747da8116a4ca9ebcfd9cd4383b, type: 3}
   - {fileID: 8300000, guid: 1a726792654aff043a035d0b6ede19c1, type: 3}
-  - {fileID: 8300000, guid: 604ac9b064a40824dafe7ec4172e1b29, type: 3}
+  - {fileID: 8300000, guid: 920f5d4a6ae328843b5d529a8b35e33d, type: 3}
   volume: 0.9
+--- !u!114 &5961062955091991579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6288944824303020976}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adb803b50c70b8046a23e6fa3bc36657, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeroKunaiThrow
+  kunaiItem: {fileID: 11400000, guid: 3595f1d2f8b204749b86c359f124e8cd, type: 2}
+  projectilePrefab: {fileID: 1968398644555766817, guid: 0d7e79db46301ce448ff075a5e3b4173, type: 3}
+  projectileSpeed: 60
+  damage: 30
+  spawnPoint: {fileID: 0}
 --- !u!1 &6422578271653281506
 GameObject:
   m_ObjectHideFlags: 0
