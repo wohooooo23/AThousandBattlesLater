@@ -18,6 +18,8 @@ public sealed class Hero_basicattackState : RoleState
         int limit = Mathf.Max(1, Mathf.RoundToInt(role.attacklimit));
         attackIndex = Time.time - lastAttack > role.attackresetduration ? 0 : (attackIndex + 1) % limit;
         role.animator.SetInteger("Basic_Attack_Choice", attackIndex);
+        // Each combo step has its own slash sound; play it on the swing, not on impact.
+        role.PlayAttackSound(attackIndex);
         attackSide = role.HorizontalInput != 0f ? (int)role.HorizontalInput : role.facingside;
         attackVelocityTime = role.attackduration;
         attackQueued = false;

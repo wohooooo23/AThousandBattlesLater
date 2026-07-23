@@ -60,6 +60,7 @@ public sealed class Role : Entity
     private Coroutine queuedAttack;
     private Coroutine dropRoutine;
     private Collider2D roleCollider;
+    private HeroAttackAudio attackAudio;
     private bool controlEnabled = true;
     private bool dashWasHeld;
 
@@ -67,6 +68,7 @@ public sealed class Role : Entity
     {
         base.Awake();
         roleCollider = GetComponent<Collider2D>();
+        attackAudio = GetComponent<HeroAttackAudio>();
         idleState = new Hero_idleState(stateMachine, "Idle", this);
         jumpstartState = new Hero_jumpstartState(stateMachine, "Jump", this);
         jumpfallState = new Hero_jumpfallState(stateMachine, "Jump", this);
@@ -192,4 +194,7 @@ public sealed class Role : Entity
             StopCoroutine(queuedAttack);
         queuedAttack = StartCoroutine(EnterAttackStateWithDelay());
     }
+
+    /// <summary>Plays the combo-step attack SFX. No-op if the hero has no HeroAttackAudio.</summary>
+    public void PlayAttackSound(int comboIndex) => attackAudio?.Play(comboIndex);
 }

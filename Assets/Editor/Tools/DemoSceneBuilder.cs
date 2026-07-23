@@ -38,6 +38,13 @@ public static class DemoSceneBuilder
     private const string LargeStairsPrefabPath = GeneratedFolder + "/StairsLarge.prefab";
     private const string HpBarPrefabPath = "Assets/Resources/Prefabs/HPBar.prefab";
     private const string HeroPrefabPath = "Assets/Prefab/Hero.prefab";
+    // Per-combo-step hero attack SFX (converted from the imported .m4a to Unity-importable wav).
+    private static readonly string[] HeroAttackSfxPaths =
+    {
+        "Assets/Audio/SFX/HeroSwordSlash01.wav",
+        "Assets/Audio/SFX/HeroSwordSlash02.wav",
+        "Assets/Audio/SFX/HeroSwordSlash03.wav"
+    };
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
     private const string FlyingEyePrefabPath = "Assets/Enemy/Mobs/FlyingEye/Mob_FlyingEye.prefab";
     private const string FlyingEyeProjectilePrefabPath = "Assets/Enemy/Mobs/FlyingEye/FlyingEyeProjectile.prefab";
@@ -2191,6 +2198,19 @@ public static class DemoSceneBuilder
                 heroBody.gravityScale = HeroGravityScale;
             heroRoot.tag = "Untagged";
             heroRoot.layer = HeroPhysicsLayer;
+
+            // Per-combo-step attack SFX. HeroAttackAudio auto-configures its AudioSource at runtime.
+            GetOrAdd<AudioSource>(heroRoot);
+            HeroAttackAudio attackAudio = GetOrAdd<HeroAttackAudio>(heroRoot);
+            AudioClip[] slashClips = new AudioClip[HeroAttackSfxPaths.Length];
+            for (int i = 0; i < HeroAttackSfxPaths.Length; i++)
+            {
+                slashClips[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(HeroAttackSfxPaths[i]);
+                if (slashClips[i] == null)
+                    throw new InvalidOperationException("Missing hero attack SFX clip at " + HeroAttackSfxPaths[i] + ".");
+            }
+            SetSerializedObjectArray(attackAudio, "clips", slashClips);
+
             PrefabUtility.SaveAsPrefabAsset(heroRoot, HeroPrefabPath);
         }
         finally
