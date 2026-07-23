@@ -26,11 +26,8 @@ public sealed class ItemDetailPanel : MonoBehaviour
     private ItemSlot source;
     private EquipmentSlotUI equipmentSource;
     private bool pinned;
-    private static int cancelConsumedFrame = -1;
 
     public static ItemDetailPanel Instance { get; private set; }
-    public static bool BlocksGameQuit =>
-        Instance != null && (Instance.pinned || cancelConsumedFrame == Time.frameCount);
 
     public bool IsVisible => canvasGroup != null && canvasGroup.alpha > 0.5f;
     public bool IsPinned => pinned;
@@ -64,7 +61,6 @@ public sealed class ItemDetailPanel : MonoBehaviour
 
         if (keyboard.qKey.wasPressedThisFrame)
         {
-            cancelConsumedFrame = Time.frameCount;
             HideImmediate();
             return;
         }

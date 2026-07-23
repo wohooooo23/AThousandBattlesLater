@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -19,6 +20,7 @@ public sealed class BossArenaController : MonoBehaviour
     [SerializeField, Min(1f)] private float arenaViewSize = 28f;
     [SerializeField] private GameObject bossRoot;
     [SerializeField] private BossHealthBarController bossHealthBar;
+    [SerializeField] private StoryDialogueController storyController;
 
     private bool entered;
 
@@ -33,8 +35,8 @@ public sealed class BossArenaController : MonoBehaviour
         BoxCollider2D trigger = GetComponent<BoxCollider2D>();
         if (!trigger.isTrigger)
             throw new MissingReferenceException(name + " requires a trigger BoxCollider2D.");
-        if (mapCamera == null || heroSpawnPoint == null || bossRoot == null)
-            throw new MissingReferenceException(name + " is missing its scene-authored camera, spawn point or Boss.");
+        if (mapCamera == null || heroSpawnPoint == null || bossRoot == null || bossHealthBar == null || storyController == null)
+            throw new MissingReferenceException(name + " is missing its scene-authored camera, spawn point, Boss, health bar or story controller.");
         if (arenaMax.x <= arenaMin.x || arenaMax.y <= arenaMin.y)
             throw new MissingReferenceException(name + " has empty arena bounds.");
 
@@ -65,7 +67,17 @@ public sealed class BossArenaController : MonoBehaviour
         bossRoot.SetActive(true);
         // Must run after the teleport: LockTo snaps the camera to the Hero's current position.
         mapCamera.LockTo(arenaMin, arenaMax, arenaViewSize);
-        bossHealthBar?.BeginReveal();
+        bool introductionStarted = storyController.PlayBossIntroduction();
+        StartCoroutine(RevealHealthBarAfterIntroduction(introductionStarted));
+    }
+
+    private IEnumerator RevealHealthBarAfterIntroduction(bool waitForIntroduction)
+    {
+        while (waitForIntroduction && storyController.IsPlaying)
+            yield return null;
+        for (int frame = 0; frame < bossHealthBar.RevealDelayFrames; frame++)
+            yield return null;
+        bossHealthBar.BeginReveal();
     }
 
     private void OnDrawGizmosSelected()

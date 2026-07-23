@@ -3,28 +3,33 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// <summary>Scene-authored start menu input, credits overlay and transitions.</summary>
+/// <summary>Scene-authored start menu input, help/credits navigation and transitions.</summary>
 [DisallowMultipleComponent]
 public sealed class StartMenuController : MonoBehaviour
 {
     [SerializeField] private Button startButton;
+    [SerializeField] private Button helpButton;
     [SerializeField] private Button creditButton;
     [SerializeField] private Button exitButton;
     [Tooltip("Credits overlay. The body is intentionally empty until the asset credits are written.")]
     [SerializeField] private GameObject creditsPanel;
     [SerializeField] private Button creditsBackButton;
     [SerializeField] private string targetSceneName = "stage1_full";
+    [SerializeField] private string helpSceneName = "Help";
     private bool isLoading;
 
     public string TargetSceneName => targetSceneName;
+    public string HelpSceneName => helpSceneName;
     public bool CreditsOpen => creditsPanel != null && creditsPanel.activeSelf;
 
     private void Awake()
     {
-        if (startButton == null || string.IsNullOrWhiteSpace(targetSceneName))
-            throw new MissingReferenceException("StartMenuController requires its scene-authored button and target scene.");
+        if (startButton == null || helpButton == null || string.IsNullOrWhiteSpace(targetSceneName) ||
+            string.IsNullOrWhiteSpace(helpSceneName))
+            throw new MissingReferenceException("StartMenuController requires its scene-authored Start/Help buttons and target scenes.");
 
         startButton.onClick.AddListener(StartGame);
+        helpButton.onClick.AddListener(OpenHelp);
         // Credits/exit are optional so a scene authored before them still loads.
         if (creditButton != null)
             creditButton.onClick.AddListener(OpenCredits);
@@ -40,6 +45,8 @@ public sealed class StartMenuController : MonoBehaviour
     {
         if (startButton != null)
             startButton.onClick.RemoveListener(StartGame);
+        if (helpButton != null)
+            helpButton.onClick.RemoveListener(OpenHelp);
         if (creditButton != null)
             creditButton.onClick.RemoveListener(OpenCredits);
         if (exitButton != null)
@@ -73,6 +80,14 @@ public sealed class StartMenuController : MonoBehaviour
             return;
         isLoading = true;
         SceneManager.LoadScene(targetSceneName);
+    }
+
+    public void OpenHelp()
+    {
+        if (isLoading)
+            return;
+        isLoading = true;
+        SceneManager.LoadScene(helpSceneName);
     }
 
     /// <summary>Opens the credits overlay. Its body is a deliberate placeholder for the asset list.</summary>

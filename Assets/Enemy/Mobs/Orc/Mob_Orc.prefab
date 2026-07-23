@@ -214,7 +214,7 @@ MonoBehaviour:
   facingside: 1
   groundLayer:
     serializedVersion: 2
-    m_Bits: 4294966527
+    m_Bits: 2147483895
   grounddistance: 1.8
   walldistance: 1.8
   wallcheck1: {fileID: 5960611712560386863}
@@ -224,7 +224,7 @@ MonoBehaviour:
   moveSpeed: 1.4
   MoveAnimSpeedMultiplier: 1
   battlemoveSpeed: 3
-  attackDistance: 8.5
+  attackDistance: 5
   attackInterval: 1.35
   battleDuration: 4
   minDistance: 0.25
@@ -309,7 +309,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Enemy_Health
   maximumHealth: 100
   worldHealthBar: {fileID: 0}
-  coinReward: 30
+  coinReward: 50
 --- !u!114 &1717474936877010450
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -324,12 +324,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Entity_Combat
   damage: 20
   targetCheck: {fileID: 1470590144534852038}
-  targetCheckRad: 4.25
+  targetCheckRad: 55
   attackMode: 2
-  radialSlashRadius: 7
+  radialSlashRadius: 5
   radialWarningDuration: 0.65
   radialSlashDuration: 0.22
-  fanRadius: 8.75
+  fanRadius: 5
   fanHalfAngle: 45
   fanWarningDuration: 0.95
   fanStrikeDuration: 0.22

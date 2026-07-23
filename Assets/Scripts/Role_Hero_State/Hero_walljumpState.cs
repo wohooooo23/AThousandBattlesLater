@@ -37,7 +37,7 @@ public sealed class Hero_walljumpState : RoleState
         }
         else if (role.JumpPressed && role.CanJump())
         {
-            stateMachine.Change(role.walljumpState);
+            stateMachine.Change(role.jumpstartState);
         }
         else if (inputLockRemaining <= 0f && role.iswall &&
                  Mathf.Approximately(role.HorizontalInput, role.facingside))

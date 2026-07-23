@@ -42,6 +42,10 @@ public sealed class HeroKunaiThrow : MonoBehaviour
         Vector3 origin = spawnPoint != null ? spawnPoint.position : transform.position;
 
         GameObject projectile = Instantiate(projectilePrefab, origin, Quaternion.identity);
+        if(entity.facingside == 1)
+        {
+            projectile.transform.Rotate(0,180,0);
+        }
         projectile.name = "Hero Kunai";
         // Authored on the bottom "Default" layer; lift it onto the effect layer so it draws over the map.
         SceneArt.ApplyEffectSorting(projectile);

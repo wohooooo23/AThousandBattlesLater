@@ -1,8 +1,7 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-/// <summary>Scene-authored match state, restart and quit controller.</summary>
+/// <summary>Scene-authored match state and restart controller.</summary>
 [DisallowMultipleComponent]
 public sealed class GameManager : MonoBehaviour
 {
@@ -33,18 +32,4 @@ public sealed class GameManager : MonoBehaviour
             Instance = null;
     }
 
-    private void Update()
-    {
-        if (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame && !ItemDetailPanel.BlocksGameQuit)
-            QuitGame();
-    }
-
-    public void QuitGame()
-    {
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
-    }
 }

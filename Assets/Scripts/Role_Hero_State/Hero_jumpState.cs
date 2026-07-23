@@ -24,6 +24,10 @@ public class Hero_jumpState:RoleState
         {
             stateMachine.Change(role.throwState);
         }
+        if(role.AttackPressed)
+        {
+            stateMachine.Change(role.basicattackState);
+        }
     }
 
 

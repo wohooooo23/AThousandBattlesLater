@@ -23,6 +23,9 @@ public sealed class Hero_basicattackState : RoleState
         attackSide = role.HorizontalInput != 0f ? (int)role.HorizontalInput : role.facingside;
         attackVelocityTime = role.attackduration;
         attackQueued = false;
+        if(role.isgrounded){
+            role.ResetJumpCount(); //重置跳跃次数
+        }
     }
 
     public override void Update()
@@ -40,6 +43,14 @@ public sealed class Hero_basicattackState : RoleState
 
         if (role.AttackPressed)
             attackQueued = true;
+
+        if(role.JumpPressed)
+        {
+            if(role.CanJump())
+            {
+                stateMachine.Change(role.jumpstartState);
+            }
+        }
 
         if (!triggerCalled)
             return;

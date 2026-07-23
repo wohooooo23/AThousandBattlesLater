@@ -48,6 +48,7 @@ public sealed class StoryDialogueController : MonoBehaviour
 
     private bool isPlaying;
     private bool encounterPlayed;
+    private bool bossIntroductionPlayed;
     private bool victoryPlayed;
     private bool ownsPause;
     private float previousTimeScale = 1f;
@@ -69,8 +70,10 @@ public sealed class StoryDialogueController : MonoBehaviour
     {
         if (heroBubble == null)
             throw new MissingReferenceException("StoryDialogueController requires the scene-authored Hero dialogue bubble.");
-        if (sceneMode == StorySceneMode.Boss && (bossBubble == null || victoryOverlay == null))
-            throw new MissingReferenceException("The Boss story requires its Wizard bubble and Victory Overlay.");
+        bool hasBossStory = (bossIntroductionLines != null && bossIntroductionLines.Length > 0) ||
+                            (bossVictoryLines != null && bossVictoryLines.Length > 0);
+        if (hasBossStory && (bossBubble == null || bossVisualRoot == null || victoryOverlay == null))
+            throw new MissingReferenceException("The Boss story requires its Wizard bubble, visual root and Victory Overlay.");
 
         heroBubble.Hide();
         bossBubble?.Hide();
@@ -125,9 +128,24 @@ public sealed class StoryDialogueController : MonoBehaviour
         tutorialRoutine = StartCoroutine(ShowTutorialWhenReady(dashPrompt, 4.5f));
     }
 
+    /// <summary>Starts the in-map Boss introduction once when the arena entrance is crossed.</summary>
+    public bool PlayBossIntroduction()
+    {
+        if (bossIntroductionPlayed || bossBubble == null || bossIntroductionLines == null ||
+            bossIntroductionLines.Length == 0)
+            return false;
+        bossIntroductionPlayed = true;
+        // Automated combat tests enter the real arena and must remain frame-driven.
+        if (Application.isBatchMode)
+            return false;
+        StartCoroutine(PlayBossIntroductionSequence());
+        return true;
+    }
+
     public bool PlayBossVictory()
     {
-        if (sceneMode != StorySceneMode.Boss || victoryPlayed)
+        if (victoryPlayed || bossBubble == null || victoryOverlay == null || bossVictoryLines == null ||
+            bossVictoryLines.Length == 0)
             return false;
         victoryPlayed = true;
         if (Application.isBatchMode)
@@ -165,6 +183,8 @@ public sealed class StoryDialogueController : MonoBehaviour
 
     private IEnumerator PlayBossIntroductionSequence()
     {
+        while (isPlaying)
+            yield return null;
         isPlaying = true;
         AcquirePause();
         yield return PlayLines(bossIntroductionLines);

@@ -33,10 +33,7 @@ public class Hero_jumpfallState:Hero_jumpState
         {
             stateMachine.Change(role.wallslideState);
         }
-        if(role.AttackPressed)
-        {
-            stateMachine.Change(role.basicattackState);
-        }
+        
         if(role.JumpPressed)
         {
             if(role.CanJump())
