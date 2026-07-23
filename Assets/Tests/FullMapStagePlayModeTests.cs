@@ -203,9 +203,7 @@ public sealed class FullMapStagePlayModeTests
         Assert.That(arena, Is.Not.Null, "stage1_full must contain the in-scene Boss arena entrance.");
         Assert.That((bool)arena.GetType().GetProperty("HasEntered").GetValue(arena), Is.False,
             "The arena must not have triggered before the Hero reaches the door.");
-        Collider2D arenaGate = (Collider2D)arena.GetType().GetProperty("Gate").GetValue(arena);
-        Assert.That(arenaGate, Is.Not.Null);
-        Assert.That(arenaGate.enabled, Is.False, "The arena gate stays open until the Hero walks in.");
+        // The gate was removed — the arena's own tilemap walls contain the fight.
         GameObject arenaBoss = (GameObject)arena.GetType().GetProperty("BossRoot").GetValue(arena);
         Assert.That(arenaBoss, Is.Not.Null);
         Assert.That(arenaBoss.activeSelf, Is.False, "The arena Boss must stay dormant until entry.");

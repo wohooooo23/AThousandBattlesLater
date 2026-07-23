@@ -87,8 +87,6 @@ public static class DemoSceneBuilder
     private const float OrcAttackRadius = 8.75f;
     // Gap between the main map's right edge and the Boss arena, so the two never overlap.
     private const float BossArenaGap = 120f;
-    // Well inside EnemyPlatformNavigator's 58 link / 28 vertical limits.
-    private const float BossArenaNodeSpacing = 18f;
     private const int FullMapRoomCount = 5;
     private const int FullMapMonsterCount = 18;
     private const int FullMapFlyingEyeCount = 6;
@@ -795,8 +793,6 @@ public static class DemoSceneBuilder
         BossArenaController arena = UnityEngine.Object.FindFirstObjectByType<BossArenaController>(FindObjectsInactive.Include);
         if (arena == null)
             throw new InvalidOperationException("stage1_full needs the in-scene Boss arena entrance.");
-        if (arena.Gate == null || arena.Gate.enabled)
-            throw new InvalidOperationException("The Boss arena gate must be authored open (disabled) and only close on entry.");
         if (arena.BossRoot == null || arena.BossRoot.activeSelf)
             throw new InvalidOperationException("The arena Boss must be authored inactive so it wakes only when the Hero arrives.");
         if (arena.BossRoot.GetComponents<EnemyAttackPattern>().Length < 6)
@@ -815,9 +811,11 @@ public static class DemoSceneBuilder
         Bounds arenaBounds = CalculateFullMapBounds(arenaMap);
         if (arenaBounds.min.x <= currentMapBounds.max.x)
             throw new InvalidOperationException("The Boss arena overlaps the main map; it must sit clear of it.");
+        // Nav nodes are now children of the arena (relative to it). Each is a clearance-checked floor
+        // point, so the Boss teleport can't land in a wall.
         GameObject arenaNodes = GameObject.Find("Boss Arena Navigation Nodes");
         int arenaNodeCount = arenaNodes != null ? arenaNodes.GetComponentsInChildren<EnemyNavigationNode>(true).Length : 0;
-        if (arenaNodeCount < 6)
+        if (arenaNodeCount < 2)
             throw new InvalidOperationException($"The Boss arena navigation graph is too sparse ({arenaNodeCount} nodes); the Boss would not move.");
 
         if (GameObject.Find("Lower Passage Platforms") != null)
@@ -1120,8 +1118,8 @@ public static class DemoSceneBuilder
     /// <summary>
     /// Builds the Boss fight inside stage1_full instead of loading "stage1 boss". The arena map is a
     /// second Grid prefab parked clear of the main map; walking into the authored door teleports the
-    /// Hero there, seals the gate and locks the camera to the arena. Beating the Boss ends the run,
-    /// so there is no way back out.
+    /// Hero there and locks the camera to the arena (the arena's own tilemap walls contain the fight).
+    /// Beating the Boss ends the run.
     /// </summary>
     private static BossArenaController SetupBossArena(GameObject map, Bounds mapBounds, Scene scene)
     {
@@ -1163,12 +1161,16 @@ public static class DemoSceneBuilder
         occupied.Add(heroSpawn);
         Vector3 bossSpawn = FindFullMapSurfaceSpawn(arenaMaps, arenaBounds, new Vector2(0.85f, 0.5f), 3.2f, occupied);
 
+        occupied.Add(bossSpawn);
+
         GameObject spawnPoint = new GameObject("Boss Arena Hero Spawn");
         spawnPoint.transform.SetParent(systems.transform);
         spawnPoint.transform.position = heroSpawn;
 
         // The Boss cannot path without a navigation graph; the old one lived in the boss scene only.
-        CreateBossArenaNavigation(arenaMaps, systems.transform);
+        // Nodes live under the arena (relative to it) at floor points found the same reliable way as
+        // the spawns, so the Boss can never teleport into a wall.
+        CreateBossArenaNavigation(arenaMaps, arenaBounds, arena.transform, occupied);
 
         GameObject hud = GameObject.Find("Hero HUD");
         Transform victoryOverlay = hud != null ? hud.transform.Find("Victory Overlay") : null;
@@ -1186,16 +1188,6 @@ public static class DemoSceneBuilder
         SetSerializedBool(bossBar, "revealOnStart", false);
         // Dormant until the Hero walks in, so the Boss does not fight from across the map.
         boss.SetActive(false);
-
-        // Seal just left of where the Hero lands, not at arenaBounds.min: those bounds come from
-        // renderer extents (the Background layer reaches well past the walkable floor), so a gate at
-        // the far edge would sit in empty backdrop and block nothing.
-        GameObject gateObject = new GameObject("Boss Arena Gate");
-        gateObject.transform.SetParent(systems.transform);
-        gateObject.transform.position = new Vector3(heroSpawn.x - 8f, heroSpawn.y + 14f, 0f);
-        BoxCollider2D gate = gateObject.AddComponent<BoxCollider2D>();
-        gate.size = new Vector2(3f, 40f);
-        gate.enabled = false;
 
         GameObject entrance = new GameObject("Boss Arena Entrance");
         entrance.transform.SetParent(systems.transform);
@@ -1216,44 +1208,47 @@ public static class DemoSceneBuilder
         SetSerializedVector2(controller, "arenaMin", arenaBounds.min);
         SetSerializedVector2(controller, "arenaMax", arenaBounds.max);
         SetSerializedFloat(controller, "arenaViewSize", FullMapCameraOrthographicSize);
-        SetSerializedObject(controller, "gate", gate);
         SetSerializedObject(controller, "bossRoot", boss);
         SetSerializedObject(controller, "bossHealthBar", bossBar);
         return controller;
     }
 
     /// <summary>
-    /// Lays EnemyNavigationNodes over the arena's walkable surfaces. Nodes are thinned to
-    /// BossArenaNodeSpacing so the graph stays small while every hop remains inside
-    /// EnemyPlatformNavigator's 58 unit / 28 vertical link limits.
+    /// Builds the Boss's navigation graph as a child of the arena (so the nodes are positioned
+    /// relative to it and move/rebuild with it). Node spots are deliberate: a spread of normalised
+    /// positions along the arena floor, each snapped by FindFullMapSurfaceSpawn to a real floor tile
+    /// with clearance for the Boss body — so a teleport can never drop the Boss into a wall. This
+    /// replaces the old raw tile-surface scan, which produced stray nodes on decorations/overhangs.
     /// </summary>
-    private static void CreateBossArenaNavigation(Tilemap[] arenaMaps, Transform parent)
+    private static void CreateBossArenaNavigation(Tilemap[] arenaMaps, Bounds arenaBounds, Transform arena,
+        List<Vector3> occupied)
     {
         GameObject nodeRoot = new GameObject("Boss Arena Navigation Nodes");
-        nodeRoot.transform.SetParent(parent);
+        nodeRoot.transform.SetParent(arena, true);   // child of the arena → relative coordinates
 
-        List<Vector3> surfaces = new List<Vector3>();
-        foreach (Tilemap tilemap in arenaMaps)
+        // Normalised X across the floor (Y is resolved to the surface). Kept clear of the hero (0.15)
+        // and Boss (0.85) spawns already in 'occupied'.
+        float[] normalizedX = { 0.3f, 0.4f, 0.5f, 0.6f, 0.7f };
+        int index = 0;
+        foreach (float nx in normalizedX)
         {
-            float cellHeight = tilemap.layoutGrid.cellSize.y * Mathf.Abs(tilemap.transform.lossyScale.y);
-            foreach (Vector3Int cell in tilemap.cellBounds.allPositionsWithin)
+            Vector3 node;
+            try
             {
-                if (!tilemap.HasTile(cell) || tilemap.HasTile(cell + Vector3Int.up))
-                    continue;
-                Vector3 centre = tilemap.GetCellCenterWorld(cell);
-                surfaces.Add(new Vector3(centre.x, centre.y + cellHeight * 0.5f + 3f, 0f));
+                node = FindFullMapSurfaceSpawn(arenaMaps, arenaBounds, new Vector2(nx, 0.5f), 3.2f, occupied);
             }
+            catch (InvalidOperationException)
+            {
+                continue;   // narrow floor: skip a spot rather than abort the whole build
+            }
+            occupied.Add(node);
+            CreateNavigationNode(nodeRoot.transform, "Arena Node " + (++index), node);
         }
 
-        List<Vector3> chosen = new List<Vector3>();
-        foreach (Vector3 surface in surfaces.OrderBy(point => point.x).ThenBy(point => point.y))
-            if (!chosen.Any(picked => Vector2.Distance(picked, surface) < BossArenaNodeSpacing))
-                chosen.Add(surface);
-
-        if (chosen.Count == 0)
-            throw new InvalidOperationException("The Boss arena has no walkable surface for navigation nodes.");
-        for (int i = 0; i < chosen.Count; i++)
-            CreateNavigationNode(nodeRoot.transform, "Arena Node " + (i + 1), chosen[i]);
+        // The Boss and hero spawns are valid floor points too, so seed a couple of nodes there to
+        // guarantee a usable graph even if the sampling above found few distinct spots.
+        if (index < 2)
+            throw new InvalidOperationException("The Boss arena floor is too small to place navigation nodes.");
     }
 
     private static void SetupFullMapMinimap(Bounds bounds, Transform hero, TreasureChest2D[] chests,

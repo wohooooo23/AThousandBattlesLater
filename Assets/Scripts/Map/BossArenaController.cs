@@ -5,8 +5,8 @@ using UnityEngine;
 /// it now lives inside stage1_full, so entering is a teleport plus a camera lock instead of a
 /// scene load. Every reference is scene-authored — nothing is created or searched for at runtime.
 ///
-/// Entering is one-way by design: defeating the Boss is the run's ending, so the gate never
-/// reopens and the camera never unlocks.
+/// Entering is one-way by design: defeating the Boss is the run's ending, so the camera never
+/// unlocks. The arena's own tilemap walls keep the fight contained (no separate gate).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -17,7 +17,6 @@ public sealed class BossArenaController : MonoBehaviour
     [SerializeField] private Vector2 arenaMin;
     [SerializeField] private Vector2 arenaMax;
     [SerializeField, Min(1f)] private float arenaViewSize = 28f;
-    [SerializeField] private Collider2D gate;
     [SerializeField] private GameObject bossRoot;
     [SerializeField] private BossHealthBarController bossHealthBar;
 
@@ -27,7 +26,6 @@ public sealed class BossArenaController : MonoBehaviour
     public Vector2 ArenaMin => arenaMin;
     public Vector2 ArenaMax => arenaMax;
     public float ArenaViewSize => arenaViewSize;
-    public Collider2D Gate => gate;
     public GameObject BossRoot => bossRoot;
 
     private void Awake()
@@ -35,13 +33,12 @@ public sealed class BossArenaController : MonoBehaviour
         BoxCollider2D trigger = GetComponent<BoxCollider2D>();
         if (!trigger.isTrigger)
             throw new MissingReferenceException(name + " requires a trigger BoxCollider2D.");
-        if (mapCamera == null || heroSpawnPoint == null || gate == null || bossRoot == null)
-            throw new MissingReferenceException(name + " is missing its scene-authored camera, spawn point, gate or Boss.");
+        if (mapCamera == null || heroSpawnPoint == null || bossRoot == null)
+            throw new MissingReferenceException(name + " is missing its scene-authored camera, spawn point or Boss.");
         if (arenaMax.x <= arenaMin.x || arenaMax.y <= arenaMin.y)
             throw new MissingReferenceException(name + " has empty arena bounds.");
 
-        // Authored closed state: the arena stays open and dormant until the Hero walks in.
-        gate.enabled = false;
+        // Dormant until the Hero walks in; the arena's own tilemap walls contain the fight.
         bossRoot.SetActive(false);
     }
 
@@ -65,7 +62,6 @@ public sealed class BossArenaController : MonoBehaviour
         hero.position = heroSpawnPoint.position;
         Physics2D.SyncTransforms();
 
-        gate.enabled = true;
         bossRoot.SetActive(true);
         // Must run after the teleport: LockTo snaps the camera to the Hero's current position.
         mapCamera.LockTo(arenaMin, arenaMax, arenaViewSize);
