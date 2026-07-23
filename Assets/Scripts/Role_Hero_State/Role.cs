@@ -13,6 +13,7 @@ public sealed class Role : Entity
     public Hero_walljumpState walljumpState { get; private set; }
     public Hero_dashState dashState { get; private set; }
     public Hero_basicattackState basicattackState { get; private set; }
+    public Hero_throwState throwState { get; private set; }
 
     [Header("Movement")]
     public float speed = 45f;
@@ -41,6 +42,10 @@ public sealed class Role : Entity
     [Range(0f, 1f)] public float attackMoveMultiplier = 0.7f;
     public float attackresetduration = 0.5f;
 
+    [Header("Kunai Throw")]
+    [Tooltip("Forward drift speed while the throw animation plays (scaled for the 5x hero).")]
+    public float throwmovespeed = 20f;
+
     public int maxJumpCount = 2;
     public int jumpCountRemaining;
 
@@ -48,6 +53,7 @@ public sealed class Role : Entity
     public bool JumpPressed { get; private set; }
     public bool DashPressed { get; private set; }
     public bool AttackPressed { get; private set; }
+    public bool ThrowPressed { get; private set; }
     public bool DropPressed { get; private set; }
     public bool IsDashing => stateMachine.currentState == dashState;
     public bool DashUnlocked => dashUnlocked;
@@ -61,6 +67,7 @@ public sealed class Role : Entity
     private Coroutine dropRoutine;
     private Collider2D roleCollider;
     private HeroAttackAudio attackAudio;
+    private HeroKunaiThrow kunaiThrow;
     private bool controlEnabled = true;
     private bool dashWasHeld;
 
@@ -69,6 +76,7 @@ public sealed class Role : Entity
         base.Awake();
         roleCollider = GetComponent<Collider2D>();
         attackAudio = GetComponent<HeroAttackAudio>();
+        kunaiThrow = GetComponent<HeroKunaiThrow>();
         idleState = new Hero_idleState(stateMachine, "Idle", this);
         jumpstartState = new Hero_jumpstartState(stateMachine, "Jump", this);
         jumpfallState = new Hero_jumpfallState(stateMachine, "Jump", this);
@@ -77,9 +85,13 @@ public sealed class Role : Entity
         walljumpState = new Hero_walljumpState(stateMachine, "Jump", this);
         dashState = new Hero_dashState(stateMachine, "Dash", this);
         basicattackState = new Hero_basicattackState(stateMachine, "Basic_Attack", this);
+        throwState = new Hero_throwState(stateMachine, "Throw", this);
         dashduration = dashAnimation != null ? Mathf.Max(0.08f, dashAnimation.length) : 0.16f;
         ResetJumpCount();
     }
+
+    /// <summary>True when a kunai throw is possible (component present and a Kunai is in the bag).</summary>
+    public bool CanThrowKunai() => kunaiThrow != null && kunaiThrow.HasKunai();
 
     protected override void Start()
     {
@@ -111,7 +123,7 @@ public sealed class Role : Entity
         if (keyboard == null)
         {
             HorizontalInput = 0f;
-            JumpPressed = DashPressed = AttackPressed = DropPressed = false;
+            JumpPressed = DashPressed = AttackPressed = ThrowPressed = DropPressed = false;
             return;
         }
         HorizontalInput = (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed ? 1f : 0f) -
@@ -121,6 +133,7 @@ public sealed class Role : Entity
         DashPressed = dashHeld && !dashWasHeld;
         dashWasHeld = dashHeld;
         AttackPressed = keyboard.jKey.wasPressedThisFrame;
+        ThrowPressed = keyboard.iKey.wasPressedThisFrame;
         DropPressed = keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed;
     }
 

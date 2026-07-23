@@ -37,7 +37,12 @@ public class Hero_groundState:RoleState
         {
             stateMachine.Change(role.basicattackState);
         }
+        // I throws a kunai — only when one is in the bag, so an empty bag simply does nothing.
+        if (role.ThrowPressed && role.CanThrowKunai())
+        {
+            stateMachine.Change(role.throwState);
+        }
 
-        
+
     }
 }

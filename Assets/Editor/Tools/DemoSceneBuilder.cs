@@ -45,6 +45,8 @@ public static class DemoSceneBuilder
         "Assets/Audio/SFX/HeroSwordSlash02.wav",
         "Assets/Audio/SFX/HeroSwordSlash03.wav"
     };
+    private const string HeroKunaiProjectilePath = "Assets/Prefab/HeroKunaiProjectile.prefab";
+    private const string KunaiIconPath = "Assets/Resources/Sprites/icons/kunai.png";
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
     private const string FlyingEyePrefabPath = "Assets/Enemy/Mobs/FlyingEye/Mob_FlyingEye.prefab";
     private const string FlyingEyeProjectilePrefabPath = "Assets/Enemy/Mobs/FlyingEye/FlyingEyeProjectile.prefab";
@@ -2214,6 +2216,14 @@ public static class DemoSceneBuilder
             }
             SetSerializedObjectArray(attackAudio, "clips", slashClips);
 
+            // Kunai ranged attack (I key). Reuses the faction-aware FlyingEyeProjectile2D — launched
+            // by the hero it hits enemies. Consumes the stackable Kunai inventory item.
+            HeroKunaiThrow kunaiThrow = GetOrAdd<HeroKunaiThrow>(heroRoot);
+            SerializedObject kunaiData = new SerializedObject(kunaiThrow);
+            kunaiData.FindProperty("kunaiItem").objectReferenceValue = KunaiInventoryBuilder.EnsureAssets();
+            kunaiData.FindProperty("projectilePrefab").objectReferenceValue = EnsureHeroKunaiProjectile();
+            kunaiData.ApplyModifiedPropertiesWithoutUndo();
+
             PrefabUtility.SaveAsPrefabAsset(heroRoot, HeroPrefabPath);
         }
         finally
@@ -2579,6 +2589,35 @@ public static class DemoSceneBuilder
         };
         for (int i = 0; i < positions.Length; i++)
             CreateConfiguredOrc(root.transform, i == 0 ? "Orc" : "Orc 2", positions[i]);
+    }
+
+    /// <summary>Creates (or refreshes) the hero's thrown-kunai projectile prefab, reusing the shared
+    /// faction-aware FlyingEyeProjectile2D so it damages enemies when the hero launches it.</summary>
+    private static GameObject EnsureHeroKunaiProjectile()
+    {
+        Sprite kunaiSprite = AssetDatabase.LoadAssetAtPath<Sprite>(KunaiIconPath);
+        GameObject root = new GameObject("HeroKunaiProjectile", typeof(SpriteRenderer),
+            typeof(Rigidbody2D), typeof(CircleCollider2D), typeof(FlyingEyeProjectile2D));
+        try
+        {
+            root.transform.localScale = Vector3.one * 1.5f;
+            SpriteRenderer renderer = root.GetComponent<SpriteRenderer>();
+            if (kunaiSprite != null)
+                renderer.sprite = kunaiSprite;
+            renderer.sortingOrder = 30;
+            Rigidbody2D body = root.GetComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            CircleCollider2D collider = root.GetComponent<CircleCollider2D>();
+            collider.isTrigger = true;
+            collider.radius = 0.4f;
+            return PrefabUtility.SaveAsPrefabAsset(root, HeroKunaiProjectilePath);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     private static void EnsureFlyingEyeCombatPrefab()

@@ -19,6 +19,11 @@ public class Hero_jumpState:RoleState
         float Input_rot = role.HorizontalInput;
         role.Change_Vec(Input_rot*role.speed*role.jumpspeeddec,role.rb.linearVelocity.y);
 
+        // Air throw: same kunai attack as on the ground (covers jump + jumpfall via inheritance).
+        if (role.ThrowPressed && role.CanThrowKunai())
+        {
+            stateMachine.Change(role.throwState);
+        }
     }
 
 
