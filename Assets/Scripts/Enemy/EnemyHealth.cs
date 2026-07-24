@@ -49,6 +49,9 @@ public sealed class EnemyHealth : CombatHealth
     protected override void OnDefeated(Transform source)
     {
         GameManager.MarkMatchOver();
+        // Beating the Boss ends the run, so the next one replays the whole story. Clearing it here
+        // rather than on the victory screen's R keeps nothing behind if the player just quits.
+        StoryProgress.Reset();
         stateMachine?.NotifyDead();
         if (storyController == null || !storyController.PlayBossVictory())
             victoryOverlay.SetActive(true);

@@ -15,6 +15,10 @@ public sealed class StoryEncounterTrigger2D : MonoBehaviour
         BoxCollider2D trigger = GetComponent<BoxCollider2D>();
         if (!trigger.isTrigger || storyController == null)
             throw new MissingReferenceException("Story encounter requires a trigger collider and scene-authored story controller.");
+
+        // The encounter survives dying and reloading, so a replay would only ever be refused.
+        if (StoryProgress.IsPassed(StoryBeat.FirstEncounter))
+            trigger.enabled = false;
     }
 
     private void OnTriggerEnter2D(Collider2D other)

@@ -106,7 +106,8 @@ public sealed class StoryDialogueController : MonoBehaviour
 
     public bool PlayFirstEncounter()
     {
-        if (sceneMode != StorySceneMode.Exploration || encounterPlayed)
+        if (sceneMode != StorySceneMode.Exploration || encounterPlayed ||
+            StoryProgress.IsPassed(StoryBeat.FirstEncounter))
             return false;
         encounterPlayed = true;
         StartCoroutine(PlayEncounterSequence());
@@ -115,24 +116,32 @@ public sealed class StoryDialogueController : MonoBehaviour
 
     public void ShowAbilityTutorial(AbilityUnlockKind ability)
     {
-        string prompt = ability == AbilityUnlockKind.DoubleJump ? doubleJumpPrompt : dashPrompt;
+        bool doubleJump = ability == AbilityUnlockKind.DoubleJump;
+        ShowTutorialOnce(doubleJump ? StoryBeat.DoubleJumpTutorial : StoryBeat.DashTutorial,
+            doubleJump ? doubleJumpPrompt : dashPrompt);
+    }
+
+    public void ShowDashTutorial()
+    {
+        ShowTutorialOnce(StoryBeat.DashTutorial, dashPrompt);
+    }
+
+    /// <summary>Shows a controls prompt the first time its ability is unlocked, and never again.</summary>
+    private void ShowTutorialOnce(StoryBeat beat, string prompt)
+    {
+        if (StoryProgress.IsPassed(beat))
+            return;
+        StoryProgress.MarkPassed(beat);
         if (tutorialRoutine != null)
             StopCoroutine(tutorialRoutine);
         tutorialRoutine = StartCoroutine(ShowTutorialWhenReady(prompt, 4.5f));
     }
 
-    public void ShowDashTutorial()
-    {
-        if (tutorialRoutine != null)
-            StopCoroutine(tutorialRoutine);
-        tutorialRoutine = StartCoroutine(ShowTutorialWhenReady(dashPrompt, 4.5f));
-    }
-
     /// <summary>Starts the in-map Boss introduction once when the arena entrance is crossed.</summary>
     public bool PlayBossIntroduction()
     {
-        if (bossIntroductionPlayed || bossBubble == null || bossIntroductionLines == null ||
-            bossIntroductionLines.Length == 0)
+        if (bossIntroductionPlayed || StoryProgress.IsPassed(StoryBeat.BossIntroduction) ||
+            bossBubble == null || bossIntroductionLines == null || bossIntroductionLines.Length == 0)
             return false;
         bossIntroductionPlayed = true;
         // Automated combat tests enter the real arena and must remain frame-driven.
@@ -160,12 +169,22 @@ public sealed class StoryDialogueController : MonoBehaviour
 
     private IEnumerator PlayOpeningSequence()
     {
+        // Awake starts Exploration fully blacked out and this sequence is the only thing that lifts
+        // the overlay, so a skipped opening still has to clear it or the map stays black.
+        if (StoryProgress.IsPassed(StoryBeat.Opening))
+        {
+            if (fadeOverlay != null)
+                fadeOverlay.alpha = 0f;
+            yield break;
+        }
+
         isPlaying = true;
         AcquirePause();
         yield return FadeFromBlack(1.35f);
         yield return PlayLines(openingLines);
         ReleasePause();
         isPlaying = false;
+        StoryProgress.MarkPassed(StoryBeat.Opening);
         heroBubble.Show(movementPrompt, 4.5f);
     }
 
@@ -178,6 +197,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         yield return PlayLines(firstEncounterLines);
         ReleasePause();
         isPlaying = false;
+        StoryProgress.MarkPassed(StoryBeat.FirstEncounter);
         heroBubble.Show(combatPrompt, 6f);
     }
 
@@ -192,6 +212,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         bossBubble.Hide();
         ReleasePause();
         isPlaying = false;
+        StoryProgress.MarkPassed(StoryBeat.BossIntroduction);
     }
 
     private IEnumerator PlayBossVictorySequence()
