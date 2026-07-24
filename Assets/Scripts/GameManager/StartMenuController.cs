@@ -34,6 +34,8 @@ public sealed class StartMenuController : MonoBehaviour
     public Button SettingButton => settingButton;
     public GameObject SettingsPanel => settingsPanel;
     public Button ClearProgressButton => clearProgressButton;
+    public Button CreditButton => creditButton;
+    public GameObject CreditsPanel => creditsPanel;
 
     private void Awake()
     {

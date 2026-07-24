@@ -7,7 +7,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Adds the SETTING entry and the language panel to the existing start menu.
+/// Authors the parts of the start menu the hand-made scene does not have: the SETTING and CREDIT
+/// corner entries, the settings panel and the credits panel.
 ///
 /// Deliberately additive: DemoSceneBuilder.BuildStartMenuScene rebuilds the menu from an empty
 /// scene, which would delete the hand-authored HELP button the current StartMenu relies on (and
@@ -19,10 +20,43 @@ using UnityEngine.UI;
 public static class StartMenuSettingsBuilder
 {
     private const string ScenePath = "Assets/Scenes/StartMenu.unity";
-    private static readonly Vector2 SettingButtonPosition = new Vector2(0f, -235f);
     private static readonly Vector2 MenuButtonSize = new Vector2(410f, 100f);
 
-    [MenuItem("Tools/Localization/Add Settings To Start Menu")]
+    // Anchored into opposite bottom corners rather than offset from the centre, so the pair stays
+    // pinned to the corners at any aspect ratio. 60 in from the side, 40 up from the bottom.
+    private static readonly Vector2 BottomLeftAnchor = new Vector2(0f, 0f);
+    private static readonly Vector2 BottomRightAnchor = new Vector2(1f, 0f);
+    private static readonly Vector2 SettingButtonPosition = new Vector2(265f, 90f);
+    private static readonly Vector2 CreditButtonPosition = new Vector2(-265f, 90f);
+    private static readonly Vector2 CentreAnchor = new Vector2(0.5f, 0.5f);
+
+    /// <summary>
+    /// The asset credits, also used by DemoSceneBuilder so the two authoring paths cannot drift.
+    /// This exact text is the translation key in LocalizationTable — Validate checks it resolves.
+    /// </summary>
+    public const string CreditsBody =
+        "Health Bar & Backpack UI\n" +
+        "https://byandrox.itch.io/pixel-art-rpg-gui\n" +
+        "\n" +
+        "Map Tileset\n" +
+        "https://brullov.itch.io/2d-platformer-asset-pack-castle-of-despair\n" +
+        "\n" +
+        "Flying Enemy\n" +
+        "https://assetstore.unity.com/packages/2d/characters/monsters-creatures-fantasy-167949\n" +
+        "\n" +
+        "Boss\n" +
+        "https://assetstore.unity.com/packages/2d/characters/evil-wizard-2-284501\n" +
+        "\n" +
+        "Forge, Coins, Kunai, Cover Art\n" +
+        "https://gemini.google.com/\n" +
+        "\n" +
+        "Player Character\n" +
+        "https://xzany.itch.io/samurai-2d-pixel-art\n" +
+        "\n" +
+        "Ground Enemies\n" +
+        "https://zerie.itch.io/tiny-rpg-character-asset-pack";
+
+    [MenuItem("Tools/Start Menu/Build Settings And Credits")]
     public static void Build()
     {
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -33,10 +67,13 @@ public static class StartMenuSettingsBuilder
         Transform menuRoot = controller.transform;
 
         Button settingButton = EnsureMenuButton(menuRoot, "Setting Button", "Setting Label", "SETTING",
-            34, SettingButtonPosition);
+            34, SettingButtonPosition, BottomLeftAnchor);
+        Button creditButton = EnsureMenuButton(menuRoot, "Credit Button", "Credit Label", "CREDIT",
+            34, CreditButtonPosition, BottomRightAnchor);
 
         GameObject panel = EnsureSettingsPanel(menuRoot, out Button chinese, out Button english,
             out Button back, out Button clearProgress);
+        GameObject credits = EnsureCreditsPanel(menuRoot, out Button creditsBack);
 
         SerializedObject data = new SerializedObject(controller);
         data.FindProperty("settingButton").objectReferenceValue = settingButton;
@@ -45,34 +82,53 @@ public static class StartMenuSettingsBuilder
         data.FindProperty("chineseButton").objectReferenceValue = chinese;
         data.FindProperty("englishButton").objectReferenceValue = english;
         data.FindProperty("clearProgressButton").objectReferenceValue = clearProgress;
+        data.FindProperty("creditButton").objectReferenceValue = creditButton;
+        data.FindProperty("creditsPanel").objectReferenceValue = credits;
+        data.FindProperty("creditsBackButton").objectReferenceValue = creditsBack;
         data.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(controller);
 
         panel.SetActive(false);
+        credits.SetActive(false);
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath))
             throw new InvalidOperationException("Failed to save " + ScenePath);
         AssetDatabase.SaveAssets();
-        Debug.Log("START_MENU_SETTINGS_OK: SETTING entry and language panel added; existing menu preserved.");
+        Debug.Log("START_MENU_OK: corner SETTING/CREDIT entries, settings panel and credits panel authored; existing menu preserved.");
     }
 
-    [MenuItem("Tools/Localization/Validate Start Menu Settings")]
+    [MenuItem("Tools/Start Menu/Validate Start Menu")]
     public static void Validate()
     {
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         StartMenuController controller = UnityEngine.Object.FindFirstObjectByType<StartMenuController>(FindObjectsInactive.Include);
         if (controller == null || controller.SettingButton == null || controller.SettingsPanel == null)
-            throw new InvalidOperationException(ScenePath + " is missing the SETTING entry or language panel.");
+            throw new InvalidOperationException(ScenePath + " is missing the SETTING entry or settings panel.");
         if (controller.SettingsPanel.activeSelf)
-            throw new InvalidOperationException("The language panel must start hidden.");
+            throw new InvalidOperationException("The settings panel must start hidden.");
         Transform panel = controller.SettingsPanel.transform;
         if (panel.Find("Chinese Button") == null || panel.Find("English Button") == null ||
-            panel.Find("Settings Back Button") == null || panel.Find("Clear Progress Button") == null)
+            panel.Find("Settings Back Button") == null || panel.Find("Clear Progress Button") == null ||
+            panel.Find("Language Heading") == null)
             throw new InvalidOperationException(
-                "The settings panel needs Chinese, English, Clear Progress and Back buttons.");
+                "The settings panel needs its language heading plus Chinese, English, Clear Progress and Back buttons.");
         if (controller.ClearProgressButton == null)
             throw new InvalidOperationException("StartMenuController is missing its Clear Progress button.");
-        Debug.Log("START_MENU_SETTINGS_VALIDATE_OK.");
+
+        if (controller.CreditsPanel == null || controller.CreditButton == null)
+            throw new InvalidOperationException(ScenePath + " is missing the CREDIT entry or credits panel.");
+        if (controller.CreditsPanel.activeSelf)
+            throw new InvalidOperationException("The credits panel must start hidden.");
+        Transform creditsBody = controller.CreditsPanel.transform.Find("Credits Body");
+        if (creditsBody == null || creditsBody.GetComponent<Text>().text != CreditsBody)
+            throw new InvalidOperationException("The credits body does not match the authored text.");
+
+        // The credits body doubles as a translation key, so a reworded block would silently show
+        // English in Chinese. Catch that here instead of in the finished build.
+        if (!LocalizationTable.TryGetChinese(CreditsBody, out _))
+            throw new InvalidOperationException("LocalizationTable has no Chinese entry for the credits body.");
+
+        Debug.Log("START_MENU_VALIDATE_OK.");
     }
 
     private static GameObject EnsureSettingsPanel(Transform menuRoot, out Button chinese, out Button english,
@@ -84,9 +140,12 @@ public static class StartMenuSettingsBuilder
             : CreateBlock(menuRoot, "Settings Panel", Vector2.zero, new Vector2(1200f, 680f),
                 new Color(0.04f, 0.05f, 0.09f, 0.98f));
 
-        if (panel.transform.Find("Settings Title") == null)
-            CreateLabel(panel.transform, "Settings Title", "LANGUAGE", 52, new Vector2(0f, 250f),
-                new Vector2(900f, 80f), Color.white, FontStyle.Bold);
+        // The panel covers more than language now, so it is titled SETTING and the language pair
+        // gets its own small heading underneath.
+        EnsureLabel(panel.transform, "Settings Title", "SETTING", 52, new Vector2(0f, 250f),
+            new Vector2(900f, 80f), Color.white, FontStyle.Bold);
+        EnsureLabel(panel.transform, "Language Heading", "LANGUAGE", 28, new Vector2(0f, 170f),
+            new Vector2(400f, 44f), new Color(0.72f, 0.74f, 0.80f, 1f), FontStyle.Normal);
 
         chinese = EnsureMenuButton(panel.transform, "Chinese Button", "Chinese Label", "中文", 34,
             new Vector2(0f, 80f));
@@ -101,21 +160,43 @@ public static class StartMenuSettingsBuilder
         return panel;
     }
 
-    /// <summary>Creates a white menu button with a black bold label, matching the authored Start/Help pair.</summary>
+    private static GameObject EnsureCreditsPanel(Transform menuRoot, out Button back)
+    {
+        Transform existing = menuRoot.Find("Credits Panel");
+        GameObject panel = existing != null
+            ? existing.gameObject
+            : CreateBlock(menuRoot, "Credits Panel", Vector2.zero, new Vector2(1500f, 820f),
+                new Color(0.04f, 0.05f, 0.09f, 0.98f));
+
+        EnsureLabel(panel.transform, "Credits Title", "CREDITS", 52, new Vector2(0f, 330f),
+            new Vector2(1100f, 80f), Color.white, FontStyle.Bold);
+        EnsureLabel(panel.transform, "Credits Body", CreditsBody, 22, new Vector2(0f, -10f),
+            new Vector2(1380f, 580f), Color.white, FontStyle.Normal);
+
+        back = EnsureMenuButton(panel.transform, "Credits Back Button", "Credits Back Label", "BACK", 30,
+            new Vector2(0f, -348f));
+        return panel;
+    }
+
+    /// <summary>
+    /// Creates a white menu button with a black bold label, matching the authored Start/Help pair.
+    /// The rect is re-applied every run, so an entry that already exists is moved to its current
+    /// authored position rather than left where an older layout put it.
+    /// </summary>
     private static Button EnsureMenuButton(Transform parent, string name, string labelName, string label,
-        int fontSize, Vector2 position)
+        int fontSize, Vector2 position, Vector2? anchor = null)
     {
         Transform existing = parent.Find(name);
         if (existing != null)
+        {
+            ApplyRect(existing.GetComponent<RectTransform>(), position, MenuButtonSize, anchor ?? CentreAnchor);
             return existing.GetComponent<Button>();
+        }
 
         GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer),
             typeof(Image), typeof(Button));
         buttonObject.transform.SetParent(parent, false);
-        RectTransform rect = buttonObject.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = MenuButtonSize;
-        rect.anchoredPosition = position;
+        ApplyRect(buttonObject.GetComponent<RectTransform>(), position, MenuButtonSize, anchor ?? CentreAnchor);
 
         Image image = buttonObject.GetComponent<Image>();
         image.color = Color.white;
@@ -143,20 +224,50 @@ public static class StartMenuSettingsBuilder
         return block;
     }
 
+    private static void ApplyRect(RectTransform rect, Vector2 position, Vector2 size, Vector2 anchor)
+    {
+        rect.anchorMin = rect.anchorMax = anchor;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = size;
+        rect.anchoredPosition = position;
+    }
+
+    /// <summary>
+    /// Creates a label, or rewrites an existing one. The text is rewritten every run because it
+    /// doubles as the translation key — a label left saying an older wording would quietly fall back
+    /// to English in Chinese.
+    /// </summary>
+    private static void EnsureLabel(Transform parent, string name, string content, int fontSize,
+        Vector2 position, Vector2 size, Color color, FontStyle style)
+    {
+        Transform existing = parent.Find(name);
+        if (existing == null)
+        {
+            CreateLabel(parent, name, content, fontSize, position, size, color, style);
+            return;
+        }
+        ApplyRect(existing.GetComponent<RectTransform>(), position, size, CentreAnchor);
+        Text label = existing.GetComponent<Text>();
+        label.text = content;
+        label.fontSize = fontSize;
+        label.color = color;
+        label.fontStyle = style;
+        EditorUtility.SetDirty(label);
+    }
+
     private static void CreateLabel(Transform parent, string name, string content, int fontSize,
         Vector2 position, Vector2 size, Color color, FontStyle style)
     {
         GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
         textObject.transform.SetParent(parent, false);
-        RectTransform rect = textObject.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = size;
-        rect.anchoredPosition = position;
+        ApplyRect(textObject.GetComponent<RectTransform>(), position, size, CentreAnchor);
         Text text = textObject.GetComponent<Text>();
         text.font = UiFont.Regular;   // Noto Sans SC — covers the Chinese label too
         text.fontSize = fontSize;
         text.fontStyle = style;
         text.alignment = TextAnchor.MiddleCenter;
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;   // keep the credit URLs on one line
+        text.verticalOverflow = VerticalWrapMode.Overflow;       // never clip the last credit line
         text.color = color;
         text.text = content;
     }

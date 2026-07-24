@@ -322,21 +322,25 @@ public static class DemoSceneBuilder
 
         Button button = CreateMenuButton(canvasObject.transform, "Start Button", "Start Label", "START", 42,
             new Vector2(0f, -115f), new Vector2(410f, 100f));
+        // CREDIT sits in the bottom-right corner, mirroring SETTING in the bottom-left. Kept in step
+        // with StartMenuSettingsBuilder, which authors the same pair into the hand-made menu.
         Button creditButton = CreateMenuButton(canvasObject.transform, "Credit Button", "Credit Label", "CREDIT", 34,
-            new Vector2(0f, -238f), new Vector2(410f, 84f));
+            new Vector2(-265f, 90f), new Vector2(410f, 100f));
+        RectTransform creditRect = creditButton.GetComponent<RectTransform>();
+        creditRect.anchorMin = creditRect.anchorMax = new Vector2(1f, 0f);
+        creditRect.anchoredPosition = new Vector2(-265f, 90f);
         Button exitButton = CreateMenuButton(canvasObject.transform, "Exit Button", "Exit Label", "EXIT", 34,
-            new Vector2(0f, -338f), new Vector2(410f, 84f));
+            new Vector2(0f, -238f), new Vector2(410f, 84f));
 
-        // Credits overlay: framed and titled, but the body is intentionally left blank for now so the
-        // reference/asset credits can be filled in later.
         GameObject creditsPanel = CreateMenuBlock(canvasObject.transform, "Credits Panel", Vector2.zero,
-            new Vector2(1200f, 680f), new Color(0.04f, 0.05f, 0.09f, 0.98f));
-        CreateMenuText(creditsPanel.transform, "Credits Title", "CREDITS", 52, new Vector2(0f, 250f),
-            new Vector2(900f, 80f), Color.white, FontStyle.Bold);
-        CreateMenuText(creditsPanel.transform, "Credits Body", string.Empty, 28, new Vector2(0f, 20f),
-            new Vector2(1000f, 380f), Color.white, FontStyle.Normal);
+            new Vector2(1500f, 820f), new Color(0.04f, 0.05f, 0.09f, 0.98f));
+        CreateMenuText(creditsPanel.transform, "Credits Title", "CREDITS", 52, new Vector2(0f, 330f),
+            new Vector2(1100f, 80f), Color.white, FontStyle.Bold);
+        // Shared with the additive builder so the asset credits cannot drift between the two paths.
+        CreateMenuText(creditsPanel.transform, "Credits Body", StartMenuSettingsBuilder.CreditsBody, 22,
+            new Vector2(0f, -10f), new Vector2(1380f, 580f), Color.white, FontStyle.Normal);
         Button creditsBackButton = CreateMenuButton(creditsPanel.transform, "Credits Back Button",
-            "Credits Back Label", "BACK", 30, new Vector2(0f, -258f), new Vector2(300f, 74f));
+            "Credits Back Label", "BACK", 30, new Vector2(0f, -348f), new Vector2(300f, 74f));
         creditsPanel.SetActive(false);
 
         StartMenuController controller = canvasObject.AddComponent<StartMenuController>();

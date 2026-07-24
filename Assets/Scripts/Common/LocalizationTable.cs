@@ -168,6 +168,52 @@ public static class LocalizationTable
             "用于演示背包堆叠与整理的简单材料。"
         },
 
+        // ---------- Credits ----------
+        // The URLs are identical in both languages; only the asset headings are translated.
+        {
+            "Health Bar & Backpack UI\n" +
+            "https://byandrox.itch.io/pixel-art-rpg-gui\n" +
+            "\n" +
+            "Map Tileset\n" +
+            "https://brullov.itch.io/2d-platformer-asset-pack-castle-of-despair\n" +
+            "\n" +
+            "Flying Enemy\n" +
+            "https://assetstore.unity.com/packages/2d/characters/monsters-creatures-fantasy-167949\n" +
+            "\n" +
+            "Boss\n" +
+            "https://assetstore.unity.com/packages/2d/characters/evil-wizard-2-284501\n" +
+            "\n" +
+            "Forge, Coins, Kunai, Cover Art\n" +
+            "https://gemini.google.com/\n" +
+            "\n" +
+            "Player Character\n" +
+            "https://xzany.itch.io/samurai-2d-pixel-art\n" +
+            "\n" +
+            "Ground Enemies\n" +
+            "https://zerie.itch.io/tiny-rpg-character-asset-pack",
+
+            "血条与背包界面\n" +
+            "https://byandrox.itch.io/pixel-art-rpg-gui\n" +
+            "\n" +
+            "地图图块\n" +
+            "https://brullov.itch.io/2d-platformer-asset-pack-castle-of-despair\n" +
+            "\n" +
+            "飞行怪\n" +
+            "https://assetstore.unity.com/packages/2d/characters/monsters-creatures-fantasy-167949\n" +
+            "\n" +
+            "Boss\n" +
+            "https://assetstore.unity.com/packages/2d/characters/evil-wizard-2-284501\n" +
+            "\n" +
+            "锻造台、金币、飞镖、封面\n" +
+            "https://gemini.google.com/\n" +
+            "\n" +
+            "主角\n" +
+            "https://xzany.itch.io/samurai-2d-pixel-art\n" +
+            "\n" +
+            "地面怪物\n" +
+            "https://zerie.itch.io/tiny-rpg-character-asset-pack"
+        },
+
         // ---------- Help page ----------
         { "CONTROLS", "操作说明" },
         {
