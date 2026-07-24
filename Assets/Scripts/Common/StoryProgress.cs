@@ -9,7 +9,12 @@ public enum StoryBeat
     FirstEncounter,
     BossIntroduction,
     DoubleJumpTutorial,
-    DashTutorial
+    DashTutorial,
+    /// <summary>How to open a chest, shown once at each of the two lower chests.</summary>
+    ChestHintDoubleJump,
+    ChestHintDash,
+    /// <summary>Backpack and forge keys, folded into whichever ability prompt fires first.</summary>
+    EquipmentTutorial
 }
 
 /// <summary>

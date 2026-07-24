@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 
 /// <summary>
 /// English source string -> Simplified Chinese. The English text authored by the scene builders is
@@ -10,7 +11,55 @@ using System.Collections.Generic;
 public static class LocalizationTable
 {
     public static bool TryGetChinese(string english, out string chinese)
-        => Chinese.TryGetValue(english, out chinese);
+    {
+        if (Chinese.TryGetValue(english, out chinese))
+            return true;
+
+        // Long blocks baked into a scene come back from YAML with their line breaks folded and any
+        // column-aligning spaces before a break stripped, so the runtime string is not character
+        // for character what was authored here. Matching on collapsed whitespace lets a multi-line
+        // key (the help page's control list) be written readably without tracking how Unity wrapped
+        // it. Short labels always hit the exact lookup above, so this only runs for the long ones.
+        return FoldedIndex.TryGetValue(Fold(english), out chinese);
+    }
+
+    private static string Fold(string value)
+    {
+        StringBuilder folded = new StringBuilder(value.Length);
+        bool pendingSpace = false;
+        foreach (char character in value)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                pendingSpace = folded.Length > 0;
+                continue;
+            }
+            if (pendingSpace)
+            {
+                folded.Append(' ');
+                pendingSpace = false;
+            }
+            folded.Append(character);
+        }
+        return folded.ToString();
+    }
+
+    private static Dictionary<string, string> folded;
+
+    // Built on first use rather than in a field initialiser, which would run before the table below
+    // it has been assigned.
+    private static Dictionary<string, string> FoldedIndex
+    {
+        get
+        {
+            if (folded != null)
+                return folded;
+            folded = new Dictionary<string, string>();
+            foreach (KeyValuePair<string, string> entry in Chinese)
+                folded[Fold(entry.Key)] = entry.Value;
+            return folded;
+        }
+    }
 
     private static readonly Dictionary<string, string> Chinese = new Dictionary<string, string>
     {
@@ -44,7 +93,9 @@ public static class LocalizationTable
 
         // ---------- Guidance prompts ----------
         { "WASD / Arrow Keys — Move", "WASD / 方向键 —— 移动" },
-        { "Press J to attack. Find treasure chests and press F to open them.", "按 J 攻击。找到宝箱后按 F 开启。" },
+        { "Press J to attack. Press I to throw a kunai.", "按 J 攻击。按 I 投掷苦无。" },
+        { "Press F to open treasure chests.", "按 F 开启宝箱。" },
+        { "Press B to open the backpack, N to open the forge.", "按 B 打开背包，按 N 打开锻造。" },
         { "Press Space in midair to double-jump.", "在空中按空格进行二段跳。" },
         { "Press Shift while moving to dash.", "移动时按 Shift 冲刺。" },
 
@@ -78,7 +129,93 @@ public static class LocalizationTable
         { "[E] Use    [Q] Cancel", "[E] 使用    [Q] 取消" },
         { "[Q] Close", "[Q] 关闭" },
 
+        // ---------- Item names ----------
+        { "Claymore Sword", "巨剑" },
+        { "Plate Shield", "板甲盾" },
+        { "Crimson Gem", "绯红宝石" },
+        { "Health Potion", "治疗药水" },
+        { "Kunai", "苦无" },
+        { "Gold Coin", "金币" },
+        { "Demo Cube", "示例方块" },
+
+        // ---------- Item descriptions ----------
+        {
+            "A heavy two-handed sword. Equip it to replace the hero's unarmed attack power.",
+            "一柄沉重的双手大剑。装备后取代主角赤手空拳的攻击力。"
+        },
+        {
+            "A sturdy plate shield that reduces the damage received from every enemy hit.",
+            "一面坚固的板甲盾，可减少每次受到的敌人伤害。"
+        },
+        {
+            "A crimson gem prepared for future accessory effects. It can already be equipped and forged.",
+            "一枚为日后的饰品效果备下的绯红宝石。目前已可装备与锻造。"
+        },
+        {
+            "A single-use red potion. Select it in the backpack and press E to restore HP to full.",
+            "一次性的红色药水。在背包中选中并按 E 可将生命值恢复至满。"
+        },
+        {
+            "Stackable throwing ammunition. Ranged attacks will consume one kunai per shot.",
+            "可堆叠的投掷弹药。每次远程攻击消耗一枚苦无。"
+        },
+        {
+            "Currency collected from defeated enemies and spent at the forge.",
+            "从击败的敌人身上获得的货币，可在锻造处消费。"
+        },
+        {
+            "A simple material used to demonstrate inventory stacking and rearrangement.",
+            "用于演示背包堆叠与整理的简单材料。"
+        },
+
+        // ---------- Help page ----------
+        { "CONTROLS", "操作说明" },
+        {
+            "A                         Move Left\n" +
+            "D                         Move Right\n" +
+            "SPACE / W                 Jump\n" +
+            "B                         Open Backpack\n" +
+            "N                         Open Forge\n" +
+            "ENTER                     Advance Dialogue\n" +
+            "I                         Throw Kunai\n" +
+            "\n" +
+            "BACKPACK EQUIPMENT\n" +
+            "Slot 1: Sword    Slot 2: Shield    Slot 3: Red Rune\n" +
+            "\n" +
+            "FORGING\n" +
+            "Select equipment on the left, then press the centre Forge button.\n" +
+            "Only swords and shields can currently be forged.\n" +
+            "A failed attempt lowers the equipment's upgrade level.",
+
+            "A                        向左移动\n" +
+            "D                        向右移动\n" +
+            "空格 / W                 跳跃\n" +
+            "B                        打开背包\n" +
+            "N                        打开锻造\n" +
+            "回车                     推进对话\n" +
+            "I                        投掷苦无\n" +
+            "\n" +
+            "背包装备栏\n" +
+            "槽位 1：武器    槽位 2：护盾    槽位 3：红色符文\n" +
+            "\n" +
+            "锻造\n" +
+            "在左侧选择装备，然后按下中间的锻造按钮。\n" +
+            "目前只有剑与盾可以锻造。\n" +
+            "锻造失败会降低装备的强化等级。"
+        },
+
         // ---------- Forge ----------
+        { "EQUIPMENT", "装备" },
+        { "WEAPON", "武器" },
+        { "ARMOR", "护甲" },
+        { "ACCESSORY", "饰品" },
+        { "ANCIENT FORGE", "远古锻炉" },
+        { "STATS", "属性" },
+        { "STAT BOOST", "属性提升" },
+        { "SUCCESS RATE", "成功率" },
+        { "GOLD REQUIRED", "所需金币" },
+        { "Empty", "空" },
+        { "MAXED", "已满级" },
         { "SELECT EQUIPMENT FIRST", "请先选择装备" },
         { "ALREADY MAXED!", "已达最高等级！" },
         { "NOT ENOUGH GOLD!", "金币不足！" },

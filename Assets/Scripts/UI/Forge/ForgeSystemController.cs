@@ -91,7 +91,9 @@ public class ForgeSystemController : MonoBehaviour
             iconImage.enabled = item != null && item.icon != null;
         }
         if (label != null)
-            label.text = item != null ? item.itemName + "+" + mEquipLevels[index] : "Empty";
+            label.text = item != null
+                ? Localization.Translate(item.itemName) + "+" + mEquipLevels[index]
+                : Localization.Translate("Empty");
     }
 
     /// <summary>Pull the persisted weapon/armor levels back into the panel (they survive scene loads).</summary>
@@ -211,6 +213,18 @@ public class ForgeSystemController : MonoBehaviour
     // （由 Editor Builder 自动绑定到 Button.onClick）
     // ============================================================
 
+    /// <summary>What the hero is wearing in a panel slot. 0=武器 1=防具 2=饰品; null means empty.</summary>
+    private static ItemData EquippedInSlot(int slotIndex)
+    {
+        switch (slotIndex)
+        {
+            case 0: return RunEquipment.Weapon;
+            case 1: return RunEquipment.Armor;
+            case 2: return RunEquipment.Rune;
+            default: return null;
+        }
+    }
+
     /// <summary>
     /// 点击左面板装备槽。slotIndex: 0=武器 1=防具 2=饰品
     /// </summary>
@@ -233,9 +247,9 @@ public class ForgeSystemController : MonoBehaviour
                     name = (accessoryName != null) ? accessoryName.text : ""; break;
         }
 
-        // The generated prototype uses coloured Image blocks and may not have a Sprite.
-        // A valid equipment name, rather than a Sprite reference, is the selection marker.
-        if (string.IsNullOrEmpty(name) || name == "Empty") return;
+        // Emptiness is read from the gear itself, not from the label: the slots mirror RunEquipment,
+        // and comparing against the word "Empty" would stop working the moment it is translated.
+        if (EquippedInSlot(slotIndex) == null) return;
 
         mForgeSprite = sprite;
         mForgeName = name;
@@ -500,7 +514,7 @@ public class ForgeSystemController : MonoBehaviour
 
         if (mForgeLevel >= 5)
         {
-            successRateText.text = "MAXED";
+            successRateText.text = Localization.Translate("MAXED");
             successRateText.color = Color.yellow;
             costGoldText.text = "-- G";
             costGoldText.color = Color.gray;

@@ -223,13 +223,13 @@ public sealed class ItemDetailPanel : MonoBehaviour
         if (item == null)
             return;
 
-        titleText.text = string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName;
+        titleText.text = Localization.Translate(
+            string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName);
         typeText.text = TypeLabel(item.type);
         statsText.text = BuildStats(item);
         // Rewritten on every open, so translate here rather than through LocalizedText.
-        descriptionText.text = string.IsNullOrWhiteSpace(item.description)
-            ? Localization.Translate("No description available.")
-            : item.description;
+        descriptionText.text = Localization.Translate(
+            string.IsNullOrWhiteSpace(item.description) ? "No description available." : item.description);
         promptText.text = Localization.Translate(actionMode
             ? equipmentSource != null ? "[E] Unequip    [Q] Cancel"
             : item.IsEquippable ? "[E] Equip    [Q] Cancel"

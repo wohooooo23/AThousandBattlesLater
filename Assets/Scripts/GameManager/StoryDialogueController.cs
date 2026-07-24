@@ -41,7 +41,12 @@ public sealed class StoryDialogueController : MonoBehaviour
     [SerializeField] private StoryDialogueLine[] bossVictoryLines;
     [SerializeField, TextArea] private string movementPrompt = "WASD / Arrow Keys — Move";
     [SerializeField, TextArea] private string combatPrompt =
-        "Press J to attack. Find treasure chests and press F to open them.";
+        "Press J to attack. Press I to throw a kunai.";
+    [Tooltip("Shown by the trigger next to each of the two lower chests.")]
+    [SerializeField, TextArea] private string chestPrompt = "Press F to open treasure chests.";
+    [Tooltip("Folded into whichever ability prompt fires first, so it is never said twice.")]
+    [SerializeField, TextArea] private string equipmentPrompt =
+        "Press B to open the backpack, N to open the forge.";
     [SerializeField, TextArea] private string doubleJumpPrompt =
         "Press Space in midair to double-jump.";
     [SerializeField, TextArea] private string dashPrompt = "Press Shift while moving to dash.";
@@ -117,9 +122,25 @@ public sealed class StoryDialogueController : MonoBehaviour
     public void ShowAbilityTutorial(AbilityUnlockKind ability)
     {
         bool doubleJump = ability == AbilityUnlockKind.DoubleJump;
-        ShowTutorialOnce(doubleJump ? StoryBeat.DoubleJumpTutorial : StoryBeat.DashTutorial,
-            doubleJump ? doubleJumpPrompt : dashPrompt);
+        string prompt = doubleJump ? doubleJumpPrompt : dashPrompt;
+
+        // Both ability orbs come out of an equipment chest, so the backpack and forge keys ride
+        // along with whichever one the player reaches first rather than interrupting it as a second
+        // bubble — and the other orb then only explains its own ability.
+        if (!StoryProgress.IsPassed(StoryBeat.EquipmentTutorial) &&
+            !string.IsNullOrWhiteSpace(equipmentPrompt))
+        {
+            StoryProgress.MarkPassed(StoryBeat.EquipmentTutorial);
+            // The bubble looks the whole message up as one key, so the two lines are translated
+            // separately here and joined; the joined result then passes through unchanged.
+            prompt = Localization.Translate(prompt) + "\n" + Localization.Translate(equipmentPrompt);
+        }
+
+        ShowTutorialOnce(doubleJump ? StoryBeat.DoubleJumpTutorial : StoryBeat.DashTutorial, prompt);
     }
+
+    /// <summary>Explains opening a chest, once per chest-side trigger.</summary>
+    public void ShowChestTutorial(StoryBeat beat) => ShowTutorialOnce(beat, chestPrompt);
 
     public void ShowDashTutorial()
     {
