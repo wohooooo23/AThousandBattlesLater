@@ -40,9 +40,8 @@ public sealed class LaserAttackPattern : EnemyAttackPattern
 
         GameObject strike = SpawnHitbox(false);
         strike.name = "Laser Strike";
-        // Sizes the visual and the collider from the same numbers, so the beam can no longer
-        // render longer than it damages (or spill out behind the boss).
-        SetupSpriteBeam(strike, context.Origin, direction, laserLength, laserWidth * 0.7f, laserSprite);
+        PositionBeam(strike.transform, context.Origin, direction, laserLength, laserWidth * 0.7f);
+        ApplyHitboxSprite(strike, laserSprite);
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(context.Origin));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.22f);

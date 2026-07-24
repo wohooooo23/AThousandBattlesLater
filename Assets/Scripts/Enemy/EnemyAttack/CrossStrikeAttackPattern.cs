@@ -78,10 +78,8 @@ public sealed class CrossStrikeAttackPattern : EnemyAttackPattern
         lane.transform.SetParent(parent, false);
         lane.transform.localPosition = Vector3.zero;
         lane.transform.localRotation = Quaternion.Euler(0f, 0f, localAngle);
-        // Keeps the local placement (the parent sweeps both lanes) but sizes visual and collider
-        // together; falls back to the procedural scale path when no art is assigned.
-        if (!SizeSpriteBeam(lane, laserSprite, length, width * 0.7f))
-            lane.transform.localScale = new Vector3(length, width * 0.7f, 1f);
+        lane.transform.localScale = new Vector3(length, width * 0.7f, 1f);
+        ApplyHitboxSprite(lane, laserSprite);
         lane.GetComponent<AttackHitbox>().Arm(onHit);
     }
 }

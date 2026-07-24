@@ -52,73 +52,11 @@ public abstract class EnemyAttackPattern : MonoBehaviour
         fill.localScale = new Vector3(progress, progress, 1f);
     }
 
-    /// <summary>
-    /// Sizes a beam through localScale. Only valid for the procedural 1x1-world-unit sprites
-    /// (AttackSquare is 64px at 64 PPU), where scale and world size are the same number.
-    /// Imported art has an arbitrary native size, so it must go through <see cref="SetupSpriteBeam"/>.
-    /// </summary>
     protected void PositionBeam(Transform beam, Vector2 origin, Vector2 direction, float length, float width)
     {
         beam.position = origin + direction * length * 0.5f;
         beam.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
         beam.localScale = new Vector3(length, width, 1f);
-    }
-
-    /// <summary>
-    /// Places and sizes a beam that renders an imported sprite.
-    ///
-    /// Sizing must NOT go through localScale here: an imported sprite's world size is
-    /// pixels / PPU (the laser is 1686px at 216 PPU = 7.81 units), so scaling it by the beam
-    /// length rendered a beam ~7.8x too long. Because the object is centred half a length ahead
-    /// of the boss, the overshoot also spilled far behind the boss while the collider stayed the
-    /// correct length — the visual and the damage no longer matched.
-    ///
-    /// Instead the visual comes from SpriteRenderer.size and the damage from the collider's own
-    /// size, both fed the same numbers, so they agree regardless of the sprite's pixels or PPU.
-    /// Tiled draw mode repeats the middle of the beam rather than stretching the artwork.
-    /// </summary>
-    protected void SetupSpriteBeam(GameObject beam, Vector2 origin, Vector2 direction, float length,
-        float width, Sprite sprite)
-    {
-        Transform transform = beam.transform;
-        SpriteRenderer renderer = beam.GetComponent<SpriteRenderer>();
-        if (sprite == null || renderer == null)
-        {
-            // No art assigned: keep the procedural square path, which is already correct.
-            PositionBeam(transform, origin, direction, length, width);
-            return;
-        }
-
-        transform.position = origin + direction * length * 0.5f;
-        transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-        SizeSpriteBeam(beam, sprite, length, width);
-    }
-
-    /// <summary>
-    /// Sizing half of <see cref="SetupSpriteBeam"/>, for beams that keep their own placement
-    /// (the cross strike parents its lanes so the pair can sweep together).
-    /// Returns false when there is no art, so the caller can keep the procedural scale path.
-    /// </summary>
-    protected bool SizeSpriteBeam(GameObject beam, Sprite sprite, float length, float width)
-    {
-        SpriteRenderer renderer = beam.GetComponent<SpriteRenderer>();
-        if (sprite == null || renderer == null)
-            return false;
-
-        beam.transform.localScale = Vector3.one;
-        renderer.sprite = sprite;
-        renderer.color = Color.white;
-        renderer.drawMode = SpriteDrawMode.Tiled;
-        renderer.tileMode = SpriteTileMode.Continuous;
-        renderer.size = new Vector2(length, width);
-
-        BoxCollider2D box = beam.GetComponent<BoxCollider2D>();
-        if (box != null)
-        {
-            box.size = new Vector2(length, width);
-            box.offset = Vector2.zero;
-        }
-        return true;
     }
 
     // --- Reusable 2D-collider hitboxes -------------------------------------------------
@@ -173,15 +111,6 @@ public abstract class EnemyAttackPattern : MonoBehaviour
     /// Replaces a generic hitbox's placeholder art without changing the root transform used by
     /// its collider. Sliced mode gives every authored effect a normalized 1 x 1 visual canvas,
     /// so the attack's existing scale remains the single source of truth for visual and hit size.
-    /// </summary>
-    /// <summary>
-    /// Art swap for the round hitboxes (bullets, circle slash, target strike), whose size still
-    /// comes from localScale because that also drives their CircleCollider2D radius.
-    ///
-    /// Drawing at size 1x1 keeps the sprite one local unit regardless of its pixels/PPU, so the
-    /// visual matches the collider. This requires the sprite to be imported with **Full Rect**
-    /// mesh type — with Tight meshes the size is ignored and the sprite renders at its native
-    /// pixels/PPU instead (which is what blew the laser up). BossAttackSpriteImporter enforces it.
     /// </summary>
     protected static void ApplyHitboxSprite(GameObject hitbox, Sprite sprite)
     {
