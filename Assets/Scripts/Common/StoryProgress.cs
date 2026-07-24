@@ -32,6 +32,9 @@ public static class StoryProgress
 
     public static bool IsPassed(StoryBeat beat) => passed.Contains(beat);
 
+    /// <summary>Whether any beat has been seen at all — part of what the settings button reflects.</summary>
+    public static bool HasAny => passed.Count > 0;
+
     /// <summary>Records a beat as seen. Safe to call again — replaying a beat never un-marks it.</summary>
     public static void MarkPassed(StoryBeat beat)
     {

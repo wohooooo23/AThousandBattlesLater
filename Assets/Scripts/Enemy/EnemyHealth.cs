@@ -38,6 +38,10 @@ public sealed class EnemyHealth : CombatHealth
         if (isDead && victoryOverlay.activeSelf && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
         {
             Time.timeScale = 1f;
+            // The backpack, gear, abilities and forge levels end with the run too. They are cleared
+            // here rather than on defeat so the victory screen still shows what the player finished
+            // with; the story was already cleared in OnDefeated, where quitting cannot skip it.
+            GameProgress.ClearAll();
             SceneManager.LoadScene(victoryReturnSceneName);
         }
     }

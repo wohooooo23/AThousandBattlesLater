@@ -20,6 +20,9 @@ public sealed class StartMenuController : MonoBehaviour
     [SerializeField] private Button settingsBackButton;
     [SerializeField] private Button chineseButton;
     [SerializeField] private Button englishButton;
+    [Tooltip("Wipes story, backpack, gear, abilities and forge levels back to a first-ever start.")]
+    [SerializeField] private Button clearProgressButton;
+    private static readonly Color ClearProgressArmedColor = new Color(0.86f, 0.40f, 0.40f, 1f);   // light red
     [SerializeField] private string targetSceneName = "stage1_full";
     [SerializeField] private string helpSceneName = "Help";
     private bool isLoading;
@@ -30,6 +33,7 @@ public sealed class StartMenuController : MonoBehaviour
     public bool SettingsOpen => settingsPanel != null && settingsPanel.activeSelf;
     public Button SettingButton => settingButton;
     public GameObject SettingsPanel => settingsPanel;
+    public Button ClearProgressButton => clearProgressButton;
 
     private void Awake()
     {
@@ -58,8 +62,11 @@ public sealed class StartMenuController : MonoBehaviour
             chineseButton.onClick.AddListener(SelectChinese);
         if (englishButton != null)
             englishButton.onClick.AddListener(SelectEnglish);
+        if (clearProgressButton != null)
+            clearProgressButton.onClick.AddListener(ClearProgress);
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
+        RefreshClearProgressButton();
     }
 
     private void OnDestroy()
@@ -82,6 +89,8 @@ public sealed class StartMenuController : MonoBehaviour
             chineseButton.onClick.RemoveListener(SelectChinese);
         if (englishButton != null)
             englishButton.onClick.RemoveListener(SelectEnglish);
+        if (clearProgressButton != null)
+            clearProgressButton.onClick.RemoveListener(ClearProgress);
     }
 
     private void Update()
@@ -142,6 +151,31 @@ public sealed class StartMenuController : MonoBehaviour
     {
         if (settingsPanel != null)
             settingsPanel.SetActive(true);
+        RefreshClearProgressButton();   // a run may have ended since the panel was last opened
+    }
+
+    /// <summary>Throws the whole save away: story, backpack, worn gear, abilities and forge levels.</summary>
+    public void ClearProgress()
+    {
+        GameProgress.ClearAll();
+        RefreshClearProgressButton();
+    }
+
+    /// <summary>
+    /// The button states what it would do: light red on white while there is progress to throw away,
+    /// plain white on black once there is nothing left to clear.
+    /// </summary>
+    private void RefreshClearProgressButton()
+    {
+        if (clearProgressButton == null)
+            return;
+
+        bool hasProgress = GameProgress.HasAny;
+        if (clearProgressButton.targetGraphic is Image background)
+            background.color = hasProgress ? ClearProgressArmedColor : Color.white;
+        Text label = clearProgressButton.GetComponentInChildren<Text>(true);
+        if (label != null)
+            label.color = hasProgress ? Color.white : Color.black;
     }
 
     public void CloseSettings()

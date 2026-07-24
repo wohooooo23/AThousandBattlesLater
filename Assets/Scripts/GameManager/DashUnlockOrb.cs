@@ -31,11 +31,14 @@ public sealed class DashUnlockOrb : MonoBehaviour
             orbRenderer == null || orbTrigger == null || promptText == null)
             throw new MissingReferenceException("DashUnlockOrb requires scene-authored enemies, Hero, visuals, trigger and prompt.");
 
-        player.SetDashUnlocked(false);
+        // Dash outlives dying, so a reload re-grants it and leaves the orb spent instead of
+        // stripping the ability and asking for the three Orcs again.
+        isCollected = RunProgress.DashUnlocked;
+        player.SetDashUnlocked(isCollected);
         orbTrigger.enabled = false;
-        orbRenderer.enabled = true;
+        orbRenderer.enabled = !isCollected;
         orbRenderer.color = lockedColor;
-        promptText.text = "Defeat all 3 Orcs";
+        promptText.text = isCollected ? "DASH UNLOCKED - Press SHIFT" : "Defeat all 3 Orcs";
     }
 
     private void Update()
@@ -67,6 +70,7 @@ public sealed class DashUnlockOrb : MonoBehaviour
         isCollected = true;
         isReady = false;
         player.SetDashUnlocked(true);
+        RunProgress.Unlock(AbilityUnlockKind.Dash);
         orbTrigger.enabled = false;
         orbRenderer.enabled = false;
         promptText.text = "DASH UNLOCKED - Press SHIFT";

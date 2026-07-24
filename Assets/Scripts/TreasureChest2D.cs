@@ -27,6 +27,7 @@ public sealed class TreasureChest2D : MonoBehaviour
 
     private readonly HashSet<Collider2D> playerColliders = new HashSet<Collider2D>();
     private bool isOpened;
+    private AbilityUnlockOrb2D abilityOrb;
 
     public bool IsOpened => isOpened;
     public bool IsPlayerInRange => playerColliders.Count > 0;
@@ -49,6 +50,17 @@ public sealed class TreasureChest2D : MonoBehaviour
         // authored Animator disabled preserves the closed SpriteRenderer frame until F is pressed.
         if (animator != null)
             animator.enabled = false;
+    }
+
+    /// <summary>Called by the linked ability orb from its Awake, before any Start runs.</summary>
+    public void RegisterAbilityOrb(AbilityUnlockOrb2D orb) => abilityOrb = orb;
+
+    private void Start()
+    {
+        // Dying reloads the stage but the backpack and unlocked abilities carry over, so a chest
+        // whose contents the player already holds stays open rather than refilling itself.
+        if (HasNothingLeftToGive())
+            MarkAlreadyOpened();
     }
 
     private void Update()
@@ -99,19 +111,66 @@ public sealed class TreasureChest2D : MonoBehaviour
         return true;
     }
 
-    private void SpawnItems()
+    private bool HasNothingLeftToGive()
     {
-        if (itemPrefabs == null)
+        if (abilityOrb != null && !abilityOrb.IsCollected)
+            return false;
+        return RemainingDrops().Count == 0;
+    }
+
+    /// <summary>
+    /// Freezes the chest in its opened pose without spawning anything, for a reload where the player
+    /// already carries everything it had to give.
+    /// </summary>
+    private void MarkAlreadyOpened()
+    {
+        isOpened = true;
+        playerColliders.Clear();
+        interactionUI?.SetActive(false);
+        if (animator == null)
             return;
+        animator.enabled = true;
+        animator.Play(openStateName, 0, 1f);   // hold the opening clip's final frame
+        animator.Update(0f);
+    }
+
+    /// <summary>
+    /// The drops the player has not already secured. Equippable items are one-of-a-kind — the
+    /// claymore, the plate and the crimson rune are each meant to be found once — so they leave the
+    /// list as soon as one is in the bag or worn. Everything else (health potions, kunai) is
+    /// deliberately farmable and drops again on every reopen.
+    /// </summary>
+    private List<GameObject> RemainingDrops()
+    {
+        List<GameObject> remaining = new List<GameObject>();
+        if (itemPrefabs == null)
+            return remaining;
 
         foreach (GameObject prefab in itemPrefabs)
         {
-            if (prefab == null || prefab.GetComponent<ItemPickup>() == null)
+            ItemPickup pickup = prefab != null ? prefab.GetComponent<ItemPickup>() : null;
+            if (pickup == null)
             {
                 Debug.LogWarning("[TreasureChest] Ignored a drop without ItemPickup.", this);
                 continue;
             }
+            if (!AlreadySecured(pickup.itemData))
+                remaining.Add(prefab);
+        }
+        return remaining;
+    }
 
+    private static bool AlreadySecured(ItemData item)
+    {
+        if (item == null || !item.IsEquippable)
+            return false;
+        return RunInventory.Count(item) > 0 || RunEquipment.Get(item.type) == item;
+    }
+
+    private void SpawnItems()
+    {
+        foreach (GameObject prefab in RemainingDrops())
+        {
             GameObject item = Instantiate(prefab, spawnPoint.position, Quaternion.identity);
             item.GetComponent<ItemPickup>().BlockPickupFor(dropPickupDelay);
             if (applyPopForce && item.TryGetComponent(out Rigidbody2D body))

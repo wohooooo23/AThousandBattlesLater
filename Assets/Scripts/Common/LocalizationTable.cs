@@ -58,6 +58,7 @@ public static class LocalizationTable
         { "EXIT", "退出游戏" },
         { "BACK", "返回" },
         { "LANGUAGE", "语言" },
+        { "CLEAR PROGRESS", "清零进度" },
 
         // ---------- End-screen overlays ----------
         { "DEFEATED\nPress R to Restart", "败北\n按 R 重新开始" },

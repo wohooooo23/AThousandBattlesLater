@@ -35,7 +35,8 @@ public static class StartMenuSettingsBuilder
         Button settingButton = EnsureMenuButton(menuRoot, "Setting Button", "Setting Label", "SETTING",
             34, SettingButtonPosition);
 
-        GameObject panel = EnsureSettingsPanel(menuRoot, out Button chinese, out Button english, out Button back);
+        GameObject panel = EnsureSettingsPanel(menuRoot, out Button chinese, out Button english,
+            out Button back, out Button clearProgress);
 
         SerializedObject data = new SerializedObject(controller);
         data.FindProperty("settingButton").objectReferenceValue = settingButton;
@@ -43,6 +44,7 @@ public static class StartMenuSettingsBuilder
         data.FindProperty("settingsBackButton").objectReferenceValue = back;
         data.FindProperty("chineseButton").objectReferenceValue = chinese;
         data.FindProperty("englishButton").objectReferenceValue = english;
+        data.FindProperty("clearProgressButton").objectReferenceValue = clearProgress;
         data.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(controller);
 
@@ -65,13 +67,16 @@ public static class StartMenuSettingsBuilder
             throw new InvalidOperationException("The language panel must start hidden.");
         Transform panel = controller.SettingsPanel.transform;
         if (panel.Find("Chinese Button") == null || panel.Find("English Button") == null ||
-            panel.Find("Settings Back Button") == null)
-            throw new InvalidOperationException("The language panel needs Chinese, English and Back buttons.");
+            panel.Find("Settings Back Button") == null || panel.Find("Clear Progress Button") == null)
+            throw new InvalidOperationException(
+                "The settings panel needs Chinese, English, Clear Progress and Back buttons.");
+        if (controller.ClearProgressButton == null)
+            throw new InvalidOperationException("StartMenuController is missing its Clear Progress button.");
         Debug.Log("START_MENU_SETTINGS_VALIDATE_OK.");
     }
 
     private static GameObject EnsureSettingsPanel(Transform menuRoot, out Button chinese, out Button english,
-        out Button back)
+        out Button back, out Button clearProgress)
     {
         Transform existing = menuRoot.Find("Settings Panel");
         GameObject panel = existing != null
@@ -87,6 +92,10 @@ public static class StartMenuSettingsBuilder
             new Vector2(0f, 80f));
         english = EnsureMenuButton(panel.transform, "English Button", "English Label", "English", 34,
             new Vector2(0f, -40f));
+        // Authored white-on-black; StartMenuController recolours it to light red on white whenever
+        // there is progress to throw away.
+        clearProgress = EnsureMenuButton(panel.transform, "Clear Progress Button", "Clear Progress Label",
+            "CLEAR PROGRESS", 30, new Vector2(0f, -150f));
         back = EnsureMenuButton(panel.transform, "Settings Back Button", "Settings Back Label", "BACK", 30,
             new Vector2(0f, -258f));
         return panel;

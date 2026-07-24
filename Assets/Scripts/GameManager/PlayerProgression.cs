@@ -9,9 +9,6 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class PlayerProgression : MonoBehaviour
 {
-    private static int forgeWeaponLevel;   // survives the map->boss scene change
-    private static int forgeArmorLevel;
-
     [SerializeField] private Entity_Combat playerCombat;
     [SerializeField] private Text notificationText;
     [Tooltip("金币物品数据（拖 GoldCoin）。金币是背包里的普通物品，跨场景保留。")]
@@ -29,16 +26,17 @@ public sealed class PlayerProgression : MonoBehaviour
     public int Coins => RunInventory.Count(coinItem);
     public int StartingKunaiCount => startingKunaiCount;
     public ItemData StartingKunaiItem => startingKunaiItem;
-    public int ForgeWeaponLevel => forgeWeaponLevel;
-    public int ForgeArmorLevel => forgeArmorLevel;
+    // Forge levels live in RunProgress with the rest of the run so one Reset covers everything.
+    public int ForgeWeaponLevel => RunProgress.ForgeWeaponLevel;
+    public int ForgeArmorLevel => RunProgress.ForgeArmorLevel;
     // Base comes from the equipped gear (bare-handed 10 ATK / 2 DEF when nothing is worn),
     // and each forge level adds on top — matching what the forge panel shows.
     public const float UnarmedAttack = 10f;
     public const float UnarmoredDefense = 2f;
     public float WeaponAttack =>
-        (RunEquipment.Weapon != null ? RunEquipment.Weapon.attackBonus : UnarmedAttack) + forgeWeaponLevel * 10f;
+        (RunEquipment.Weapon != null ? RunEquipment.Weapon.attackBonus : UnarmedAttack) + RunProgress.ForgeWeaponLevel * 10f;
     public float ArmorDefense =>
-        (RunEquipment.Armor != null ? RunEquipment.Armor.defenseBonus : UnarmoredDefense) + forgeArmorLevel * 2f;
+        (RunEquipment.Armor != null ? RunEquipment.Armor.defenseBonus : UnarmoredDefense) + RunProgress.ForgeArmorLevel * 2f;
     public float CurrentPlayerDamage => playerCombat != null ? playerCombat.Damage : 0f;
     public bool ResetsRunOnAwake => resetRunOnAwake;
 
@@ -48,15 +46,19 @@ public sealed class PlayerProgression : MonoBehaviour
             throw new MissingReferenceException("PlayerProgression requires the scene-authored Hero combat, notification text and coin ItemData (GoldCoin).");
 
         Instance = this;
-        if (resetRunOnAwake)
+        // resetRunOnAwake is a scene flag, so it is equally true when the stage reloads after a
+        // death. RunStarted is what separates a genuinely new run from carrying the same one on:
+        // dying keeps the backpack, worn gear and forge levels the player had earned.
+        if (resetRunOnAwake && !RunProgress.RunStarted)
         {
             RunInventory.Reset();
             RunEquipment.Reset();
-            forgeWeaponLevel = 0;
-            forgeArmorLevel = 0;
+            RunProgress.Reset();
             if (startingKunaiItem != null && startingKunaiCount > 0)
                 RunInventory.Add(startingKunaiItem, startingKunaiCount);
         }
+        if (resetRunOnAwake)
+            RunProgress.MarkRunStarted();
 
         // Weapon power now comes purely from equipped gear + the forge; entering the Boss room no
         // longer spends coins on an automatic damage upgrade.
@@ -113,8 +115,7 @@ public sealed class PlayerProgression : MonoBehaviour
     /// </summary>
     public void ApplyForgeStats(int weaponLevel, int armorLevel)
     {
-        forgeWeaponLevel = Mathf.Max(0, weaponLevel);
-        forgeArmorLevel = Mathf.Max(0, armorLevel);
+        RunProgress.SetForgeLevels(weaponLevel, armorLevel);
         ApplyWeaponDamage();
         ApplyArmorDefense();
         // Deliberately silent: only coin pickups surface a notification.

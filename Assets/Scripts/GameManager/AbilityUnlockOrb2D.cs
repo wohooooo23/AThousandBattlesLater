@@ -41,6 +41,23 @@ public sealed class AbilityUnlockOrb2D : MonoBehaviour
             throw new MissingReferenceException("AbilityUnlockOrb2D requires its scene-authored chest, Hero, renderer and trigger.");
         pickupTrigger.isTrigger = true;
         SetVisible(false);
+        sourceChest.RegisterAbilityOrb(this);
+
+        // The unlock outlives dying, so re-grant it to the freshly loaded Hero and stay collected —
+        // this is also what lets the source chest know it has nothing left to give.
+        if (RunProgress.IsUnlocked(ability))
+        {
+            collected = true;
+            GrantAbility();
+        }
+    }
+
+    private void GrantAbility()
+    {
+        if (ability == AbilityUnlockKind.DoubleJump)
+            player.SetMaxJumpCount(2);
+        else
+            player.SetDashUnlocked(true);
     }
 
     private void Update()
@@ -73,10 +90,8 @@ public sealed class AbilityUnlockOrb2D : MonoBehaviour
         if (!revealed || collected || candidate == null || candidate != player)
             return false;
 
-        if (ability == AbilityUnlockKind.DoubleJump)
-            candidate.SetMaxJumpCount(2);
-        else
-            candidate.SetDashUnlocked(true);
+        GrantAbility();
+        RunProgress.Unlock(ability);
 
         collected = true;
         revealed = false;
