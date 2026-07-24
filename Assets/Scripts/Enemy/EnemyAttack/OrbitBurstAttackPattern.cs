@@ -59,7 +59,7 @@ public sealed class OrbitBurstAttackPattern : EnemyAttackPattern
             bullet.name = "Radial Projectile";
             bullet.transform.SetParent(burst.transform);
             bullet.transform.localScale = Vector3.one * projectileRadius * 2f;
-            ApplyHitboxSprite(bullet, projectileSprite);
+            ApplyHitboxSprite(bullet, projectileSprite, Vector2.one * projectileRadius * 2f);
             bullets[i] = bullet.transform;
             // Shared guard so the whole burst only damages once.
             bullet.GetComponent<AttackHitbox>().Arm(() =>

@@ -57,7 +57,7 @@ public sealed class FanVolleyAttackPattern : EnemyAttackPattern
             bullet.name = "Projectile";
             bullet.transform.SetParent(volley.transform);
             bullet.transform.localScale = Vector3.one * projectileRadius * 2f;
-            ApplyHitboxSprite(bullet, projectileSprite);
+            ApplyHitboxSprite(bullet, projectileSprite, Vector2.one * projectileRadius * 2f);
             bullets[i] = bullet.transform;
             // Shared guard so the whole volley only damages once.
             bullet.GetComponent<AttackHitbox>().Arm(() =>

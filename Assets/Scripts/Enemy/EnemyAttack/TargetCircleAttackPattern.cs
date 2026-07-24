@@ -29,7 +29,7 @@ public sealed class TargetCircleAttackPattern : EnemyAttackPattern
         strike.name = "Circle Strike";
         strike.transform.position = lockedPoint;
         strike.transform.localScale = Vector3.one * radius * 2f;
-        ApplyHitboxSprite(strike, strikeSprite);
+        ApplyHitboxSprite(strike, strikeSprite, Vector2.one * radius * 2f);
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(lockedPoint));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.28f);

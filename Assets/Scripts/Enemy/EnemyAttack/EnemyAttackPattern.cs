@@ -108,11 +108,18 @@ public abstract class EnemyAttackPattern : MonoBehaviour
     }
 
     /// <summary>
-    /// Replaces a generic hitbox's placeholder art without changing the root transform used by
-    /// its collider. Sliced mode gives every authored effect a normalized 1 x 1 visual canvas,
-    /// so the attack's existing scale remains the single source of truth for visual and hit size.
+    /// Replaces a generic hitbox's placeholder art and fits it to <paramref name="size"/> world units.
+    ///
+    /// Callers size an attack by writing its world extent into localScale, which only lines up when the
+    /// sprite is natively 1 x 1 world unit (the procedural AttackSquare). An authored sprite is whatever
+    /// its pixels / PPU say — the laser is 7.81 x 1.00 — so the same scale renders it several times too
+    /// large. We therefore divide the requested size by the sprite's native bounds, and grow the collider
+    /// by the same factor so the hit rectangle stays exactly <paramref name="size"/>.
+    ///
+    /// Simple draw mode stretches the one sprite across the whole rectangle: a single continuous beam
+    /// filling its telegraph, never a row of repeated copies.
     /// </summary>
-    protected static void ApplyHitboxSprite(GameObject hitbox, Sprite sprite)
+    protected static void ApplyHitboxSprite(GameObject hitbox, Sprite sprite, Vector2 size)
     {
         if (sprite == null)
             return;
@@ -123,8 +130,28 @@ public abstract class EnemyAttackPattern : MonoBehaviour
 
         renderer.sprite = sprite;
         renderer.color = Color.white;
-        renderer.drawMode = SpriteDrawMode.Sliced;
-        renderer.size = Vector2.one;
+        renderer.drawMode = SpriteDrawMode.Simple;
+
+        Vector2 native = sprite.bounds.size;
+        if (native.x <= 0.0001f || native.y <= 0.0001f)
+            return;
+
+        hitbox.transform.localScale = new Vector3(size.x / native.x, size.y / native.y, 1f);
+
+        // The collider is authored in the hitbox's local space, so it has to be expressed in native
+        // units for scale * collider to come back out as `size`.
+        BoxCollider2D box = hitbox.GetComponent<BoxCollider2D>();
+        if (box != null)
+        {
+            box.size = native;
+            box.offset = Vector2.zero;
+        }
+        CircleCollider2D circle = hitbox.GetComponent<CircleCollider2D>();
+        if (circle != null)
+        {
+            circle.radius = native.x * 0.5f;
+            circle.offset = Vector2.zero;
+        }
     }
 
     protected float DistanceToRay(Vector2 point, Vector2 origin, Vector2 direction, float length)

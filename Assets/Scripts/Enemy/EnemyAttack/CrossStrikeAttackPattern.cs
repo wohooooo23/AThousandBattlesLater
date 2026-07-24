@@ -78,8 +78,8 @@ public sealed class CrossStrikeAttackPattern : EnemyAttackPattern
         lane.transform.SetParent(parent, false);
         lane.transform.localPosition = Vector3.zero;
         lane.transform.localRotation = Quaternion.Euler(0f, 0f, localAngle);
-        lane.transform.localScale = new Vector3(length, width * 0.7f, 1f);
-        ApplyHitboxSprite(lane, laserSprite);
+        lane.transform.localScale = new Vector3(length, width, 1f);
+        ApplyHitboxSprite(lane, laserSprite, new Vector2(length, width));
         lane.GetComponent<AttackHitbox>().Arm(onHit);
     }
 }

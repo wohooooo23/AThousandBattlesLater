@@ -29,7 +29,7 @@ public sealed class SpinSlashAttackPattern : EnemyAttackPattern
         strike.name = "Spin Slash";
         strike.transform.position = context.Origin;
         strike.transform.localScale = Vector3.one * radius * 2f;
-        ApplyHitboxSprite(strike, slashSprite);
+        ApplyHitboxSprite(strike, slashSprite, Vector2.one * radius * 2f);
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(context.Origin));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.25f);

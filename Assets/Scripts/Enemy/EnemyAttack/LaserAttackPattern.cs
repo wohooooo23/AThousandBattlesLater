@@ -40,8 +40,9 @@ public sealed class LaserAttackPattern : EnemyAttackPattern
 
         GameObject strike = SpawnHitbox(false);
         strike.name = "Laser Strike";
-        PositionBeam(strike.transform, context.Origin, direction, laserLength, laserWidth * 0.7f);
-        ApplyHitboxSprite(strike, laserSprite);
+        // The beam fills its telegraph exactly, so what the warning promised is what fires and what hits.
+        PositionBeam(strike.transform, context.Origin, direction, laserLength, laserWidth);
+        ApplyHitboxSprite(strike, laserSprite, new Vector2(laserLength, laserWidth));
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(context.Origin));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.22f);
