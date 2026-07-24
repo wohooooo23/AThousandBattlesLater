@@ -1474,6 +1474,10 @@ PrefabInstance:
       propertyPath: radius
       value: 27.5
       objectReference: {fileID: 0}
+    - target: {fileID: 3788660626847563615, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
+      propertyPath: strikeSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: d9b43775c97451a4595600dd7f44d371, type: 3}
     - target: {fileID: 4068017401467170543, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: m_Name
       value: Arena Boss
@@ -1490,6 +1494,10 @@ PrefabInstance:
       propertyPath: selectionWeight
       value: 0.9
       objectReference: {fileID: 0}
+    - target: {fileID: 5005087716498413051, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
+      propertyPath: projectileSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 46c70cf92b954024fb5632b220f23de4, type: 3}
     - target: {fileID: 7087474098433612738, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: cooldown
       value: 2
@@ -1550,10 +1558,18 @@ PrefabInstance:
       propertyPath: projectileRadius
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 7363983113771495230, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
+      propertyPath: projectileSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 46c70cf92b954024fb5632b220f23de4, type: 3}
     - target: {fileID: 7963203781293016322, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: radius
       value: 17.5
       objectReference: {fileID: 0}
+    - target: {fileID: 7963203781293016322, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
+      propertyPath: slashSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: d9b43775c97451a4595600dd7f44d371, type: 3}
     - target: {fileID: 8487550491731073310, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: laserWidth
       value: 12.5
@@ -1614,7 +1630,7 @@ Transform:
   m_GameObject: {fileID: 129628201}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 618.6, y: 22.9, z: 0}
+  m_LocalPosition: {x: 618.2, y: 25.3, z: 0}
   m_LocalScale: {x: 0.9999999, y: 0.9999999, z: 0.9999999}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5479,11 +5495,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -207.3
+      value: 155.8
       objectReference: {fileID: 0}
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 23.5
+      value: 171.2
       objectReference: {fileID: 0}
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalPosition.z
@@ -6409,7 +6425,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &573673267
 RectTransform:
   m_ObjectHideFlags: 0
@@ -21198,7 +21214,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1046162212
 MonoBehaviour:
   m_ObjectHideFlags: 0

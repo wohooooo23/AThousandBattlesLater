@@ -8,6 +8,8 @@ public sealed class CrossStrikeAttackPattern : EnemyAttackPattern
     [SerializeField] private float width = 12f;
     [SerializeField] private float strikeDuration = 2f;    // beams stay active this long
     [SerializeField] private float rotationSpeed = 30f;    // degrees per second the cross sweeps
+    [Tooltip("Sprite rendered by both rotating laser beams. Assign this on the Boss prefab.")]
+    [SerializeField] private Sprite laserSprite;
 
     public override string PatternName => "Cross Strike";
     public override string WarningObjectName => "Cross Strike Warning";
@@ -77,7 +79,7 @@ public sealed class CrossStrikeAttackPattern : EnemyAttackPattern
         lane.transform.localPosition = Vector3.zero;
         lane.transform.localRotation = Quaternion.Euler(0f, 0f, localAngle);
         lane.transform.localScale = new Vector3(length, width * 0.7f, 1f);
-        TintHitbox(lane, new Color(0.85f, 0.55f, 1f, 0.95f));
+        ApplyHitboxSprite(lane, laserSprite);
         lane.GetComponent<AttackHitbox>().Arm(onHit);
     }
 }

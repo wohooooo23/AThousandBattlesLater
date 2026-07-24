@@ -8,6 +8,8 @@ public sealed class FanVolleyAttackPattern : EnemyAttackPattern
     [SerializeField] private float spreadAngle = 54f;
     [SerializeField] private float projectileSpeed = 95f;
     [SerializeField] private float projectileRadius = 3.3f;
+    [Tooltip("Sprite rendered by each projectile. Assign this on the Boss prefab.")]
+    [SerializeField] private Sprite projectileSprite;
 
     public override string PatternName => "Fan Volley";
     public override string WarningObjectName => "Fan Volley Warning";
@@ -55,7 +57,7 @@ public sealed class FanVolleyAttackPattern : EnemyAttackPattern
             bullet.name = "Projectile";
             bullet.transform.SetParent(volley.transform);
             bullet.transform.localScale = Vector3.one * projectileRadius * 2f;
-            TintHitbox(bullet, new Color(0.80f, 0.35f, 1f, 1f));
+            ApplyHitboxSprite(bullet, projectileSprite);
             bullets[i] = bullet.transform;
             // Shared guard so the whole volley only damages once.
             bullet.GetComponent<AttackHitbox>().Arm(() =>

@@ -107,6 +107,26 @@ public abstract class EnemyAttackPattern : MonoBehaviour
             renderer.color = color;
     }
 
+    /// <summary>
+    /// Replaces a generic hitbox's placeholder art without changing the root transform used by
+    /// its collider. Sliced mode gives every authored effect a normalized 1 x 1 visual canvas,
+    /// so the attack's existing scale remains the single source of truth for visual and hit size.
+    /// </summary>
+    protected static void ApplyHitboxSprite(GameObject hitbox, Sprite sprite)
+    {
+        if (sprite == null)
+            return;
+
+        SpriteRenderer renderer = hitbox.GetComponent<SpriteRenderer>();
+        if (renderer == null)
+            return;
+
+        renderer.sprite = sprite;
+        renderer.color = Color.white;
+        renderer.drawMode = SpriteDrawMode.Sliced;
+        renderer.size = Vector2.one;
+    }
+
     protected float DistanceToRay(Vector2 point, Vector2 origin, Vector2 direction, float length)
     {
         float projection = Vector2.Dot(point - origin, direction);

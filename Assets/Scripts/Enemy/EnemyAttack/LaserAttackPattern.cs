@@ -7,6 +7,8 @@ public sealed class LaserAttackPattern : EnemyAttackPattern
     [SerializeField] private float laserLength = 100f;
     [SerializeField] private float laserWidth = 15f;
     [SerializeField] private float maximumAngularSpeed = 30f;
+    [Tooltip("Sprite rendered by the fired laser. Assign this on the Boss prefab.")]
+    [SerializeField] private Sprite laserSprite;
 
     public override string PatternName => "Tracking Laser";
     public override string WarningObjectName => "Laser Warning";
@@ -38,8 +40,8 @@ public sealed class LaserAttackPattern : EnemyAttackPattern
 
         GameObject strike = SpawnHitbox(false);
         strike.name = "Laser Strike";
-        TintHitbox(strike, new Color(0.70f, 0.45f, 1f, 0.95f));
         PositionBeam(strike.transform, context.Origin, direction, laserLength, laserWidth * 0.7f);
+        ApplyHitboxSprite(strike, laserSprite);
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(context.Origin));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.22f);

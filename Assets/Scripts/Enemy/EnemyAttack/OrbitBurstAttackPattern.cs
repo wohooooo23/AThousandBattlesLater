@@ -7,6 +7,8 @@ public sealed class OrbitBurstAttackPattern : EnemyAttackPattern
     [SerializeField] private int projectileCount = 14;
     [SerializeField] private float burstRadius = 72f;
     [SerializeField] private float projectileRadius = 2.2f;
+    [Tooltip("Sprite rendered by each projectile. Assign this on the Boss prefab.")]
+    [SerializeField] private Sprite projectileSprite;
 
     public override string PatternName => "Radial Burst";
     public override string WarningObjectName => "Orbit Burst Warning";
@@ -57,7 +59,7 @@ public sealed class OrbitBurstAttackPattern : EnemyAttackPattern
             bullet.name = "Radial Projectile";
             bullet.transform.SetParent(burst.transform);
             bullet.transform.localScale = Vector3.one * projectileRadius * 2f;
-            TintHitbox(bullet, new Color(0.88f, 0.28f, 1f, 1f));
+            ApplyHitboxSprite(bullet, projectileSprite);
             bullets[i] = bullet.transform;
             // Shared guard so the whole burst only damages once.
             bullet.GetComponent<AttackHitbox>().Arm(() =>

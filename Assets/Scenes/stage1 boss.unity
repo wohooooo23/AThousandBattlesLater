@@ -21785,6 +21785,7 @@ MonoBehaviour:
   width: 10
   strikeDuration: 2
   rotationSpeed: 30
+  laserSprite: {fileID: 21300000, guid: 9d37e316c4cc00c4db6ad1a5f81b37ae, type: 3}
 --- !u!114 &1680395619822073634
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21805,6 +21806,7 @@ MonoBehaviour:
   projectileCount: 14
   burstRadius: 72
   projectileRadius: 2
+  projectileSprite: {fileID: 21300000, guid: d9b43775c97451a4595600dd7f44d371, type: 3}
 --- !u!114 &1680395619822073635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21826,6 +21828,7 @@ MonoBehaviour:
   spreadAngle: 54
   projectileSpeed: 95
   projectileRadius: 3
+  projectileSprite: {fileID: 21300000, guid: d9b43775c97451a4595600dd7f44d371, type: 3}
 --- !u!114 &1680395619822073636
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21844,6 +21847,7 @@ MonoBehaviour:
   castAnimation: 0
   warningDuration: 1
   radius: 17.5
+  slashSprite: {fileID: 21300000, guid: d9b43775c97451a4595600dd7f44d371, type: 3}
 --- !u!114 &1680395619822073637
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21862,6 +21866,7 @@ MonoBehaviour:
   castAnimation: 0
   warningDuration: 0.8
   radius: 27.5
+  strikeSprite: {fileID: 21300000, guid: d9b43775c97451a4595600dd7f44d371, type: 3}
 --- !u!114 &1680395619822073638
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21882,6 +21887,7 @@ MonoBehaviour:
   laserLength: 100
   laserWidth: 12.5
   maximumAngularSpeed: 30
+  laserSprite: {fileID: 21300000, guid: 9d37e316c4cc00c4db6ad1a5f81b37ae, type: 3}
 --- !u!114 &1680395619822073639
 MonoBehaviour:
   m_ObjectHideFlags: 0

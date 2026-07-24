@@ -5,6 +5,8 @@ public sealed class SpinSlashAttackPattern : EnemyAttackPattern
 {
     [SerializeField] private float warningDuration = 1f;
     [SerializeField] private float radius = 20f;
+    [Tooltip("Sprite rendered by the circular slash. Assign this on the Boss prefab.")]
+    [SerializeField] private Sprite slashSprite;
 
     public override string PatternName => "Circular Slash";
     public override string WarningObjectName => "Spin Slash Warning";
@@ -27,7 +29,7 @@ public sealed class SpinSlashAttackPattern : EnemyAttackPattern
         strike.name = "Spin Slash";
         strike.transform.position = context.Origin;
         strike.transform.localScale = Vector3.one * radius * 2f;
-        TintHitbox(strike, new Color(0.88f, 0.72f, 1f, 0.95f));
+        ApplyHitboxSprite(strike, slashSprite);
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(context.Origin));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.25f);

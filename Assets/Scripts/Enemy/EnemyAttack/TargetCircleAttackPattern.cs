@@ -5,6 +5,8 @@ public sealed class TargetCircleAttackPattern : EnemyAttackPattern
 {
     [SerializeField] private float warningDuration = 0.8f;
     [SerializeField] private float radius = 30f;
+    [Tooltip("Sprite rendered by the circular strike. Assign this on the Boss prefab.")]
+    [SerializeField] private Sprite strikeSprite;
 
     public override string PatternName => "Locked Circle";
     public override string WarningObjectName => "Target Circle Warning";
@@ -27,7 +29,7 @@ public sealed class TargetCircleAttackPattern : EnemyAttackPattern
         strike.name = "Circle Strike";
         strike.transform.position = lockedPoint;
         strike.transform.localScale = Vector3.one * radius * 2f;
-        TintHitbox(strike, new Color(0.62f, 0.18f, 1f, 0.9f));
+        ApplyHitboxSprite(strike, strikeSprite);
         strike.GetComponent<AttackHitbox>().Arm(() => context.HitHero(lockedPoint));
         context.FireFeedback();
         yield return FadeAndDestroy(strike, 0.28f);
