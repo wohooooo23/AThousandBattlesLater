@@ -247,7 +247,7 @@ public static class AlphaUiBuilder
     /// </summary>
     private static void RepairTextFonts(GameObject root)
     {
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        Font font = UiFont.Regular;
         if (font == null)
             font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         if (font == null)
@@ -490,7 +490,7 @@ public static class AlphaUiBuilder
         rect.anchoredPosition = topLeft;
         rect.sizeDelta = size;
         Text text = child.GetComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.font = UiFont.Regular;
         text.fontSize = fontSize;
         text.fontStyle = style;
         text.alignment = alignment;

@@ -438,7 +438,7 @@ public static class DemoSceneBuilder
         rect.sizeDelta = size;
         rect.anchoredPosition = position;
         Text text = textObject.GetComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.font = UiFont.Regular;
         text.fontSize = fontSize;
         text.fontStyle = style;
         text.alignment = TextAnchor.MiddleCenter;
@@ -1093,7 +1093,7 @@ public static class DemoSceneBuilder
         labelRect.anchorMax = Vector2.one;
         labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
         Text label = labelObject.GetComponent<Text>();
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        label.font = UiFont.Regular;
         label.fontSize = 28;
         label.fontStyle = FontStyle.Bold;
         label.alignment = TextAnchor.MiddleCenter;
@@ -1365,7 +1365,7 @@ public static class DemoSceneBuilder
         legendRect.anchoredPosition = Vector2.zero;
         legendRect.sizeDelta = new Vector2(210f, 26f);
         Text legendText = legend.GetComponent<Text>();
-        legendText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        legendText.font = UiFont.Regular;
         legendText.fontSize = 15;
         legendText.fontStyle = FontStyle.Bold;
         legendText.alignment = TextAnchor.MiddleCenter;
@@ -1840,7 +1840,7 @@ public static class DemoSceneBuilder
         rect.sizeDelta = new Vector2(1200f, 80f);
 
         Text text = prompt.GetComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.font = UiFont.Regular;
         text.fontSize = 34;
         text.fontStyle = FontStyle.Bold;
         text.alignment = TextAnchor.MiddleCenter;
@@ -2391,7 +2391,7 @@ public static class DemoSceneBuilder
         notificationRect.anchoredPosition = new Vector2(0f, -118f);
         notificationRect.sizeDelta = new Vector2(1000f, 64f);
         Text notification = notificationObject.GetComponent<Text>();
-        notification.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        notification.font = UiFont.Regular;
         notification.fontSize = 32;
         notification.fontStyle = FontStyle.Bold;
         notification.alignment = TextAnchor.MiddleCenter;
@@ -2497,7 +2497,7 @@ public static class DemoSceneBuilder
         messageRect.sizeDelta = new Vector2(900f, 220f);
         Text text = messageObject.GetComponent<Text>();
         text.text = message;
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.font = UiFont.Regular;
         text.fontSize = 54;
         text.fontStyle = FontStyle.Bold;
         text.alignment = TextAnchor.MiddleCenter;

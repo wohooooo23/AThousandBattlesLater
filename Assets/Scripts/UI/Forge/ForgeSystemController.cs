@@ -349,19 +349,19 @@ public class ForgeSystemController : MonoBehaviour
         if (mIsForging) return;
         if (string.IsNullOrWhiteSpace(mForgeName))
         {
-            progressStateText.text = "SELECT EQUIPMENT FIRST";
+            progressStateText.text = Localization.Translate("SELECT EQUIPMENT FIRST");
             return;
         }
         if (mForgeLevel >= 5)
         {
-            progressStateText.text = "ALREADY MAXED!";
+            progressStateText.text = Localization.Translate("ALREADY MAXED!");
             return;
         }
 
         int cost = (mForgeLevel + 1) * kBaseGoldCost / 2;
         if (GetGold() < cost)
         {
-            progressStateText.text = "NOT ENOUGH GOLD!";
+            progressStateText.text = Localization.Translate("NOT ENOUGH GOLD!");
             return;
         }
 
@@ -377,7 +377,7 @@ public class ForgeSystemController : MonoBehaviour
         // 扣金币
         if (!SpendGold(cost))
         {
-            progressStateText.text = "NOT ENOUGH GOLD!";
+            progressStateText.text = Localization.Translate("NOT ENOUGH GOLD!");
             mIsForging = false;
             smashForgeButton.interactable = true;
             if (mCloseButton != null) mCloseButton.interactable = true;
@@ -414,7 +414,7 @@ public class ForgeSystemController : MonoBehaviour
             progressBlocks[i].color = (i < 3) ? Color.red :
                                       (i < 7) ? new Color(1f, 0.5f, 0f) :
                                       Color.yellow;
-            progressStateText.text = "FORGING... [" + (i + 1) + "/10]";
+            progressStateText.text = Localization.Format("FORGING... [{0}/10]", i + 1);
 
             yield return new WaitForSecondsRealtime(0.1f);
             hearthTransform.localPosition = orig;
@@ -431,7 +431,7 @@ public class ForgeSystemController : MonoBehaviour
         {
             mForgeLevel++;
             mEquipLevels[mSelectedSlot] = mForgeLevel; // 保存
-            progressStateText.text = "SUCCESS! +" + mForgeLevel;
+            progressStateText.text = Localization.Format("SUCCESS! +{0}", mForgeLevel);
             progressStateText.color = Color.green;
 
             // 更新锻造槽名字
@@ -453,7 +453,7 @@ public class ForgeSystemController : MonoBehaviour
         {
             if (mForgeLevel > 0) mForgeLevel--;
             mEquipLevels[mSelectedSlot] = mForgeLevel;
-            progressStateText.text = "FAILED! -" + mForgeLevel;
+            progressStateText.text = Localization.Format("FAILED! -{0}", mForgeLevel);
             progressStateText.color = Color.red;
 
             string failName = mForgeName;
@@ -477,9 +477,9 @@ public class ForgeSystemController : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(mForgeName))
         {
-            statBeforeText.text = "-- ATK";
+            statBeforeText.text = Localization.Translate("-- ATK");
             statAfterText.text = "";
-            successRateText.text = "N/A";
+            successRateText.text = Localization.Translate("N/A");
             successRateText.color = Color.gray;
             costGoldText.text = "0 G";
             costGoldText.color = Color.gray;

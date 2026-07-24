@@ -368,7 +368,7 @@ namespace RetroForge
         /// <summary>A serializable built-in font, so labels survive a prefab save/reload.</summary>
         static Font ResolveUiFont()
         {
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            Font font = UiFont.Regular;
             if (font == null)
                 font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             return font;

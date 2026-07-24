@@ -149,7 +149,7 @@ public static class TreasureChestBuilder
         labelRect.anchorMax = Vector2.one;
         labelRect.offsetMin = labelRect.offsetMax = Vector2.zero;
         Text label = labelObject.GetComponent<Text>();
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        label.font = UiFont.Regular;
         label.text = "按F打开";
         label.fontSize = 30;
         label.fontStyle = FontStyle.Bold;

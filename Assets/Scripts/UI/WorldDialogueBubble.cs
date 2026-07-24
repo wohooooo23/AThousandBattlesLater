@@ -48,8 +48,12 @@ public sealed class WorldDialogueBubble : MonoBehaviour
             hideRoutine = null;
         }
 
+        // Single choke point for every story line and tutorial prompt, so the story data and
+        // NarrativeAudioBuilder keep their English source text and still display translated.
         if (dialogueText != null)
-            dialogueText.text = string.IsNullOrWhiteSpace(message) ? "..." : message;
+            dialogueText.text = string.IsNullOrWhiteSpace(message)
+                ? "..."
+                : Localization.Translate(message);
         if (skipHintRoot != null)
             skipHintRoot.SetActive(showSkipHint);
         SetVisible(true);

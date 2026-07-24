@@ -14,6 +14,12 @@ public sealed class StartMenuController : MonoBehaviour
     [Tooltip("Credits overlay. The body is intentionally empty until the asset credits are written.")]
     [SerializeField] private GameObject creditsPanel;
     [SerializeField] private Button creditsBackButton;
+    [Header("Settings")]
+    [SerializeField] private Button settingButton;
+    [SerializeField] private GameObject settingsPanel;
+    [SerializeField] private Button settingsBackButton;
+    [SerializeField] private Button chineseButton;
+    [SerializeField] private Button englishButton;
     [SerializeField] private string targetSceneName = "stage1_full";
     [SerializeField] private string helpSceneName = "Help";
     private bool isLoading;
@@ -21,6 +27,9 @@ public sealed class StartMenuController : MonoBehaviour
     public string TargetSceneName => targetSceneName;
     public string HelpSceneName => helpSceneName;
     public bool CreditsOpen => creditsPanel != null && creditsPanel.activeSelf;
+    public bool SettingsOpen => settingsPanel != null && settingsPanel.activeSelf;
+    public Button SettingButton => settingButton;
+    public GameObject SettingsPanel => settingsPanel;
 
     private void Awake()
     {
@@ -39,6 +48,18 @@ public sealed class StartMenuController : MonoBehaviour
             creditsBackButton.onClick.AddListener(CloseCredits);
         if (creditsPanel != null)
             creditsPanel.SetActive(false);
+
+        // Settings are optional so a menu authored before them still loads.
+        if (settingButton != null)
+            settingButton.onClick.AddListener(OpenSettings);
+        if (settingsBackButton != null)
+            settingsBackButton.onClick.AddListener(CloseSettings);
+        if (chineseButton != null)
+            chineseButton.onClick.AddListener(SelectChinese);
+        if (englishButton != null)
+            englishButton.onClick.AddListener(SelectEnglish);
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
     }
 
     private void OnDestroy()
@@ -53,6 +74,14 @@ public sealed class StartMenuController : MonoBehaviour
             exitButton.onClick.RemoveListener(QuitGame);
         if (creditsBackButton != null)
             creditsBackButton.onClick.RemoveListener(CloseCredits);
+        if (settingButton != null)
+            settingButton.onClick.RemoveListener(OpenSettings);
+        if (settingsBackButton != null)
+            settingsBackButton.onClick.RemoveListener(CloseSettings);
+        if (chineseButton != null)
+            chineseButton.onClick.RemoveListener(SelectChinese);
+        if (englishButton != null)
+            englishButton.onClick.RemoveListener(SelectEnglish);
     }
 
     private void Update()
@@ -61,11 +90,17 @@ public sealed class StartMenuController : MonoBehaviour
         if (keyboard == null)
             return;
 
-        // While the credits are up, Esc closes them and Enter/Space must not start the run.
+        // While an overlay is up, Esc closes it and Enter/Space must not start the run.
         if (CreditsOpen)
         {
             if (keyboard.escapeKey.wasPressedThisFrame)
                 CloseCredits();
+            return;
+        }
+        if (SettingsOpen)
+        {
+            if (keyboard.escapeKey.wasPressedThisFrame)
+                CloseSettings();
             return;
         }
 
@@ -102,6 +137,23 @@ public sealed class StartMenuController : MonoBehaviour
         if (creditsPanel != null)
             creditsPanel.SetActive(false);
     }
+
+    public void OpenSettings()
+    {
+        if (settingsPanel != null)
+            settingsPanel.SetActive(true);
+    }
+
+    public void CloseSettings()
+    {
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
+    }
+
+    /// <summary>Switching language republishes every LocalizedText, so the menu updates instantly.</summary>
+    public void SelectChinese() => Localization.SetLanguage(GameLanguage.Chinese);
+
+    public void SelectEnglish() => Localization.SetLanguage(GameLanguage.English);
 
     public void QuitGame()
     {
