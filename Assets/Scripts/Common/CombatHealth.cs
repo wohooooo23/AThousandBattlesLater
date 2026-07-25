@@ -26,9 +26,14 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
 
     protected virtual void Awake()
     {
+        maximumHealth *= DifficultyHealthScale;
         currentHealth = maximumHealth;
         UpdateDisplays();
     }
+
+    /// <summary>Difficulty multiplier applied to the authored max health. 1 for the player; the
+    /// enemy subclasses return the mob or boss health scale.</summary>
+    protected virtual float DifficultyHealthScale => 1f;
 
     protected virtual void OnEnable()
     {

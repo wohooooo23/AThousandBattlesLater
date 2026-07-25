@@ -22,6 +22,12 @@ public sealed class StartMenuController : MonoBehaviour
     [SerializeField] private Button englishButton;
     [Tooltip("Wipes story, backpack, gear, abilities and forge levels back to a first-ever start.")]
     [SerializeField] private Button clearProgressButton;
+    [Header("Difficulty")]
+    [Tooltip("Shown when a new save is started; the choice locks for the run.")]
+    [SerializeField] private GameObject difficultyPanel;
+    [SerializeField] private Button normalButton;
+    [SerializeField] private Button hardButton;
+    [SerializeField] private Button difficultyBackButton;
     private static readonly Color ClearProgressArmedColor = new Color(0.86f, 0.40f, 0.40f, 1f);   // light red
     [SerializeField] private string targetSceneName = "stage1_full";
     [SerializeField] private string helpSceneName = "Help";
@@ -36,6 +42,10 @@ public sealed class StartMenuController : MonoBehaviour
     public Button ClearProgressButton => clearProgressButton;
     public Button CreditButton => creditButton;
     public GameObject CreditsPanel => creditsPanel;
+    public bool DifficultyOpen => difficultyPanel != null && difficultyPanel.activeSelf;
+    public GameObject DifficultyPanel => difficultyPanel;
+    public Button NormalButton => normalButton;
+    public Button HardButton => hardButton;
 
     private void Awake()
     {
@@ -69,6 +79,20 @@ public sealed class StartMenuController : MonoBehaviour
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
         RefreshClearProgressButton();
+
+        // Difficulty picker is optional so a menu authored before it still loads.
+        if (normalButton != null)
+            normalButton.onClick.AddListener(ChooseNormal);
+        if (hardButton != null)
+        {
+            hardButton.onClick.AddListener(ChooseHard);
+            if (hardButton.targetGraphic is Image hardImage)
+                hardImage.color = ClearProgressArmedColor;   // red reads as "the harder choice"
+        }
+        if (difficultyBackButton != null)
+            difficultyBackButton.onClick.AddListener(CloseDifficulty);
+        if (difficultyPanel != null)
+            difficultyPanel.SetActive(false);
     }
 
     private void OnDestroy()
@@ -93,6 +117,12 @@ public sealed class StartMenuController : MonoBehaviour
             englishButton.onClick.RemoveListener(SelectEnglish);
         if (clearProgressButton != null)
             clearProgressButton.onClick.RemoveListener(ClearProgress);
+        if (normalButton != null)
+            normalButton.onClick.RemoveListener(ChooseNormal);
+        if (hardButton != null)
+            hardButton.onClick.RemoveListener(ChooseHard);
+        if (difficultyBackButton != null)
+            difficultyBackButton.onClick.RemoveListener(CloseDifficulty);
     }
 
     private void Update()
@@ -114,13 +144,50 @@ public sealed class StartMenuController : MonoBehaviour
                 CloseSettings();
             return;
         }
+        if (DifficultyOpen)
+        {
+            if (keyboard.escapeKey.wasPressedThisFrame)
+                CloseDifficulty();
+            return;
+        }
 
         if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame ||
             keyboard.spaceKey.wasPressedThisFrame)
             StartGame();
     }
 
+    /// <summary>
+    /// A brand-new save picks its difficulty first; an existing run keeps the one it was created
+    /// with and loads straight in. HasAny is the "is there a save" signal the clear button uses too.
+    /// </summary>
     public void StartGame()
+    {
+        if (isLoading || DifficultyOpen)
+            return;
+        if (!GameProgress.HasAny && difficultyPanel != null)
+        {
+            difficultyPanel.SetActive(true);
+            return;
+        }
+        LoadTargetScene();
+    }
+
+    public void ChooseNormal() => StartRunWith(GameDifficulty.Normal);
+    public void ChooseHard() => StartRunWith(GameDifficulty.Hard);
+
+    private void StartRunWith(GameDifficulty difficulty)
+    {
+        Difficulty.SetForNewRun(difficulty);
+        LoadTargetScene();
+    }
+
+    public void CloseDifficulty()
+    {
+        if (difficultyPanel != null)
+            difficultyPanel.SetActive(false);
+    }
+
+    private void LoadTargetScene()
     {
         if (isLoading)
             return;

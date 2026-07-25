@@ -19,5 +19,7 @@ public static class GameProgress
         RunProgress.Reset();
         RunInventory.Reset();
         RunEquipment.Reset();
+        // The next save picks a difficulty again, so the start menu re-offers the choice.
+        Difficulty.Reset();
     }
 }

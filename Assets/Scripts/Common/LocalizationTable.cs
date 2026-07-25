@@ -110,6 +110,9 @@ public static class LocalizationTable
         { "BACK", "返回" },
         { "LANGUAGE", "语言" },
         { "CLEAR PROGRESS", "清零进度" },
+        { "SELECT DIFFICULTY", "选择难度" },
+        { "NORMAL", "普通" },
+        { "HARD", "困难" },
 
         // ---------- End-screen overlays ----------
         { "DEFEATED\nPress R to Restart", "败北\n按 R 重新开始" },

@@ -7,6 +7,7 @@ public class Entity_Health : CombatHealth
     private Entity_VFX entityVFX;
 
     public override CombatFaction Faction => CombatFaction.Enemy;
+    protected override float DifficultyHealthScale => Difficulty.MobHealthScale;
 
     protected override void Awake()
     {

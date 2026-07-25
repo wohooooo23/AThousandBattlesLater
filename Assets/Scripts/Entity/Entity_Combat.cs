@@ -40,9 +40,22 @@ public sealed class Entity_Combat : MonoBehaviour
     private GameObject activeWarning;
     private GameObject activeStrike;
     private float damageMultiplier = 1f;
+    // 1 for the player; the mob scales for an enemy. Resolved once from the owner's faction, so the
+    // shared melee code never scales the hero.
+    private float difficultyDamageScale = 1f;
+    private float difficultyWindupScale = 1f;
+
+    private void Awake()
+    {
+        if (GetComponent<IDamageable>() is { Faction: CombatFaction.Enemy })
+        {
+            difficultyDamageScale = Difficulty.MobDamageScale;
+            difficultyWindupScale = Difficulty.MobWindupScale;
+        }
+    }
 
     public float BaseDamage => damage;
-    public float Damage => damage * damageMultiplier;
+    public float Damage => damage * damageMultiplier * difficultyDamageScale;
     public EntityAttackMode AttackMode => attackMode;
     public float AttackRadius =>
         attackMode == EntityAttackMode.RadialSlash ? radialSlashRadius :
@@ -96,7 +109,7 @@ public sealed class Entity_Combat : MonoBehaviour
     // ---- Windup / release, so the telegraph is the wind-up and the strike lands on the swing ----
 
     /// <summary>How long the wind-up pose is held before the swing is allowed to play.</summary>
-    public float WindupDuration => fanWarningDuration;
+    public float WindupDuration => fanWarningDuration * difficultyWindupScale;
     public bool WindupActive => windupActive;
 
     /// <summary>

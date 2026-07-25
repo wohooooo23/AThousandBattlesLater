@@ -32,7 +32,7 @@ public class Enemy : Entity
 
     public void RecordAttackCompleted()
     {
-        nextAttackTime = Time.time + attackInterval;
+        nextAttackTime = Time.time + attackInterval * Difficulty.MobAttackIntervalScale;
     }
 
     public bool RoleDetection()

@@ -74,6 +74,8 @@ public static class StartMenuSettingsBuilder
         GameObject panel = EnsureSettingsPanel(menuRoot, out Button chinese, out Button english,
             out Button back, out Button clearProgress);
         GameObject credits = EnsureCreditsPanel(menuRoot, out Button creditsBack);
+        GameObject difficulty = EnsureDifficultyPanel(menuRoot, out Button normal, out Button hard,
+            out Button difficultyBack);
 
         SerializedObject data = new SerializedObject(controller);
         data.FindProperty("settingButton").objectReferenceValue = settingButton;
@@ -85,16 +87,21 @@ public static class StartMenuSettingsBuilder
         data.FindProperty("creditButton").objectReferenceValue = creditButton;
         data.FindProperty("creditsPanel").objectReferenceValue = credits;
         data.FindProperty("creditsBackButton").objectReferenceValue = creditsBack;
+        data.FindProperty("difficultyPanel").objectReferenceValue = difficulty;
+        data.FindProperty("normalButton").objectReferenceValue = normal;
+        data.FindProperty("hardButton").objectReferenceValue = hard;
+        data.FindProperty("difficultyBackButton").objectReferenceValue = difficultyBack;
         data.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(controller);
 
         panel.SetActive(false);
         credits.SetActive(false);
+        difficulty.SetActive(false);
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath))
             throw new InvalidOperationException("Failed to save " + ScenePath);
         AssetDatabase.SaveAssets();
-        Debug.Log("START_MENU_OK: corner SETTING/CREDIT entries, settings panel and credits panel authored; existing menu preserved.");
+        Debug.Log("START_MENU_OK: corner SETTING/CREDIT entries, settings, credits and difficulty panels authored; existing menu preserved.");
     }
 
     [MenuItem("Tools/Start Menu/Validate Start Menu")]
@@ -127,6 +134,13 @@ public static class StartMenuSettingsBuilder
         // English in Chinese. Catch that here instead of in the finished build.
         if (!LocalizationTable.TryGetChinese(CreditsBody, out _))
             throw new InvalidOperationException("LocalizationTable has no Chinese entry for the credits body.");
+
+        if (controller.DifficultyPanel == null || controller.NormalButton == null || controller.HardButton == null)
+            throw new InvalidOperationException(ScenePath + " is missing the difficulty panel or its buttons.");
+        if (controller.DifficultyPanel.activeSelf)
+            throw new InvalidOperationException("The difficulty panel must start hidden.");
+        if (controller.DifficultyPanel.transform.Find("Difficulty Back Button") == null)
+            throw new InvalidOperationException("The difficulty panel needs Normal, Hard and Back buttons.");
 
         Debug.Log("START_MENU_VALIDATE_OK.");
     }
@@ -175,6 +189,32 @@ public static class StartMenuSettingsBuilder
 
         back = EnsureMenuButton(panel.transform, "Credits Back Button", "Credits Back Label", "BACK", 30,
             new Vector2(0f, -348f));
+        return panel;
+    }
+
+    /// <summary>
+    /// The new-save difficulty picker, laid out like the main menu: a title over a left/right button
+    /// pair. NORMAL stays white; HARD is recoloured red by StartMenuController to read as the harder
+    /// choice, matching the clear-progress button.
+    /// </summary>
+    private static GameObject EnsureDifficultyPanel(Transform menuRoot, out Button normal, out Button hard,
+        out Button back)
+    {
+        Transform existing = menuRoot.Find("Difficulty Panel");
+        GameObject panel = existing != null
+            ? existing.gameObject
+            : CreateBlock(menuRoot, "Difficulty Panel", Vector2.zero, new Vector2(1200f, 560f),
+                new Color(0.04f, 0.05f, 0.09f, 0.98f));
+
+        EnsureLabel(panel.transform, "Difficulty Title", "SELECT DIFFICULTY", 52, new Vector2(0f, 170f),
+            new Vector2(1000f, 80f), Color.white, FontStyle.Bold);
+
+        normal = EnsureMenuButton(panel.transform, "Normal Button", "Normal Label", "NORMAL", 34,
+            new Vector2(-215f, -20f));
+        hard = EnsureMenuButton(panel.transform, "Hard Button", "Hard Label", "HARD", 34,
+            new Vector2(215f, -20f));
+        back = EnsureMenuButton(panel.transform, "Difficulty Back Button", "Difficulty Back Label", "BACK", 30,
+            new Vector2(0f, -200f));
         return panel;
     }
 

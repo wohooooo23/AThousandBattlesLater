@@ -10,6 +10,7 @@ public sealed class EnemyHealth : CombatHealth
     [SerializeField] private StoryDialogueController storyController;
 
     public override CombatFaction Faction => CombatFaction.Enemy;
+    protected override float DifficultyHealthScale => Difficulty.BossHealthScale;
     public string VictoryReturnSceneName => victoryReturnSceneName;
 
     protected override void Awake()

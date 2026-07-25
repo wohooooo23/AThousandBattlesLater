@@ -37,6 +37,12 @@ public sealed class FlyingEyeRangedAttack : MonoBehaviour
         visual ??= GetComponentInChildren<MobSpriteAnimator>(true);
         if (projectilePrefab == null || projectilePrefab.GetComponent<FlyingEyeProjectile2D>() == null)
             throw new MissingReferenceException(name + " requires the scene-authored Flying Eye projectile prefab.");
+
+        // Fold the difficulty scales into the authored values so the attack coroutine reads them
+        // unchanged. Hard hits harder, fires more often and shows a shorter tell.
+        damage *= Difficulty.MobDamageScale;
+        cooldown *= Difficulty.MobAttackIntervalScale;
+        windupDuration *= Difficulty.MobWindupScale;
     }
 
     public bool BeginAttack(Transform target)

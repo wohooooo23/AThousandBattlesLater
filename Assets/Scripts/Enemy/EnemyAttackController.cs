@@ -34,6 +34,10 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     private void Start()
     {
+        // Hard makes the boss hit harder and act more often. Health is scaled on EnemyHealth.
+        attackDamage *= Difficulty.BossDamageScale;
+        cooldown *= Difficulty.BossAttackIntervalScale;
+
         SceneArt.EnsureSprites();
         body = GetComponent<Rigidbody2D>();
         CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
