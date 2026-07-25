@@ -1468,7 +1468,7 @@ PrefabInstance:
       objectReference: {fileID: 1046162212}
     - target: {fileID: 1194950431501330264, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: victoryReturnSceneName
-      value: stage1_full
+      value: StartMenu
       objectReference: {fileID: 0}
     - target: {fileID: 3788660626847563615, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: radius
@@ -5495,11 +5495,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 155.8
+      value: -207.7
       objectReference: {fileID: 0}
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 171.2
+      value: 23.6
       objectReference: {fileID: 0}
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalPosition.z
@@ -5945,6 +5945,39 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!1 &528464120
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 528464121}
+  m_Layer: 0
+  m_Name: Chest Hint Triggers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &528464121
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 528464120}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1317439556}
+  - {fileID: 2026683382}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &531837803
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -21214,7 +21247,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1046162212
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21279,7 +21312,9 @@ MonoBehaviour:
   - speaker: 0
     text: Then today, at last, the truth will be revealed.
   movementPrompt: "WASD / Arrow Keys \u2014 Move"
-  combatPrompt: Press J to attack. Find treasure chests and press F to open them.
+  combatPrompt: Press J to attack. Press I to throw a kunai.
+  chestPrompt: Press F to open treasure chests.
+  equipmentPrompt: Press B to open the backpack, N to open the forge.
   doubleJumpPrompt: Press Space in midair to double-jump.
   dashPrompt: Press Shift while moving to dash.
 --- !u!4 &1046162213
@@ -23940,7 +23975,7 @@ MonoBehaviour:
     m_LineSpacing: 1
   m_Text: 'VICTORY
 
-    Press R to Restart'
+    Press Space for Main Menu'
 --- !u!222 &1265228733
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -24404,6 +24439,99 @@ Transform:
   - {fileID: 1751144650}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1317439555
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1317439556}
+  - component: {fileID: 1317439558}
+  - component: {fileID: 1317439557}
+  m_Layer: 0
+  m_Name: Double Jump Chest Hint Trigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1317439556
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1317439555}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -140.6, y: -138.78, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 528464121}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1317439557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1317439555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83212bc3573f7a14cae1aab9ad3a7453, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StoryPromptTrigger2D
+  storyController: {fileID: 1046162212}
+  beat: 5
+--- !u!61 &1317439558
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1317439555}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 36, y: 24}
+  m_EdgeRadius: 0
 --- !u!1001 &1319483594
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -34639,6 +34767,99 @@ Transform:
   - {fileID: 720507833}
   m_Father: {fileID: 100179490}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2026683381
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2026683382}
+  - component: {fileID: 2026683384}
+  - component: {fileID: 2026683383}
+  m_Layer: 0
+  m_Name: Dash Chest Hint Trigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2026683382
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2026683381}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 260.7, y: -170.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 528464121}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2026683383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2026683381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83212bc3573f7a14cae1aab9ad3a7453, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StoryPromptTrigger2D
+  storyController: {fileID: 1046162212}
+  beat: 6
+--- !u!61 &2026683384
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2026683381}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 36, y: 24}
+  m_EdgeRadius: 0
 --- !u!1 &2040713868
 GameObject:
   m_ObjectHideFlags: 0
@@ -35743,3 +35964,4 @@ SceneRoots:
   - {fileID: 2136941015}
   - {fileID: 1046162213}
   - {fileID: 1597042222}
+  - {fileID: 528464121}

@@ -22,12 +22,9 @@ public static class StartMenuSettingsBuilder
     private const string ScenePath = "Assets/Scenes/StartMenu.unity";
     private static readonly Vector2 MenuButtonSize = new Vector2(410f, 100f);
 
-    // Anchored into opposite bottom corners rather than offset from the centre, so the pair stays
-    // pinned to the corners at any aspect ratio. 60 in from the side, 40 up from the bottom.
-    private static readonly Vector2 BottomLeftAnchor = new Vector2(0f, 0f);
-    private static readonly Vector2 BottomRightAnchor = new Vector2(1f, 0f);
-    private static readonly Vector2 SettingButtonPosition = new Vector2(265f, 90f);
-    private static readonly Vector2 CreditButtonPosition = new Vector2(-265f, 90f);
+    // A second centred row under START/HELP (which sit at (±400, -115)): SETTING left, CREDIT right.
+    private static readonly Vector2 SettingButtonPosition = new Vector2(-400f, -300f);
+    private static readonly Vector2 CreditButtonPosition = new Vector2(400f, -300f);
     private static readonly Vector2 CentreAnchor = new Vector2(0.5f, 0.5f);
 
     /// <summary>
@@ -67,9 +64,9 @@ public static class StartMenuSettingsBuilder
         Transform menuRoot = controller.transform;
 
         Button settingButton = EnsureMenuButton(menuRoot, "Setting Button", "Setting Label", "SETTING",
-            34, SettingButtonPosition, BottomLeftAnchor);
+            34, SettingButtonPosition);
         Button creditButton = EnsureMenuButton(menuRoot, "Credit Button", "Credit Label", "CREDIT",
-            34, CreditButtonPosition, BottomRightAnchor);
+            34, CreditButtonPosition);
 
         GameObject panel = EnsureSettingsPanel(menuRoot, out Button chinese, out Button english,
             out Button back, out Button clearProgress);

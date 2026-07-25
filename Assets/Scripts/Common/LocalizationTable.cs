@@ -116,7 +116,7 @@ public static class LocalizationTable
 
         // ---------- End-screen overlays ----------
         { "DEFEATED\nPress R to Restart", "败北\n按 R 重新开始" },
-        { "VICTORY\nPress R to Restart", "胜利\n按 R 重新开始" },
+        { "VICTORY\nPress Space for Main Menu", "胜利\n按空格返回主菜单" },
 
         // ---------- Minimap legend (rich text kept intact) ----------
         {

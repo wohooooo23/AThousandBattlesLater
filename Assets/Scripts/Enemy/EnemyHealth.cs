@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 public sealed class EnemyHealth : CombatHealth
 {
     [SerializeField] private GameObject victoryOverlay;
-    [SerializeField] private string victoryReturnSceneName = "stage1_full";
+    [SerializeField] private string victoryReturnSceneName = "StartMenu";
     [SerializeField] private StoryDialogueController storyController;
 
     public override CombatFaction Faction => CombatFaction.Enemy;
@@ -36,7 +36,9 @@ public sealed class EnemyHealth : CombatHealth
 
     private void Update()
     {
-        if (isDead && victoryOverlay.activeSelf && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        // Space, not Enter: the victory dialogue advances on Enter, and reusing it would let the
+        // keypress that closes the last line also dismiss the victory screen in the same frame.
+        if (isDead && victoryOverlay.activeSelf && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             Time.timeScale = 1f;
             // The backpack, gear, abilities and forge levels end with the run too. They are cleared

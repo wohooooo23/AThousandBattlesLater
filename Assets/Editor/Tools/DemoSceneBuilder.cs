@@ -325,10 +325,7 @@ public static class DemoSceneBuilder
         // CREDIT sits in the bottom-right corner, mirroring SETTING in the bottom-left. Kept in step
         // with StartMenuSettingsBuilder, which authors the same pair into the hand-made menu.
         Button creditButton = CreateMenuButton(canvasObject.transform, "Credit Button", "Credit Label", "CREDIT", 34,
-            new Vector2(-265f, 90f), new Vector2(410f, 100f));
-        RectTransform creditRect = creditButton.GetComponent<RectTransform>();
-        creditRect.anchorMin = creditRect.anchorMax = new Vector2(1f, 0f);
-        creditRect.anchoredPosition = new Vector2(-265f, 90f);
+            new Vector2(400f, -300f), new Vector2(410f, 100f));
         Button exitButton = CreateMenuButton(canvasObject.transform, "Exit Button", "Exit Label", "EXIT", 34,
             new Vector2(0f, -238f), new Vector2(410f, 84f));
 
@@ -2303,7 +2300,7 @@ public static class DemoSceneBuilder
         EnemyHealth health = boss.GetComponent<EnemyHealth>();
         if (!health)
             throw new InvalidOperationException("Boss.prefab is missing EnemyHealth.");
-        SetSerializedString(health, "victoryReturnSceneName", Path.GetFileNameWithoutExtension(FullMapStageScenePath));
+        SetSerializedString(health, "victoryReturnSceneName", Path.GetFileNameWithoutExtension(StartMenuScenePath));
         SetSerializedFloat(health, "maximumHealth", CombatBalance.BossMaximumHealth);
         PrefabUtility.RecordPrefabInstancePropertyModifications(health);
         EditorSceneManager.MarkSceneDirty(scene);
@@ -2362,7 +2359,7 @@ public static class DemoSceneBuilder
         // full-screen defeat/victory overlays; HeroHealth.healthBar is wired to the Canvas HP bar
         // in SetupAlphaUi (which runs right after this, once the Alpha UI is in the scene).
         GameObject defeatedOverlay = CreateEndScreenOverlay(hud.transform, "Defeated Overlay", "DEFEATED\nPress R to Restart");
-        CreateEndScreenOverlay(hud.transform, "Victory Overlay", "VICTORY\nPress R to Restart");
+        CreateEndScreenOverlay(hud.transform, "Victory Overlay", "VICTORY\nPress Space for Main Menu");
 
         HeroHealth health = GameObject.Find("Hero").GetComponent<HeroHealth>();
         SetSerializedObject(health, "defeatedOverlay", defeatedOverlay);
@@ -2588,7 +2585,7 @@ public static class DemoSceneBuilder
         // the victory overlay was authored alongside the defeat overlay in SetupHeroHud.
         EnemyHealth enemyHealth = GetOrAdd<EnemyHealth>(target);
         SetSerializedFloat(enemyHealth, "maximumHealth", CombatBalance.BossMaximumHealth);
-        SetSerializedString(enemyHealth, "victoryReturnSceneName", Path.GetFileNameWithoutExtension(FullMapStageScenePath));
+        SetSerializedString(enemyHealth, "victoryReturnSceneName", Path.GetFileNameWithoutExtension(StartMenuScenePath));
         SetSerializedObject(enemyHealth, "victoryOverlay", victoryOverlay);
         SetSerializedObject(enemyHealth, "worldHealthBar", null);
         return enemyHealth;
