@@ -100,7 +100,7 @@ public static class LocalizationTable
         { "Press Shift while moving to dash.", "移动时按 Shift 冲刺。" },
 
         // ---------- Start menu ----------
-        { "A THOUSAND BATTLES LATER", "身经百战" },
+        { "A THOUSAND BATTLES LATER", "武者之誓" },
         { "START", "开始游戏" },
         { "HELP", "帮助" },
         { "SETTING", "设置" },
