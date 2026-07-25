@@ -166,7 +166,7 @@ public sealed class StartMenuController : MonoBehaviour
             return;
         if (!GameProgress.HasAny && difficultyPanel != null)
         {
-            difficultyPanel.SetActive(true);
+            OpenOverlay(difficultyPanel);
             return;
         }
         LoadTargetScene();
@@ -206,8 +206,20 @@ public sealed class StartMenuController : MonoBehaviour
     /// <summary>Opens the credits overlay. Its body is a deliberate placeholder for the asset list.</summary>
     public void OpenCredits()
     {
-        if (creditsPanel != null)
-            creditsPanel.SetActive(true);
+        OpenOverlay(creditsPanel);
+    }
+
+    /// <summary>
+    /// Shows an overlay panel and moves it to the front of its siblings. A panel's full-screen
+    /// backdrop only covers what is drawn behind it, so without this the menu buttons that happen to
+    /// sit later in the hierarchy (e.g. CREDIT) draw on top of the backdrop and stay clickable.
+    /// </summary>
+    private static void OpenOverlay(GameObject panel)
+    {
+        if (panel == null)
+            return;
+        panel.transform.SetAsLastSibling();
+        panel.SetActive(true);
     }
 
     public void CloseCredits()
@@ -218,8 +230,7 @@ public sealed class StartMenuController : MonoBehaviour
 
     public void OpenSettings()
     {
-        if (settingsPanel != null)
-            settingsPanel.SetActive(true);
+        OpenOverlay(settingsPanel);
         RefreshClearProgressButton();   // a run may have ended since the panel was last opened
     }
 
