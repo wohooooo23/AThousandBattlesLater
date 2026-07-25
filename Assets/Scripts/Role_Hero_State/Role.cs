@@ -43,8 +43,9 @@ public sealed class Role : Entity
     public float attackresetduration = 0.5f;
 
     [Header("Kunai Throw")]
-    [Tooltip("Forward drift speed while the throw animation plays (scaled for the 5x hero).")]
-    public float throwmovespeed = 20f;
+    [Tooltip("When the throw begins, the hero's velocity is multiplied by these to tune the feel: 1 keeps the momentum, 0 kills it. Horizontal and vertical are separate.")]
+    [Range(0f, 1f)] public float throwHorizontalFactor = 1f;
+    [Range(0f, 1f)] public float throwVerticalFactor = 1f;
 
     public int maxJumpCount = 2;
     public int jumpCountRemaining;
