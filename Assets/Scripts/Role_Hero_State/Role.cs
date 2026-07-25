@@ -183,6 +183,28 @@ public sealed class Role : Entity
             stateMachine.canChangeState = value;
     }
 
+    /// <summary>
+    /// Snaps the hero to the first frame of the idle animation. Used on boss-room entry so the cutscene
+    /// pause freezes a clean idle stance instead of whatever run/jump frame the player entered on.
+    /// Change() clears the current state's animator bool and sets "Idle"; Play jumps straight to the
+    /// idle state's frame 0 (state named "Hero_Idle" in the Hero Animator Controller).
+    /// </summary>
+    public void ResetToIdlePose()
+    {
+        if (stateMachine == null || idleState == null)
+            return;
+        bool previous = stateMachine.canChangeState;
+        stateMachine.canChangeState = true;
+        stateMachine.Change(idleState);
+        stateMachine.canChangeState = previous;
+        Change_Vec(0f, rb != null ? rb.linearVelocity.y : 0f);
+        if (animator != null)
+        {
+            animator.Play("Hero_Idle", 0, 0f);
+            animator.Update(0f);
+        }
+    }
+
     public void ResetJumpCount() => jumpCountRemaining = maxJumpCount;
     public void SetMaxJumpCount(int value)
     {

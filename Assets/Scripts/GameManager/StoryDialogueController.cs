@@ -71,8 +71,19 @@ public sealed class StoryDialogueController : MonoBehaviour
     public int BossVictoryLineCount => bossVictoryLines != null ? bossVictoryLines.Length : 0;
     public bool IsPlaying => isPlaying;
 
+    /// <summary>
+    /// True while a time-stopping dialogue holds the game paused. UIManager reads it to refuse
+    /// opening the bag/forge during a cutscene, which would otherwise un-pause on close and draw the
+    /// panel over the dialogue. Non-pausing tutorial prompts leave it false, so the bag still opens.
+    /// </summary>
+    public static bool CutscenePauseActive { get; private set; }
+
     private void Awake()
     {
+        // The static can be left true if a previous scene ended mid-pause (e.g. the victory screen
+        // never releases). Clear it before this scene's own opening sequence re-arms it.
+        CutscenePauseActive = false;
+
         if (heroBubble == null)
             throw new MissingReferenceException("StoryDialogueController requires the scene-authored Hero dialogue bubble.");
         bool hasBossStory = (bossIntroductionLines != null && bossIntroductionLines.Length > 0) ||
@@ -329,6 +340,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         FreezeHeroForDialogue();
         Time.timeScale = 0f;
         ownsPause = true;
+        CutscenePauseActive = true;
     }
 
     private void ReleasePause()
@@ -338,6 +350,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         Time.timeScale = previousTimeScale <= 0f ? 1f : previousTimeScale;
         RestoreHeroAfterDialogue();
         ownsPause = false;
+        CutscenePauseActive = false;
     }
 
     private void FreezeHeroForDialogue()

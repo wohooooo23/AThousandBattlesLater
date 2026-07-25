@@ -71,6 +71,11 @@ public sealed class BossArenaController : MonoBehaviour
         hero.position = heroSpawnPoint.position;
         Physics2D.SyncTransforms();
 
+        // Reset to idle before the intro so the cutscene pause freezes a clean stance, not the run/jump
+        // frame the player charged in on. Done while control is still enabled so the state change takes;
+        // the intro's freeze (same frame) then holds this idle frame.
+        hero.GetComponent<Role>()?.ResetToIdlePose();
+
         // Only one MainCamera and one AudioListener are active at a time. Reloading stage1_full
         // after victory restores these authored states and therefore the exploration camera.
         explorationCamera.gameObject.SetActive(false);

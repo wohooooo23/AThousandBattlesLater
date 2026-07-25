@@ -16,6 +16,7 @@ public sealed class EnemyAttackController : MonoBehaviour
     private CameraShake2D cameraShake;
     private Rigidbody2D body;
     private bool attacking;
+    private float attackUnlockTime;   // no attacks until this scaled-time mark (initial entry cooldown)
     private EnemyAttackPattern previousPattern;
     private Vector3 attackAnchor;
     private Vector3 attackBaseScale;
@@ -51,6 +52,11 @@ public sealed class EnemyAttackController : MonoBehaviour
         animationDriven = bossFsm != null;
         teleport = GetComponent<BossTeleport>();
         RefreshAttackPatterns();
+
+        // Start on cooldown so the first telegraph never fires on the activation frame — otherwise it
+        // draws during the (time-stopped) boss intro and freezes on screen over the dialogue. Time.time
+        // is scaled, so this clock is paused for the whole intro and only elapses once play resumes.
+        attackUnlockTime = Time.time + cooldown;
     }
 
     public void RefreshAttackPatterns()
@@ -61,7 +67,7 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     private void Update()
     {
-        if (attacking || hero == null)
+        if (attacking || hero == null || Time.time < attackUnlockTime)
             return;
         float distance = Vector2.Distance(transform.position, hero.position);
         if (distance > chaseRange)

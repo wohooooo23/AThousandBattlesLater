@@ -27,6 +27,11 @@ public static class StartMenuSettingsBuilder
     private static readonly Vector2 CreditButtonPosition = new Vector2(400f, -300f);
     private static readonly Vector2 CentreAnchor = new Vector2(0.5f, 0.5f);
 
+    // Overlay panels are full-screen: a dim backdrop that blocks every click to the menu behind it,
+    // with the visible dark box centred on top of it.
+    private static readonly Color ModalDimColor = new Color(0f, 0f, 0f, 0.72f);
+    private static readonly Color PanelBoxColor = new Color(0.04f, 0.05f, 0.09f, 0.98f);
+
     /// <summary>
     /// The asset credits, also used by DemoSceneBuilder so the two authoring paths cannot drift.
     /// This exact text is the translation key in LocalizationTable — Validate checks it resolves.
@@ -142,14 +147,48 @@ public static class StartMenuSettingsBuilder
         Debug.Log("START_MENU_VALIDATE_OK.");
     }
 
+    /// <summary>
+    /// Finds or creates an overlay panel as a full-screen modal: the root stretches over the whole
+    /// canvas with a dim, click-blocking Image so no menu button behind it can be seen through or
+    /// clicked (the CREDIT button used to poke past a centred box and stay pressable). A centred dark
+    /// box is kept as the first child for the visible frame; titles and buttons stay on the root and
+    /// therefore render above it. Idempotent — re-running converts an old centred panel in place.
+    /// </summary>
+    private static GameObject EnsureModalPanel(Transform menuRoot, string name, Vector2 boxSize)
+    {
+        Transform existing = menuRoot.Find(name);
+        GameObject panel = existing != null
+            ? existing.gameObject
+            : new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        panel.transform.SetParent(menuRoot, false);
+
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Image dim = panel.GetComponent<Image>();
+        if (dim == null)
+            dim = panel.AddComponent<Image>();
+        dim.color = ModalDimColor;
+        dim.raycastTarget = true;
+
+        string boxName = name + " Box";
+        Transform boxTransform = panel.transform.Find(boxName);
+        GameObject box = boxTransform != null
+            ? boxTransform.gameObject
+            : CreateBlock(panel.transform, boxName, Vector2.zero, boxSize, PanelBoxColor);
+        ApplyRect(box.GetComponent<RectTransform>(), Vector2.zero, boxSize, CentreAnchor);
+        box.GetComponent<Image>().color = PanelBoxColor;
+        box.transform.SetAsFirstSibling();   // behind the labels/buttons already on the panel root
+        return panel;
+    }
+
     private static GameObject EnsureSettingsPanel(Transform menuRoot, out Button chinese, out Button english,
         out Button back, out Button clearProgress)
     {
-        Transform existing = menuRoot.Find("Settings Panel");
-        GameObject panel = existing != null
-            ? existing.gameObject
-            : CreateBlock(menuRoot, "Settings Panel", Vector2.zero, new Vector2(1200f, 680f),
-                new Color(0.04f, 0.05f, 0.09f, 0.98f));
+        GameObject panel = EnsureModalPanel(menuRoot, "Settings Panel", new Vector2(1200f, 680f));
 
         // The panel covers more than language now, so it is titled SETTING and the language pair
         // gets its own small heading underneath.
@@ -173,11 +212,7 @@ public static class StartMenuSettingsBuilder
 
     private static GameObject EnsureCreditsPanel(Transform menuRoot, out Button back)
     {
-        Transform existing = menuRoot.Find("Credits Panel");
-        GameObject panel = existing != null
-            ? existing.gameObject
-            : CreateBlock(menuRoot, "Credits Panel", Vector2.zero, new Vector2(1500f, 820f),
-                new Color(0.04f, 0.05f, 0.09f, 0.98f));
+        GameObject panel = EnsureModalPanel(menuRoot, "Credits Panel", new Vector2(1500f, 820f));
 
         EnsureLabel(panel.transform, "Credits Title", "CREDITS", 52, new Vector2(0f, 330f),
             new Vector2(1100f, 80f), Color.white, FontStyle.Bold);
@@ -197,11 +232,7 @@ public static class StartMenuSettingsBuilder
     private static GameObject EnsureDifficultyPanel(Transform menuRoot, out Button normal, out Button hard,
         out Button back)
     {
-        Transform existing = menuRoot.Find("Difficulty Panel");
-        GameObject panel = existing != null
-            ? existing.gameObject
-            : CreateBlock(menuRoot, "Difficulty Panel", Vector2.zero, new Vector2(1200f, 560f),
-                new Color(0.04f, 0.05f, 0.09f, 0.98f));
+        GameObject panel = EnsureModalPanel(menuRoot, "Difficulty Panel", new Vector2(1200f, 560f));
 
         EnsureLabel(panel.transform, "Difficulty Title", "SELECT DIFFICULTY", 52, new Vector2(0f, 170f),
             new Vector2(1000f, 80f), Color.white, FontStyle.Bold);

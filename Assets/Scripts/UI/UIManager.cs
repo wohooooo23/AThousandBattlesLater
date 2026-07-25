@@ -58,6 +58,11 @@ public sealed class UIManager : MonoBehaviour
 
     public void ToggleExclusive(params GameObject[] panels)
     {
+        // A time-stopping cutscene owns the pause; opening a panel here would un-pause it on close and
+        // cover the dialogue. Nothing is open during a cutscene, so refusing to open is enough.
+        if (StoryDialogueController.CutscenePauseActive)
+            return;
+
         bool targetIsOpen = false;
         foreach (GameObject panel in panels)
         {
