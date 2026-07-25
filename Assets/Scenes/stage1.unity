@@ -1775,7 +1775,7 @@ Sprite:
       height: 64
     textureRectOffset: {x: 0, y: 0}
     atlasRectOffset: {x: -1, y: -1}
-    settingsRaw: 3136
+    settingsRaw: 64
     uvTransform: {x: 64, y: 32, z: 64, w: 32}
     downscaleMultiplier: 1
   m_AtlasRD:
@@ -2063,13 +2063,33 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 319477096981186190, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 200
+      objectReference: {fileID: 0}
+    - target: {fileID: 319477096981186190, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 3856785247887672959, guid: d4332103648f2d148b096f6b692ade13, type: 3}
       propertyPath: m_Name
       value: Alpha UI
       objectReference: {fileID: 0}
+    - target: {fileID: 3856785247887672959, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5804391885191555660, guid: d4332103648f2d148b096f6b692ade13, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6408201250922506525, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 200
+      objectReference: {fileID: 0}
+    - target: {fileID: 6408201250922506525, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 7219262886901005022, guid: d4332103648f2d148b096f6b692ade13, type: 3}
       propertyPath: m_Pivot.x
@@ -2150,6 +2170,18 @@ PrefabInstance:
     - target: {fileID: 7219262886901005022, guid: d4332103648f2d148b096f6b692ade13, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8040100098302992530, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 200
+      objectReference: {fileID: 0}
+    - target: {fileID: 8040100098302992530, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 8528731625880214794, guid: d4332103648f2d148b096f6b692ade13, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2430,6 +2462,10 @@ PrefabInstance:
     - target: {fileID: 377488103459768345, guid: 116318262ea6b1747a0f250ae573af19, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5862002304262011042, guid: 116318262ea6b1747a0f250ae573af19, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 6986887443521159146, guid: 116318262ea6b1747a0f250ae573af19, type: 3}
       propertyPath: followTarget
@@ -4157,7 +4193,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1983818621
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4198,6 +4234,8 @@ MonoBehaviour:
   bossVictoryLines: []
   movementPrompt: "WASD / Arrow Keys \u2014 Move"
   combatPrompt: Press J to attack. Find treasure chests and press F to open them.
+  chestPrompt: Press F to open treasure chests.
+  equipmentPrompt: Press B to open the backpack, N to open the forge.
   doubleJumpPrompt: Press Space in midair to double-jump.
   dashPrompt: Press Shift while moving to dash.
 --- !u!4 &1983818622

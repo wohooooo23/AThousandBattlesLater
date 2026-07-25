@@ -307,7 +307,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
   chaseRange: 550
   cooldown: 1.2
-  attackDamage: 20
+  attackDamage: 40
 --- !u!114 &8487550491731073310
 MonoBehaviour:
   m_ObjectHideFlags: 0
