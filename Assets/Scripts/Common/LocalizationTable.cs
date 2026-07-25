@@ -114,6 +114,12 @@ public static class LocalizationTable
         { "NORMAL", "普通" },
         { "HARD", "困难" },
 
+        // ---------- Pause menu ----------
+        { "PAUSED", "暂停" },
+        { "RESUME", "继续游戏" },
+        { "HOW TO PLAY", "操作帮助" },
+        { "MAIN MENU", "返回主菜单" },
+
         // ---------- End-screen overlays ----------
         { "DEFEATED\nPress R to Restart", "败北\n按 R 重新开始" },
         { "VICTORY\nPress Space for Main Menu", "胜利\n按空格返回主菜单" },
