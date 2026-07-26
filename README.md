@@ -3,6 +3,24 @@
 `final test` 是当前 Unity 6（`6000.5.2f1`）工作工程。项目的完整玩法由
 `Assets/Scenes/stage1_full.unity` 串联地图探索、宝箱奖励、装备/背包和 Boss 战。
 
+## Hero 受击闪白管线
+
+Hero 与敌人共用 `Entity_VFX` 的材质切换效果，核心组件和引用直接保存在 `Hero.prefab`，运行时不会临时补挂。
+
+1. **伤害入口**：近战、子弹、毒气和尖刺最终都通过 `IDamageable.ApplyDamage -> CombatHealth.ApplyDamage`，只有实际扣除生命时才调用 `HeroHealth.OnDamaged`。
+2. **受击反馈**：`HeroHealth.Awake` 缓存同一 Hero 根对象上的 `Entity_VFX`；`OnDamaged` 依次刷新 HP、播放血条反馈、调用 `PlayOnDamageVfx`，最后保留原有击退与跳落状态切换。
+3. **材质恢复**：`Entity_VFX` 在 Awake 保存动画 SpriteRenderer 的原材质，受击时切换到 `OnDamage_Material` 0.2 秒后恢复；连续受击会重启同一协程，不会叠加多个闪白计时器。
+4. **保存式引用**：`Hero.prefab` 已保存 Hero 根对象的 `Entity_VFX`，其 `targetRenderer` 指向动画模型，`onDamageMaterial` 指向 `Assets/Material/OnDamage_Material.mat`；`HeroHealth.Awake` 会要求该保存式组件存在，避免静默退化成无反馈状态。
+
+```text
+Enemy hit / projectile / poison / spike
+  -> CombatHealth.ApplyDamage
+  -> HeroHealth.OnDamaged
+  -> HP bar feedback + Entity_VFX.PlayOnDamageVfx
+  -> white material (0.2 s)
+  -> original animated sprite material
+```
+
 ## 红色 / 绿色符文效果管线
 
 红色与绿色符文占用各自独立的装备槽，可以同时生效；红色符文提供固定机动强化且不可锻造，绿色符文提供可锻造的持续生命恢复。

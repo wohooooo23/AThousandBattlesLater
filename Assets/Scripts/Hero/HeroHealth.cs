@@ -13,6 +13,7 @@ public sealed class HeroHealth : CombatHealth
     public override CombatFaction Faction => CombatFaction.Player;
 
     private float flatDefense;
+    private Entity_VFX hitFlash;
 
     /// <summary>Forged armor sets a flat damage reduction. At least 1 damage always lands.</summary>
     public void SetDefense(float defense)
@@ -28,8 +29,10 @@ public sealed class HeroHealth : CombatHealth
     protected override void Awake()
     {
         base.Awake();
-        if (healthBar == null || defeatedOverlay == null)
-            throw new MissingReferenceException("HeroHealth requires scene-authored HUD references.");
+        hitFlash = GetComponent<Entity_VFX>();
+        if (healthBar == null || defeatedOverlay == null || hitFlash == null)
+            throw new MissingReferenceException(
+                "HeroHealth requires scene-authored HUD references and an Entity_VFX hit flash.");
         defeatedOverlay.SetActive(false);
         healthBar.SetHP(HealthFraction);
     }
@@ -71,6 +74,7 @@ public sealed class HeroHealth : CombatHealth
     {
         healthBar.SetHP(HealthFraction);
         healthBar.FlashDamage();
+        hitFlash.PlayOnDamageVfx();
         GetComponent<Role>()?.ReceiveHit(source);
     }
 
