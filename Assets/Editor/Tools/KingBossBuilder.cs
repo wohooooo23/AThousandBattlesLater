@@ -47,6 +47,7 @@ public static class KingBossBuilder
             boss.AddComponent<EnemyAttackController>();
         if (boss.GetComponent<EnemyPlatformNavigator>() == null)
             boss.AddComponent<EnemyPlatformNavigator>();
+        ConfigureJumpRelocation(boss);
         EnemyHealth health = boss.GetComponent<EnemyHealth>() ??
             throw new MissingReferenceException("The preserved arena boss is missing EnemyHealth.");
 
@@ -104,8 +105,11 @@ public static class KingBossBuilder
             cleave.CastAnim != CastAnimation.Attack3 || ReadFloat(cleave, "reachDistance") < arenaHalfWidth ||
             ReadFloat(cleave, "cleaveHeight") < 30f)
             throw new InvalidOperationException("King attack animation mapping or authored half-arena size is invalid.");
-        if (boss.GetComponent<BossTeleport>() != null)
-            throw new InvalidOperationException("The stage2 King must not retain BossTeleport.");
+        BossTeleport relocation = boss.GetComponent<BossTeleport>();
+        if (relocation == null || relocation.RelocationMode != BossRelocationMode.Jump ||
+            relocation.AttacksPerRelocation != 3 || ReadFloat(relocation, "jumpDuration") <= 0f ||
+            ReadFloat(relocation, "jumpHeight") <= 0f)
+            throw new InvalidOperationException("The stage2 King requires an every-three-attacks node jump.");
         EnemyHealth bossHealth = boss.GetComponent<EnemyHealth>();
         if (boss.GetComponent<EnemyPlatformNavigator>() == null || boss.GetComponent<EnemyAttackController>() == null ||
             bossHealth == null)
@@ -129,7 +133,7 @@ public static class KingBossBuilder
                 pattern is KingUppercutArcPattern || pattern is KingGroundCleavePattern))
             throw new InvalidOperationException("stage1 Evil Wizard was modified by the King build.");
 
-        Debug.Log("KING_BOSS_VALIDATE_OK: stage2 King frames, attacks, references and no-teleport movement verified; stage1 unchanged.");
+        Debug.Log("KING_BOSS_VALIDATE_OK: stage2 King frames, attacks, references and every-three-attacks node jump verified; stage1 unchanged.");
     }
 
     private static BossSpriteAnimator CreateKingVisual(GameObject boss, out SpriteRenderer renderer)
@@ -213,6 +217,15 @@ public static class KingBossBuilder
         Entity_VFX vfx = boss.GetComponent<Entity_VFX>() ?? boss.AddComponent<Entity_VFX>();
         SetObject(vfx, "targetRenderer", renderer);
         SetObject(vfx, "onDamageMaterial", material);
+    }
+
+    private static void ConfigureJumpRelocation(GameObject boss)
+    {
+        BossTeleport relocation = boss.GetComponent<BossTeleport>() ?? boss.AddComponent<BossTeleport>();
+        SetInt(relocation, "attacksPerRelocation", 3);
+        SetInt(relocation, "relocationMode", (int)BossRelocationMode.Jump);
+        SetFloat(relocation, "jumpDuration", 0.8f);
+        SetFloat(relocation, "jumpHeight", 12f);
     }
 
     private static void RemoveWizardVisuals(GameObject boss)

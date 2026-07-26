@@ -178,7 +178,8 @@ public static class BossWizardBuilder
             teleport = root.AddComponent<BossTeleport>();
         SerializedObject teleportData = new SerializedObject(teleport);
         teleportData.FindProperty("flash").objectReferenceValue = vfx;
-        teleportData.FindProperty("attacksPerTeleport").intValue = 3;
+        teleportData.FindProperty("attacksPerRelocation").intValue = 3;
+        teleportData.FindProperty("relocationMode").enumValueIndex = (int)BossRelocationMode.Blink;
         teleportData.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(teleport);
     }

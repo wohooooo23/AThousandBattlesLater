@@ -28286,6 +28286,7 @@ GameObject:
   - component: {fileID: 8081266080304940360}
   - component: {fileID: 8081266080304940359}
   - component: {fileID: 8081266080304940358}
+  - component: {fileID: 8081266080304940361}
   m_Layer: 8
   m_Name: Arena Boss - Medieval King
   m_TagString: Untagged
@@ -28359,6 +28360,25 @@ MonoBehaviour:
   chaseRange: 55
   cooldown: 2
   attackDamage: 12
+--- !u!114 &8081266080304940361
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4068017401519250528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 908f36a510db90249a8cefbfa03cd115, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BossTeleport
+  attacksPerRelocation: 3
+  relocationMode: 1
+  flash: {fileID: 6118492944854572108}
+  teleportDuration: 0.8
+  relocateAt: 0.25
+  jumpDuration: 0.8
+  jumpHeight: 12
 --- !u!4 &7093356234712874282
 Transform:
   m_ObjectHideFlags: 0

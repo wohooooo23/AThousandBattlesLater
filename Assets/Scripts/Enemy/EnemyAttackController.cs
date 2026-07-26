@@ -31,7 +31,7 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     private bool animationDriven;   // a BossStateMachine plays cast anims instead of the procedural jitter
     private BossStateMachine bossFsm;
-    private BossTeleport teleport;
+    private BossTeleport relocation;
 
     private void Start()
     {
@@ -50,7 +50,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         cameraShake = Camera.main != null ? Camera.main.GetComponent<CameraShake2D>() : null;
         bossFsm = GetComponent<BossStateMachine>();
         animationDriven = bossFsm != null;
-        teleport = GetComponent<BossTeleport>();
+        relocation = GetComponent<BossTeleport>();
         RefreshAttackPatterns();
 
         // Start on cooldown so the first telegraph never fires on the activation frame — otherwise it
@@ -109,11 +109,11 @@ public sealed class EnemyAttackController : MonoBehaviour
         yield return pattern.Execute(new EnemyAttackContext(this));
         bossFsm?.OnCastEnd();
         ResetAttackPose();
-        // Relocation is its own window before the cooldown, not part of it: the cooldown below is
-        // still paid in full so the blink adds reaction time. attacking stays true throughout, so
-        // the platform navigator keeps its hands off the body during the blink.
-        if (teleport != null && teleport.ShouldTeleport())
-            yield return teleport.TeleportRoutine();
+        // Relocation is its own window before the cooldown, not part of it. The Wizard blinks while
+        // the King follows a visible jump arc. attacking stays true throughout, so the platform
+        // navigator never competes for the Rigidbody2D during either movement.
+        if (relocation != null && relocation.ShouldRelocate())
+            yield return relocation.RelocationRoutine();
         yield return new WaitForSeconds(cooldown);
         attacking = false;
         CurrentPattern = null;
