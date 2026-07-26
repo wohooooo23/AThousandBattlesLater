@@ -9,14 +9,14 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Authors the fourth equipment category without rebuilding the level: creates the reusable green
-/// rune assets, wires the saved paperdoll slot, and appends one drop to the existing Supply Chest.
+/// rune assets, wires the saved paperdoll slot, and saves one drop in stage2's lower-right chest.
 /// Existing chest transforms and unrelated prefab overrides are deliberately preserved.
 /// </summary>
 public static class VerdantRuneBuilder
 {
-    private const string ScenePath = "Assets/Scenes/stage1_full.unity";
+    private const string ScenePath = "Assets/Scenes/stage2_full.unity";
     private const string CanvasPath = "Assets/Prefab/Canvas.prefab";
-    private const string SupplyChestName = "Supply Treasure Chest";
+    private const string RuneChestName = "Dash Treasure Chest";
 
     [MenuItem("Tools/Inventory/Build Green Rune")]
     public static void Build()
@@ -25,11 +25,11 @@ public static class VerdantRuneBuilder
         EquipmentBuilder.EnsureGreenRunePickup();
         ConfigureCrimsonRuneDescription();
         EquipmentBuilder.WireWearableSlots();
-        AppendSupplyChestDrop();
+        ConfigureRuneChestDrop();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Validate();
-        Debug.Log("GREEN_RUNE_OK: item, fourth equipment slot and Supply Chest drop are saved.");
+        Debug.Log("GREEN_RUNE_OK: item, fourth equipment slot and stage2 rune chest drop are saved.");
     }
 
     [MenuItem("Tools/Inventory/Validate Green Rune")]
@@ -72,10 +72,9 @@ public static class VerdantRuneBuilder
 
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         TreasureChest2D chest = FindInScene<TreasureChest2D>(scene)
-            .SingleOrDefault(candidate => candidate.name == SupplyChestName);
-        if (chest == null || Enumerable.Range(0, chest.ConfiguredDropCount)
-                .Count(index => chest.GetConfiguredDrop(index) == pickup) != 1)
-            throw new InvalidOperationException("Supply Treasure Chest must contain exactly one Green Rune drop.");
+            .SingleOrDefault(candidate => candidate.name == RuneChestName);
+        if (chest == null || chest.ConfiguredDropCount != 1 || chest.GetConfiguredDrop(0) != pickup)
+            throw new InvalidOperationException("Stage2's lower-right chest must contain only one Green Rune drop.");
 
         // Exercise the real inventory/equipment route without entering Play Mode. The new rune must
         // occupy its dedicated slot and return to the bag when unequipped.
@@ -126,30 +125,24 @@ public static class VerdantRuneBuilder
         importer.SaveAndReimport();
     }
 
-    private static void AppendSupplyChestDrop()
+    private static void ConfigureRuneChestDrop()
     {
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         TreasureChest2D chest = FindInScene<TreasureChest2D>(scene)
-            .SingleOrDefault(candidate => candidate.name == SupplyChestName);
+            .SingleOrDefault(candidate => candidate.name == RuneChestName);
         GameObject pickup = AssetDatabase.LoadAssetAtPath<GameObject>(EquipmentBuilder.GreenRunePickupPath);
         if (chest == null || pickup == null)
-            throw new MissingReferenceException("Supply chest or Green Rune pickup is missing.");
+            throw new MissingReferenceException("Stage2 rune chest or Green Rune pickup is missing.");
 
         SerializedObject data = new SerializedObject(chest);
         SerializedProperty drops = data.FindProperty("itemPrefabs");
-        bool alreadyPresent = Enumerable.Range(0, drops.arraySize)
-            .Any(index => drops.GetArrayElementAtIndex(index).objectReferenceValue == pickup);
-        if (!alreadyPresent)
-        {
-            int index = drops.arraySize;
-            drops.InsertArrayElementAtIndex(index);
-            drops.GetArrayElementAtIndex(index).objectReferenceValue = pickup;
-            data.ApplyModifiedPropertiesWithoutUndo();
-            PrefabUtility.RecordPrefabInstancePropertyModifications(chest);
-            EditorSceneManager.MarkSceneDirty(scene);
-            if (!EditorSceneManager.SaveScene(scene, ScenePath))
-                throw new InvalidOperationException("Failed to save " + ScenePath);
-        }
+        drops.arraySize = 1;
+        drops.GetArrayElementAtIndex(0).objectReferenceValue = pickup;
+        data.ApplyModifiedPropertiesWithoutUndo();
+        PrefabUtility.RecordPrefabInstancePropertyModifications(chest);
+        EditorSceneManager.MarkSceneDirty(scene);
+        if (!EditorSceneManager.SaveScene(scene, ScenePath))
+            throw new InvalidOperationException("Failed to save " + ScenePath);
     }
 
     private static T[] FindInScene<T>(Scene scene) where T : Component => scene.GetRootGameObjects()

@@ -27,6 +27,12 @@ public sealed class BossArenaController : MonoBehaviour
     [SerializeField] private UIManager uiManager;
     [SerializeField] private BgmPlayer bgmPlayer;
 
+    [Header("Rune Gate")]
+    [Tooltip("When enabled, the Hero must be wearing the configured rune before this arena can be entered.")]
+    [SerializeField] private bool requiresEquippedRune;
+    [SerializeField] private ItemType requiredRuneSlot = ItemType.Accessory;
+    [SerializeField] private string missingRuneMessage = "The gate has a red rune-shaped recess.";
+
     private bool entered;
 
     public bool HasEntered => entered;
@@ -35,6 +41,9 @@ public sealed class BossArenaController : MonoBehaviour
     public BossArenaCamera2D BossCamera => bossCamera;
     public GameObject BossRoot => bossRoot;
     public GameObject MinimapHud => minimapHud;
+    public bool RequiresEquippedRune => requiresEquippedRune;
+    public ItemType RequiredRuneSlot => requiredRuneSlot;
+    public string MissingRuneMessage => missingRuneMessage;
 
     private void Awake()
     {
@@ -53,10 +62,20 @@ public sealed class BossArenaController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (entered || other.GetComponentInParent<HeroHealth>() == null)
+        HeroHealth heroHealth = other.GetComponentInParent<HeroHealth>();
+        if (entered || heroHealth == null)
             return;
+
+        // The rune is a reusable key: it must be worn, but entering never removes it from the
+        // equipment slot. This keeps the requirement visible through the backpack equipment flow.
+        if (requiresEquippedRune && RunEquipment.Get(requiredRuneSlot) == null)
+        {
+            PlayerProgression.Instance?.ShowNotification(missingRuneMessage);
+            return;
+        }
+
         entered = true;
-        EnterArena(other.GetComponentInParent<HeroHealth>().transform);
+        EnterArena(heroHealth.transform);
     }
 
     private void EnterArena(Transform hero)

@@ -35,11 +35,12 @@ Enemy hit / projectile / poison / spike
 6. **锻造与跨场景状态**：锻造面板第三格现在映射 `RunEquipment.GreenRune`，不再映射红色符文；右侧显示 HPS 的锻造前后数值。`RunProgress.ForgeGreenRuneLevel` 与武器、防具等级一起跨场景保存、失败降级并在新一局统一清零。
 7. **背包界面**：纸娃娃左列从上到下固定为武器、防具、红色符文、绿色符文；第四格
    `EquipSlot_L3` 直接保存 `EquipmentSlotUI(ItemType.GreenRune)`，不会在运行时创建组件。
-8. **关卡投放**：`GreenRunePickup.prefab` 复用既有重力、弹出和 1 秒拾取保护逻辑；它被追加到
-   地图上方 `Supply Treasure Chest` 的掉落数组，且不会改变宝箱在编辑器中保存的位置。
+8. **关卡投放**：`GreenRunePickup.prefab` 复用既有重力、弹出和 1 秒拾取保护逻辑；绿色符文现在由
+   第二关右下角宝箱提供，第一关上方宝箱则提供红色符文、药水与飞镖。构筑过程只改掉落引用，
+   不写入宝箱 Transform，因此不会覆盖在编辑器中保存的位置。
 9. **可重复构筑**：菜单 `Tools > Inventory > Build Green Rune` 执行
    `VerdantRuneBuilder.Build`，只补齐图标导入设置、物品/掉落预制体、第四装备槽和宝箱引用；
-   `Validate Green Rune` 还会校验绿色符文可锻造、红色符文不可锻造，并断言红色符文的 1.3/1.3/1.5 倍率及绿色符文 2 HPS、每级 +2 HPS 的数值公式。完整地图生成器也包含该掉落，之后重建关卡不会丢失。
+   `Validate Green Rune` 还会校验绿色符文可锻造、红色符文不可锻造，并断言红色符文的 1.3/1.3/1.5 倍率、绿色符文 2 HPS、每级 +2 HPS 的数值公式，以及第二关右下角绿符文掉落。
 
 运行路径：
 
@@ -55,6 +56,30 @@ Rune_Crimson equipped
   -> RunEquipment.Changed
   -> Role restores from authored base values
   -> movement 130% / jump 130% / dash 150%
+```
+
+## 双关卡符文门钥匙管线
+
+红、绿符文同时承担装备和 Boss 房钥匙职责。门只检查对应符文是否正在装备，不消耗物品；这样玩家必须在背包详情中明确装备钥匙，进入后仍保留原有符文能力。
+
+1. **场景保存式配置**：两关现有的 `BossArenaController` 增加 `requiresEquippedRune`、`requiredRuneSlot` 和 `missingRuneMessage` 三个序列化字段。`stage1_full` 保存为 `Accessory`（红符文），`stage2_full` 保存为 `GreenRune`；不在运行时创建门禁组件。
+2. **开门检查**：Hero 进入 Boss 门触发器时先调用 `RunEquipment.Get(requiredRuneSlot)`。对应槽为空时取消传送并由 `PlayerProgression` 显示提示；红、绿门分别显示“大门上有一个红色/绿色的符文凹槽”。装备正确符文后再次接触门，才进入原有的相机、BGM、Boss 激活和剧情流程。
+3. **第一关奖励**：保留全部三个宝箱及其编辑器位置。上方 `Supply Treasure Chest` 固定掉落红符文、回复药水和一组飞镖；上方宝箱的小地图圆点改为比普通宝箱大 35% 的红色圆点。左下、右下宝箱及其能力光球不变。
+4. **第二关奖励**：删除上方 Supply 宝箱及其小地图标记；左下 `Double Jump Treasure Chest` 改为回复药水和一组飞镖，右下 `Dash Treasure Chest` 只掉落绿色符文。两只下方宝箱的位置和既有能力光球关系不修改。
+5. **第二关小地图**：右下绿符文宝箱使用比普通宝箱大 35% 的绿色圆点；Boss 门和其他地图信息仍沿用原小地图相机与 Marker Layer。
+6. **重建安全**：`DemoSceneBuilder` 的第一关完整地图生成路径已同步红符文宝箱、红色标记和红符文门禁，重建第一关不会恢复旧掉落。菜单 `Tools > A Thousand Battles Later > Build Rune Boss Gates` 可幂等地把最终规则重新写入两个场景，并刻意不写宝箱坐标；`Validate Rune Boss Gates` 会检查门槽位、提示、掉落顺序、被删除的第二关上方宝箱以及彩色大圆点。
+
+运行路径：
+
+```text
+Hero touches Boss gate
+  -> BossArenaController checks the scene-authored required slot
+  -> rune not equipped: localized HUD hint, remain in stage
+  -> matching rune equipped: enter arena (rune remains equipped)
+
+stage1 upper chest -> Red Rune + Health Potion + Kunai -> enlarged red minimap dot
+stage2 lower-left  -> Health Potion + Kunai
+stage2 lower-right -> Green Rune -> enlarged green minimap dot
 ```
 
 ## 能力光球装备实现管线

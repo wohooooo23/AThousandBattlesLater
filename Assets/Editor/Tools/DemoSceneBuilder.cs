@@ -772,7 +772,7 @@ public static class DemoSceneBuilder
             { "Double Jump Treasure Chest", new[] { EquipmentBuilder.SwordPickupPath } },
             { "Dash Treasure Chest", new[] { EquipmentBuilder.ShieldPickupPath } },
             { "Supply Treasure Chest", new[] { EquipmentBuilder.GemPickupPath, EquipmentBuilder.HealthPotionPickupPath,
-                KunaiInventoryBuilder.PickupPath, EquipmentBuilder.GreenRunePickupPath } }
+                KunaiInventoryBuilder.PickupPath } }
         };
         if (chests.Any(chest => (chest.transform.localScale - FullMapChestScale).sqrMagnitude > 0.001f))
             throw new InvalidOperationException("Every full-map treasure chest must use the compact 2.5 x 2.5 x 1 scale.");
@@ -1033,7 +1033,6 @@ public static class DemoSceneBuilder
         };
         GameObject potionDrop = RequirePrefab(EquipmentBuilder.HealthPotionPickupPath);
         GameObject kunaiDrop = RequirePrefab(KunaiInventoryBuilder.PickupPath);
-        GameObject greenRuneDrop = RequirePrefab(EquipmentBuilder.GreenRunePickupPath);
         for (int i = 0; i < names.Length; i++)
         {
             GameObject chestObject = (GameObject)PrefabUtility.InstantiatePrefab(RequirePrefab(TreasureChestPrefabPath), root.transform);
@@ -1045,7 +1044,7 @@ public static class DemoSceneBuilder
             SceneArt.ApplyItemSorting(chestObject);
             chests[i] = chestObject.GetComponent<TreasureChest2D>();
             SetSerializedObjectArray(chests[i], "itemPrefabs", i == 2
-                ? new[] { equipmentDrops[i], potionDrop, kunaiDrop, greenRuneDrop }
+                ? new[] { equipmentDrops[i], potionDrop, kunaiDrop }
                 : new[] { equipmentDrops[i] });
         }
 
@@ -1232,6 +1231,9 @@ public static class DemoSceneBuilder
         SetSerializedVector2(controller, "arenaMax", arenaBounds.max);
         SetSerializedObject(controller, "bossRoot", boss);
         SetSerializedObject(controller, "bossHealthBar", bossBar);
+        SetSerializedBool(controller, "requiresEquippedRune", true);
+        SetSerializedInt(controller, "requiredRuneSlot", (int)ItemType.Accessory);
+        SetSerializedString(controller, "missingRuneMessage", "The gate has a red rune-shaped recess.");
         return controller;
     }
 
@@ -1309,8 +1311,12 @@ public static class DemoSceneBuilder
         CreateMinimapCollisionSilhouette(markerRoot.transform, square, collisionMaps);
         float markerScale = Mathf.Max(7f, viewSize * 0.032f);
         foreach (TreasureChest2D chest in chests)
+        {
+            bool runeChest = chest.name == "Supply Treasure Chest";
             CreateMinimapMarker(markerRoot.transform, "Chest Marker - " + chest.name, chest.transform.position,
-                circle, new Color(1f, 0.78f, 0.08f, 1f), markerScale);
+                circle, runeChest ? new Color(1f, 0.08f, 0.08f, 1f) : new Color(1f, 0.78f, 0.08f, 1f),
+                runeChest ? markerScale * 1.35f : markerScale);
+        }
         CreateMinimapMarker(markerRoot.transform, "Boss Door Marker", bossEntrance.position, square,
             new Color(1f, 0.12f, 0.12f, 1f), markerScale * 1.15f);
         GameObject heroMarker = CreateMinimapMarker(markerRoot.transform, "Hero Marker", hero.position, circle,

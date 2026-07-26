@@ -136,8 +136,11 @@ public sealed class PlayerProgression : MonoBehaviour
         hero?.SetDefense(ArmorDefense);   // flat per-hit reduction equals the forge panel DEF
     }
 
-    private void ShowNotification(string message)
+    /// <summary>Shows a short HUD message for scene-authored interactions such as locked gates.</summary>
+    public void ShowNotification(string message)
     {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
         if (notificationRoutine != null)
             StopCoroutine(notificationRoutine);
         notificationRoutine = StartCoroutine(ShowNotificationRoutine(message));
@@ -145,7 +148,7 @@ public sealed class PlayerProgression : MonoBehaviour
 
     private IEnumerator ShowNotificationRoutine(string message)
     {
-        notificationText.text = message;
+        notificationText.text = Localization.Translate(message);
         yield return new WaitForSeconds(notificationDuration);
         notificationText.text = string.Empty;
         notificationRoutine = null;
