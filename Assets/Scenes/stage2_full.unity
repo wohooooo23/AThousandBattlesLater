@@ -18214,7 +18214,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1046162212
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28231,6 +28231,9 @@ MonoBehaviour:
   victoryOverlay: {fileID: 1687958375}
   victoryReturnSceneName: StartMenu
   storyController: {fileID: 1046162212}
+  nextStageSceneName: 
+  transitionFade: {fileID: 1388268344}
+  transitionFadeDuration: 1.15
 --- !u!114 &2919125391319649210
 MonoBehaviour:
   m_ObjectHideFlags: 0

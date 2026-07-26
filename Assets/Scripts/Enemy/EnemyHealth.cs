@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -9,9 +10,18 @@ public sealed class EnemyHealth : CombatHealth
     [SerializeField] private string victoryReturnSceneName = "StartMenu";
     [SerializeField] private StoryDialogueController storyController;
 
+    [Header("Campaign Flow")]
+    [Tooltip("Non-empty only for an intermediate-stage Boss. The final Boss leaves this empty and shows Victory.")]
+    [SerializeField] private string nextStageSceneName;
+    [SerializeField] private CanvasGroup transitionFade;
+    [SerializeField, Min(0.05f)] private float transitionFadeDuration = 1.15f;
+
     public override CombatFaction Faction => CombatFaction.Enemy;
     protected override float DifficultyHealthScale => Difficulty.BossHealthScale;
     public string VictoryReturnSceneName => victoryReturnSceneName;
+    public string NextStageSceneName => nextStageSceneName;
+    public CanvasGroup TransitionFade => transitionFade;
+    public float TransitionFadeDuration => transitionFadeDuration;
 
     protected override void Awake()
     {
@@ -56,11 +66,17 @@ public sealed class EnemyHealth : CombatHealth
     protected override void OnDefeated(Transform source)
     {
         GameManager.MarkMatchOver();
-        // Beating the Boss ends the run, so the next one replays the whole story. Clearing it here
-        // rather than on the victory screen's R keeps nothing behind if the player just quits.
-        StoryProgress.Reset();
+        bool hasNextStage = !string.IsNullOrWhiteSpace(nextStageSceneName);
+        // Only the final Boss ends the run. An intermediate Boss must preserve the backpack,
+        // equipped runes, abilities and forge levels for the next stage.
+        if (!hasNextStage)
+            StoryProgress.Reset();
         stateMachine?.NotifyDead();
-        if (storyController == null || !storyController.PlayBossVictory())
+        bool victoryDialogueStarted = storyController != null &&
+                                       storyController.PlayBossVictory(!hasNextStage);
+        if (hasNextStage)
+            StartCoroutine(TransitionToNextStage(victoryDialogueStarted));
+        else if (!victoryDialogueStarted)
             victoryOverlay.SetActive(true);
 
         foreach (EnemyAttackPattern pattern in GetComponents<EnemyAttackPattern>())
@@ -87,5 +103,32 @@ public sealed class EnemyHealth : CombatHealth
         MeshRenderer renderer = GetComponent<MeshRenderer>();
         if (renderer != null)
             renderer.material.color = new Color(0.35f, 0.35f, 0.35f, 1f);
+    }
+
+    private IEnumerator TransitionToNextStage(bool waitForVictoryDialogue)
+    {
+        // The dialogue coroutine sets IsPlaying on its first frame, so let it start before polling.
+        if (waitForVictoryDialogue)
+            yield return null;
+        while (waitForVictoryDialogue && storyController != null && storyController.IsPlaying)
+            yield return null;
+
+        if (transitionFade != null)
+        {
+            transitionFade.gameObject.SetActive(true);
+            transitionFade.blocksRaycasts = true;
+            float elapsed = 0f;
+            while (elapsed < transitionFadeDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                transitionFade.alpha = Mathf.Clamp01(elapsed / transitionFadeDuration);
+                yield return null;
+            }
+            transitionFade.alpha = 1f;
+        }
+
+        StoryProgress.PrepareForNextStage();
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(nextStageSceneName);
     }
 }

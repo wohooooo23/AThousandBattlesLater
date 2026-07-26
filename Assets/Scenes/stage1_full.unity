@@ -947,6 +947,10 @@ PrefabInstance:
       value: 800
       objectReference: {fileID: 0}
     - target: {fileID: 1194950431501330264, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
+      propertyPath: transitionFade
+      value: 
+      objectReference: {fileID: 1388268344}
+    - target: {fileID: 1194950431501330264, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: victoryOverlay
       value: 
       objectReference: {fileID: 1687958375}
@@ -954,6 +958,10 @@ PrefabInstance:
       propertyPath: storyController
       value: 
       objectReference: {fileID: 1046162212}
+    - target: {fileID: 1194950431501330264, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
+      propertyPath: nextStageSceneName
+      value: stage2_full
+      objectReference: {fileID: 0}
     - target: {fileID: 1194950431501330264, guid: c09bf374091f7c44a9356398c86d2f14, type: 3}
       propertyPath: victoryReturnSceneName
       value: StartMenu
@@ -18525,7 +18533,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1046162212
 MonoBehaviour:
   m_ObjectHideFlags: 0

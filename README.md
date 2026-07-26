@@ -1,7 +1,32 @@
 # Final Test
 
 `final test` 是当前 Unity 6（`6000.5.2f1`）工作工程。项目的完整玩法由
-`Assets/Scenes/stage1_full.unity` 串联地图探索、宝箱奖励、装备/背包和 Boss 战。
+`Assets/Scenes/stage1_full.unity` 与 `Assets/Scenes/stage2_full.unity` 串联地图探索、宝箱奖励、装备/背包和两场 Boss 战。
+
+## 完整战役流程管线
+
+正式流程固定为 `StartMenu → stage1_full → stage2_full → Victory`。第一关 Boss 是中间关结算，第二关 Boss 才是整轮游戏的最终结算。
+
+1. **开始入口**：`StartMenuController.targetSceneName` 直接保存为 `stage1_full`；Build Settings 的启用顺序固定为 `StartMenu`、`stage1_full`、`stage2_full`、`Help`，旧 `stage1` 与独立 `stage1 boss` 不再参与正式流程。
+2. **中间关 Boss 结算**：第一关 `EnemyHealth.nextStageSceneName` 保存为 `stage2_full`。Boss 死亡后仍播放现有胜利剧情，但调用 `PlayBossVictory(false)`，不会启用最终 Victory 面板。
+3. **进度继承**：第一关结束时不调用 `GameProgress.ClearAll`，因此背包堆叠、已装备物品、红/绿符文、能力解锁和锻造等级全部通过现有静态 Run 数据进入第二关。`StoryProgress.PrepareForNextStage` 只清除 Boss Introduction 标记，使第二关 Boss 仍能播放入场对话，其余开场和教学不重复。
+4. **黑屏淡出**：第一关 Boss 剧情结束后，`EnemyHealth` 使用场景中已经保存的 `Story Fade Canvas/Black Fade`，按 unscaled time 在 1.15 秒内从透明变为纯黑；即使剧情将 `Time.timeScale` 保持为 0，淡出仍能正常完成。
+5. **第二关淡入**：加载 `stage2_full` 后，启用的 `StoryDialogueController` 从全黑开始。开场剧情已经完成时不重复台词，但仍执行 1.35 秒 `FadeFromBlack`，形成连续的“第一关淡出—加载—第二关淡入”。
+6. **最终胜利**：第二关 `nextStageSceneName` 为空，因此 Boss 死亡后沿用完整胜利剧情并显示 Victory 面板；按 Space 返回 `StartMenu` 时才通过 `GameProgress.ClearAll` 清除整轮背包、装备、能力、锻造、难度与剧情进度。
+7. **保存式组件**：流程直接配置两个场景内已有的 `EnemyHealth`、`StoryDialogueController` 和 `CanvasGroup`，没有在运行时补挂核心组件或创建永久 UI。只有淡入淡出协程属于短生命周期运行逻辑。
+8. **可重复构筑与验证**：菜单 `Tools > A Thousand Battles Later > Build Campaign Flow` 执行 `CampaignFlowBuilder.Build`，幂等写入开始目标、两关结算角色、淡出引用和 Build Settings；`Validate Campaign Flow` 检查第一关只通往第二关、第二关只显示最终 Victory、两个 Story System 已保存为启用状态，并验证四个正式场景的顺序。
+
+```text
+START
+  -> stage1_full
+  -> stage1 Boss victory dialogue (no Victory panel)
+  -> black fade-out
+  -> load stage2_full, preserve RunInventory / RunEquipment / RunProgress
+  -> black fade-in
+  -> stage2 Boss victory dialogue
+  -> Victory panel
+  -> Space: clear run and return to StartMenu
+```
 
 ## Hero 受击闪白管线
 

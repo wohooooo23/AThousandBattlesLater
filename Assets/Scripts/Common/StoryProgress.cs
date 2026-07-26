@@ -58,6 +58,17 @@ public static class StoryProgress
         PlayerPrefs.Save();
     }
 
+    /// <summary>
+    /// Keeps run-wide tutorials and the opening marked as seen, but lets the next stage play its own
+    /// Boss introduction. This is called only after an intermediate-stage victory.
+    /// </summary>
+    public static void PrepareForNextStage()
+    {
+        passed.Remove(StoryBeat.BossIntroduction);
+        PlayerPrefs.DeleteKey(KeyPrefix + StoryBeat.BossIntroduction);
+        PlayerPrefs.Save();
+    }
+
     // Statics are empty on the first entry into Play, so seed the cache from the saved progress.
     // (RunInventory's matching hook clears instead — the backpack is per-session, the story is not.)
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

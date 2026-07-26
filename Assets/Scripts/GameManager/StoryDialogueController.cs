@@ -70,6 +70,7 @@ public sealed class StoryDialogueController : MonoBehaviour
     public int BossIntroductionLineCount => bossIntroductionLines != null ? bossIntroductionLines.Length : 0;
     public int BossVictoryLineCount => bossVictoryLines != null ? bossVictoryLines.Length : 0;
     public bool IsPlaying => isPlaying;
+    public CanvasGroup FadeOverlay => fadeOverlay;
 
     /// <summary>
     /// True while a time-stopping dialogue holds the game paused. UIManager reads it to refuse
@@ -183,7 +184,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         return true;
     }
 
-    public bool PlayBossVictory()
+    public bool PlayBossVictory(bool showFinalVictoryOverlay = true)
     {
         if (victoryPlayed || bossBubble == null || victoryOverlay == null || bossVictoryLines == null ||
             bossVictoryLines.Length == 0)
@@ -192,30 +193,28 @@ public sealed class StoryDialogueController : MonoBehaviour
         if (Application.isBatchMode)
         {
             HideBossVisuals();
-            victoryOverlay.SetActive(true);
+            victoryOverlay.SetActive(showFinalVictoryOverlay);
             return true;
         }
-        StartCoroutine(PlayBossVictorySequence());
+        StartCoroutine(PlayBossVictorySequence(showFinalVictoryOverlay));
         return true;
     }
 
     private IEnumerator PlayOpeningSequence()
     {
         // Awake starts Exploration fully blacked out and this sequence is the only thing that lifts
-        // the overlay, so a skipped opening still has to clear it or the map stays black.
-        if (StoryProgress.IsPassed(StoryBeat.Opening))
-        {
-            if (fadeOverlay != null)
-                fadeOverlay.alpha = 0f;
-            yield break;
-        }
-
+        // the overlay. Later stages skip the repeated opening dialogue but still fade in from the
+        // black frame carried across the scene load.
+        bool openingWasAlreadyPlayed = StoryProgress.IsPassed(StoryBeat.Opening);
         isPlaying = true;
         AcquirePause();
         yield return FadeFromBlack(1.35f);
-        yield return PlayLines(openingLines);
+        if (!openingWasAlreadyPlayed)
+            yield return PlayLines(openingLines);
         ReleasePause();
         isPlaying = false;
+        if (openingWasAlreadyPlayed)
+            yield break;
         StoryProgress.MarkPassed(StoryBeat.Opening);
         heroBubble.Show(movementPrompt, 4.5f);
     }
@@ -247,7 +246,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         StoryProgress.MarkPassed(StoryBeat.BossIntroduction);
     }
 
-    private IEnumerator PlayBossVictorySequence()
+    private IEnumerator PlayBossVictorySequence(bool showFinalVictoryOverlay)
     {
         isPlaying = true;
         AcquirePause();
@@ -261,9 +260,10 @@ public sealed class StoryDialogueController : MonoBehaviour
         }
         heroBubble.Hide();
         bossBubble.Hide();
-        victoryOverlay.SetActive(true);
+        victoryOverlay.SetActive(showFinalVictoryOverlay);
         isPlaying = false;
-        // Keep the final screen paused. EnemyHealth restores time before loading on R.
+        // Keep the final screen paused. EnemyHealth either fades to the next stage with unscaled
+        // time or restores time before leaving the final Victory screen.
     }
 
     private IEnumerator PlayLines(StoryDialogueLine[] lines)
