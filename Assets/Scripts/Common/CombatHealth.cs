@@ -71,6 +71,16 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
         UpdateDisplays();
     }
 
+    /// <summary>Restores part of the pool without reviving a defeated actor.</summary>
+    public virtual bool RestoreHealth(float amount)
+    {
+        if (isDead || amount <= 0f || currentHealth >= maximumHealth)
+            return false;
+        currentHealth = Mathf.Min(maximumHealth, currentHealth + amount);
+        UpdateDisplays();
+        return true;
+    }
+
     protected virtual void OnDamaged(float amount, Transform source) { }
     protected abstract void OnDefeated(Transform source);
 

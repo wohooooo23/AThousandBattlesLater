@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Rune_Crimson
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
   itemName: Crimson Gem
-  description: A crimson gem prepared for future accessory effects. It can already
-    be equipped and forged.
+  description: A crimson rune that increases movement and jump speed by 30%, and
+    dash speed by 50%. It cannot be forged.
   icon: {fileID: 2270747145057029203, guid: 4e033d0e922349b4384259093adfc2d3, type: 3}
   type: 2
   attackBonus: 0

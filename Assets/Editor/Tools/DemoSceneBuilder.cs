@@ -772,7 +772,7 @@ public static class DemoSceneBuilder
             { "Double Jump Treasure Chest", new[] { EquipmentBuilder.SwordPickupPath } },
             { "Dash Treasure Chest", new[] { EquipmentBuilder.ShieldPickupPath } },
             { "Supply Treasure Chest", new[] { EquipmentBuilder.GemPickupPath, EquipmentBuilder.HealthPotionPickupPath,
-                KunaiInventoryBuilder.PickupPath } }
+                KunaiInventoryBuilder.PickupPath, EquipmentBuilder.GreenRunePickupPath } }
         };
         if (chests.Any(chest => (chest.transform.localScale - FullMapChestScale).sqrMagnitude > 0.001f))
             throw new InvalidOperationException("Every full-map treasure chest must use the compact 2.5 x 2.5 x 1 scale.");
@@ -1033,6 +1033,7 @@ public static class DemoSceneBuilder
         };
         GameObject potionDrop = RequirePrefab(EquipmentBuilder.HealthPotionPickupPath);
         GameObject kunaiDrop = RequirePrefab(KunaiInventoryBuilder.PickupPath);
+        GameObject greenRuneDrop = RequirePrefab(EquipmentBuilder.GreenRunePickupPath);
         for (int i = 0; i < names.Length; i++)
         {
             GameObject chestObject = (GameObject)PrefabUtility.InstantiatePrefab(RequirePrefab(TreasureChestPrefabPath), root.transform);
@@ -1044,7 +1045,7 @@ public static class DemoSceneBuilder
             SceneArt.ApplyItemSorting(chestObject);
             chests[i] = chestObject.GetComponent<TreasureChest2D>();
             SetSerializedObjectArray(chests[i], "itemPrefabs", i == 2
-                ? new[] { equipmentDrops[i], potionDrop, kunaiDrop }
+                ? new[] { equipmentDrops[i], potionDrop, kunaiDrop, greenRuneDrop }
                 : new[] { equipmentDrops[i] });
         }
 
@@ -2685,7 +2686,7 @@ public static class DemoSceneBuilder
             SetSerializedFloat(ranged, "warningDiameter", 7.5f);
 
             eyeRoot.transform.localScale = Vector3.one * PrefabActorScale;
-            SetSerializedObject(stateMachine, "rangedAttack", ranged);
+            SetSerializedObject(stateMachine, "attackBehaviour", ranged);
             SetSerializedFloat(stateMachine, "detectionRange", 48f);
             SetSerializedFloat(stateMachine, "patrolRange", 10f);
             SetSerializedFloat(stateMachine, "patrolSpeed", 5f);
@@ -2776,7 +2777,9 @@ public static class DemoSceneBuilder
 
     private static EnemyHealthBar CreateWorldHealthBar(Transform target, string name, float width, float height, float offsetY)
     {
-        SceneArt.EnsureSprites();
+        Sprite persistentSquare = AssetDatabase.LoadAssetAtPath<Sprite>(AttackSquareSpritePath);
+        if (persistentSquare == null)
+            throw new MissingReferenceException("World health bars require " + AttackSquareSpritePath);
         // The bar is a child of the actor it belongs to, so destroying the corpse removes the bar
         // with it. EnemyHealthBar re-asserts world position and rotation every LateUpdate, so the
         // owner's flip (a 180 degree Y rotation) never mirrors the bar; only scale is inherited,
@@ -2789,13 +2792,13 @@ public static class DemoSceneBuilder
             Mathf.Approximately(ownerScale.y, 0f) ? 1f : 1f / ownerScale.y,
             1f);
 
-        GameObject capacity = SceneArt.CreateChildSprite(root.transform, "Capacity", SceneArt.SquareSprite,
+        GameObject capacity = SceneArt.CreateChildSprite(root.transform, "Capacity", persistentSquare,
             new Color(0.32f, 0.015f, 0.025f, 0.92f), 60);
         capacity.transform.localScale = new Vector3(width, height, 1f);
         GameObject anchor = new GameObject("Fill Anchor");
         anchor.transform.SetParent(root.transform, false);
         anchor.transform.localPosition = new Vector3(-width * 0.5f, 0f, 0f);
-        GameObject fill = SceneArt.CreateChildSprite(anchor.transform, "Current", SceneArt.SquareSprite,
+        GameObject fill = SceneArt.CreateChildSprite(anchor.transform, "Current", persistentSquare,
             new Color(1f, 0.32f, 0.36f, 0.96f), 61);
 
         EnemyHealthBar bar = root.AddComponent<EnemyHealthBar>();

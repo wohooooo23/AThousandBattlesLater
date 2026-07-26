@@ -14,6 +14,7 @@ public static class RunEquipment
     public static ItemData Weapon { get; private set; }
     public static ItemData Armor { get; private set; }
     public static ItemData Rune { get; private set; }
+    public static ItemData GreenRune { get; private set; }
 
     public static event Action Changed;
 
@@ -25,6 +26,7 @@ public static class RunEquipment
             case ItemType.Weapon: return Weapon;
             case ItemType.Armor: return Armor;
             case ItemType.Accessory: return Rune;
+            case ItemType.GreenRune: return GreenRune;
             default: return null;
         }
     }
@@ -61,7 +63,7 @@ public static class RunEquipment
 
     public static void Reset()
     {
-        Weapon = Armor = Rune = null;
+        Weapon = Armor = Rune = GreenRune = null;
         Changed?.Invoke();
     }
 
@@ -72,6 +74,7 @@ public static class RunEquipment
             case ItemType.Weapon: Weapon = item; break;
             case ItemType.Armor: Armor = item; break;
             case ItemType.Accessory: Rune = item; break;
+            case ItemType.GreenRune: GreenRune = item; break;
         }
     }
 
@@ -79,7 +82,7 @@ public static class RunEquipment
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ClearOnFreshPlay()
     {
-        Weapon = Armor = Rune = null;
+        Weapon = Armor = Rune = GreenRune = null;
         Changed = null;
     }
 }

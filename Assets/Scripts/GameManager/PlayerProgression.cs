@@ -29,6 +29,7 @@ public sealed class PlayerProgression : MonoBehaviour
     // Forge levels live in RunProgress with the rest of the run so one Reset covers everything.
     public int ForgeWeaponLevel => RunProgress.ForgeWeaponLevel;
     public int ForgeArmorLevel => RunProgress.ForgeArmorLevel;
+    public int ForgeGreenRuneLevel => RunProgress.ForgeGreenRuneLevel;
     // Base comes from the equipped gear (bare-handed 10 ATK / 2 DEF when nothing is worn),
     // and each forge level adds on top — matching what the forge panel shows.
     public const float UnarmedAttack = 10f;
@@ -110,12 +111,12 @@ public sealed class PlayerProgression : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by the forge when a weapon/armor level changes. Weapon level scales attack damage,
-    /// armor level becomes flat defense on the hero. Both persist across scenes.
+    /// Called by the forge when a weapon, armor or Green Rune level changes. All three levels
+    /// persist across scenes; HeroHealth reads the Green Rune level for its regeneration rate.
     /// </summary>
-    public void ApplyForgeStats(int weaponLevel, int armorLevel)
+    public void ApplyForgeStats(int weaponLevel, int armorLevel, int greenRuneLevel)
     {
-        RunProgress.SetForgeLevels(weaponLevel, armorLevel);
+        RunProgress.SetForgeLevels(weaponLevel, armorLevel, greenRuneLevel);
         ApplyWeaponDamage();
         ApplyArmorDefense();
         // Deliberately silent: only coin pickups surface a notification.

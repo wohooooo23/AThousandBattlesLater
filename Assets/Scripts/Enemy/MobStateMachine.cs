@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public enum MobState
 {
@@ -26,7 +27,8 @@ public sealed class MobStateMachine : MonoBehaviour
     [SerializeField, Min(0.1f)] private float stopDistance = 1.4f;
     [SerializeField, Min(0f)] private float idleDuration = 1.25f;
     [SerializeField, Min(0f)] private float hurtDuration = 0.32f;
-    [SerializeField] private FlyingEyeRangedAttack rangedAttack;
+    [FormerlySerializedAs("rangedAttack")]
+    [SerializeField] private MobAttackBehaviour attackBehaviour;
 
     private Rigidbody2D body;
     private Collider2D hitbox;
@@ -36,7 +38,8 @@ public sealed class MobStateMachine : MonoBehaviour
     private float patrolDirection = 1f;
 
     public MobState CurrentState { get; private set; }
-    public bool HasAttackLogic => rangedAttack != null;
+    public bool HasAttackLogic => attackBehaviour != null;
+    public MobAttackBehaviour AttackBehaviour => attackBehaviour;
     public float DetectionRange => detectionRange;
 
     private void Awake()
@@ -44,7 +47,7 @@ public sealed class MobStateMachine : MonoBehaviour
         body = GetComponent<Rigidbody2D>();
         hitbox = GetComponent<Collider2D>();
         visual ??= GetComponentInChildren<MobSpriteAnimator>(true);
-        rangedAttack ??= GetComponent<FlyingEyeRangedAttack>();
+        attackBehaviour ??= GetComponent<MobAttackBehaviour>();
         spawnPosition = transform.position;
         EnterState(MobState.Idle, true);
     }
@@ -66,21 +69,32 @@ public sealed class MobStateMachine : MonoBehaviour
 
         if (CurrentState == MobState.Attack)
         {
-            if (rangedAttack != null && rangedAttack.IsAttacking)
+            if (attackBehaviour != null && attackBehaviour.IsAttacking)
                 return;
+            if (attackBehaviour != null && attackBehaviour.PatrolDuringCooldown)
+            {
+                EnterState(MobState.Patrol);
+                return;
+            }
             EnterState(TargetInRange() ? MobState.Chase : MobState.Idle);
+        }
+
+        if (attackBehaviour != null && attackBehaviour.PatrolDuringCooldown && !attackBehaviour.CanAttack)
+        {
+            EnterState(MobState.Patrol);
+            return;
         }
 
         if (TargetInRange())
         {
             float distance = Vector2.Distance(transform.position, target.position);
-            if (rangedAttack != null && distance <= rangedAttack.AttackRange && rangedAttack.CanAttack)
+            if (attackBehaviour != null && distance <= attackBehaviour.AttackRange && attackBehaviour.CanAttack)
             {
                 EnterState(MobState.Attack, true);
-                rangedAttack.BeginAttack(target);
+                attackBehaviour.BeginAttack(target);
                 return;
             }
-            float desiredStopDistance = rangedAttack != null ? rangedAttack.PreferredDistance : stopDistance;
+            float desiredStopDistance = attackBehaviour != null ? attackBehaviour.PreferredDistance : stopDistance;
             EnterState(distance > desiredStopDistance ? MobState.Chase : MobState.Idle);
             return;
         }
@@ -139,7 +153,7 @@ public sealed class MobStateMachine : MonoBehaviour
     /// </summary>
     public void NotifyDead()
     {
-        rangedAttack?.CancelAttack();
+        attackBehaviour?.CancelAttack();
         EnterState(MobState.Dead, true);
         if (body != null)
         {

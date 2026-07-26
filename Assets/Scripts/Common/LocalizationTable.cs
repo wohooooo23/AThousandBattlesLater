@@ -133,6 +133,7 @@ public static class LocalizationTable
         // ---------- Item detail panel ----------
         { "No description available.", "暂无描述。" },
         { "Click for actions", "点击查看操作" },
+        { "Click to inspect", "点击查看详情" },
         { "[E] Equip    [Q] Cancel", "[E] 装备    [Q] 取消" },
         { "[E] Unequip    [Q] Cancel", "[E] 卸下    [Q] 取消" },
         { "[E] Use    [Q] Cancel", "[E] 使用    [Q] 取消" },
@@ -142,6 +143,10 @@ public static class LocalizationTable
         { "Claymore Sword", "巨剑" },
         { "Plate Shield", "板甲盾" },
         { "Crimson Gem", "绯红宝石" },
+        { "Green Rune", "绿色符文" },
+        { "Wall Jump Orb", "蹬墙跳光球" },
+        { "Double Jump Orb", "二段跳光球" },
+        { "Dash Orb", "冲刺光球" },
         { "Health Potion", "治疗药水" },
         { "Kunai", "苦无" },
         { "Gold Coin", "金币" },
@@ -157,8 +162,24 @@ public static class LocalizationTable
             "一面坚固的板甲盾，可减少每次受到的敌人伤害。"
         },
         {
-            "A crimson gem prepared for future accessory effects. It can already be equipped and forged.",
-            "一枚为日后的饰品效果备下的绯红宝石。目前已可装备与锻造。"
+            "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged.",
+            "装备后移动与跳跃速度提高 30%，冲刺速度提高 50%。红色符文无法锻造。"
+        },
+        {
+            "Restores 2 HP per second while equipped. Each successful forge level adds another 2 HPS.",
+            "装备后每秒恢复 2 点生命。每次成功锻造额外增加 2 点每秒恢复。"
+        },
+        {
+            "Enables wall sliding and a wall jump that launches the hero away from a wall.",
+            "允许勇者沿墙滑落，并从墙面反向蹬墙跳。"
+        },
+        {
+            "Grants one additional jump while airborne.",
+            "允许勇者在空中额外跳跃一次。"
+        },
+        {
+            "Enables a high-speed ground and air dash with Shift.",
+            "允许勇者按 Shift 在地面或空中高速冲刺。"
         },
         {
             "A single-use red potion. Select it in the backpack and press E to restore HP to full.",
@@ -235,11 +256,11 @@ public static class LocalizationTable
             "I                         Throw Kunai\n" +
             "\n" +
             "BACKPACK EQUIPMENT\n" +
-            "Slot 1: Sword    Slot 2: Shield    Slot 3: Red Rune\n" +
+            "Slot 1: Sword    Slot 2: Shield    Slot 3: Red Rune    Slot 4: Green Rune\n" +
             "\n" +
             "FORGING\n" +
             "Select equipment on the left, then press the centre Forge button.\n" +
-            "Only swords and shields can currently be forged.\n" +
+            "Swords, shields and the Green Rune can be forged; the Red Rune cannot.\n" +
             "A failed attempt lowers the equipment's upgrade level.",
 
             "A                        向左移动\n" +
@@ -251,11 +272,11 @@ public static class LocalizationTable
             "I                        投掷苦无\n" +
             "\n" +
             "背包装备栏\n" +
-            "槽位 1：武器    槽位 2：护盾    槽位 3：红色符文\n" +
+            "槽位 1：武器    槽位 2：护盾    槽位 3：红色符文    槽位 4：绿色符文\n" +
             "\n" +
             "锻造\n" +
             "在左侧选择装备，然后按下中间的锻造按钮。\n" +
-            "目前只有剑与盾可以锻造。\n" +
+            "剑、盾与绿色符文可以锻造；红色符文无法锻造。\n" +
             "锻造失败会降低装备的强化等级。"
         },
 
@@ -264,6 +285,9 @@ public static class LocalizationTable
         { "WEAPON", "武器" },
         { "ARMOR", "护甲" },
         { "ACCESSORY", "饰品" },
+        { "GREEN RUNE", "绿色符文" },
+        { "ABILITY", "能力" },
+        { "Passive movement ability", "被动移动能力" },
         { "ANCIENT FORGE", "远古锻炉" },
         { "STATS", "属性" },
         { "STAT BOOST", "属性提升" },

@@ -138,7 +138,7 @@ public sealed class FullMapStagePlayModeTests
         {
             { "Double Jump Treasure Chest", new[] { "Weapon" } },
             { "Dash Treasure Chest", new[] { "Armor" } },
-            { "Supply Treasure Chest", new[] { "Accessory", "Potion", "Ammunition" } }
+            { "Supply Treasure Chest", new[] { "Accessory", "Potion", "Ammunition", "GreenRune" } }
         };
         foreach (MonoBehaviour chest in chests)
         {

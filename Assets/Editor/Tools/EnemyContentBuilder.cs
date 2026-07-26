@@ -42,6 +42,9 @@ public static class EnemyContentBuilder
             foreach (MobDefinition mob in NewMobs)
                 BuildMobPrefab(mob, orcHealth, orcReward);
 
+            // Mob prefabs are rebuilt from scratch above, so persist their world-space bars again.
+            MobHealthBarPrefabBuilder.BuildPrefabsOnly();
+
             RemoveImportedDemoContent();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -151,10 +154,7 @@ public static class EnemyContentBuilder
             machineData.FindProperty("visual").objectReferenceValue = animator;
             machineData.FindProperty("flying").boolValue = mob.flying;
 
-            // The Flying Eye is the only mob with attack logic, and this builder rebuilds prefabs
-            // from scratch — so it has to author the ranged attack itself. Leaving it to
-            // DemoSceneBuilder meant a standalone catalogue rebuild stripped the component and then
-            // failed its own ValidateOrThrow check.
+            MobAttackBehaviour attack = null;
             if (mob.name == "FlyingEye")
             {
                 FlyingEyeRangedAttack ranged = root.AddComponent<FlyingEyeRangedAttack>();
@@ -170,12 +170,46 @@ public static class EnemyContentBuilder
                 rangedData.FindProperty("warningDiameter").floatValue = FlyingEyeWarningDiameter;
                 rangedData.ApplyModifiedPropertiesWithoutUndo();
 
-                machineData.FindProperty("rangedAttack").objectReferenceValue = ranged;
+                attack = ranged;
                 machineData.FindProperty("detectionRange").floatValue = FlyingEyeDetectionRange;
                 machineData.FindProperty("patrolRange").floatValue = 10f;
                 machineData.FindProperty("patrolSpeed").floatValue = 5f;
                 machineData.FindProperty("chaseSpeed").floatValue = 8f;
             }
+            else if (mob.name == "Mushroom")
+            {
+                MushroomPoisonAttack melee = root.AddComponent<MushroomPoisonAttack>();
+                SerializedObject data = new SerializedObject(melee);
+                data.FindProperty("visual").objectReferenceValue = animator;
+                data.FindProperty("radius").floatValue = MushroomRadius;
+                data.FindProperty("windupDuration").floatValue = MobAttackWindup;
+                data.FindProperty("cooldown").floatValue = MobAttackCooldown;
+                data.FindProperty("slashDamage").floatValue = CombatBalance.EnemyDamagePerHit;
+                data.FindProperty("poisonDamage").floatValue = MushroomPoisonDamage;
+                data.FindProperty("poisonDuration").floatValue = 1f;
+                data.ApplyModifiedPropertiesWithoutUndo();
+                attack = melee;
+                machineData.FindProperty("detectionRange").floatValue = GroundMobDetectionRange;
+            }
+            else if (mob.name == "Skeleton")
+            {
+                SkeletonTripleSlashAttack melee = root.AddComponent<SkeletonTripleSlashAttack>();
+                SerializedObject data = new SerializedObject(melee);
+                data.FindProperty("visual").objectReferenceValue = animator;
+                SerializedProperty radii = data.FindProperty("radii");
+                radii.arraySize = 3;
+                radii.GetArrayElementAtIndex(0).floatValue = 3.5f;
+                radii.GetArrayElementAtIndex(1).floatValue = 5f;
+                radii.GetArrayElementAtIndex(2).floatValue = 6.5f;
+                data.FindProperty("windupPerSlash").floatValue = 0.42f;
+                data.FindProperty("cooldown").floatValue = MobAttackCooldown;
+                data.FindProperty("damage").floatValue = CombatBalance.EnemyDamagePerHit;
+                data.ApplyModifiedPropertiesWithoutUndo();
+                attack = melee;
+                machineData.FindProperty("detectionRange").floatValue = GroundMobDetectionRange;
+            }
+
+            machineData.FindProperty("attackBehaviour").objectReferenceValue = attack;
 
             machineData.ApplyModifiedPropertiesWithoutUndo();
 
@@ -205,6 +239,9 @@ public static class EnemyContentBuilder
     private const float FlyingEyeProjectileSpeed = 22f;
     private const float FlyingEyeProjectileScale = 1.75f;
     private const float FlyingEyeWarningDiameter = 7.5f;
+    private const float GroundMobDetectionRange = 12f;
+    private const float MushroomRadius = 5f;
+    private const float MushroomPoisonDamage = 5f;
     private const string FlyingEyeProjectilePath = EnemyRoot + "/Mobs/FlyingEye/FlyingEyeProjectile.prefab";
     private const string AttackCircleSpritePath = "Assets/Resources/AttackHitboxes/AttackCircle.png";
 
@@ -320,7 +357,7 @@ public static class EnemyContentBuilder
             // Entity_Health resolves the flash with GetComponent, so it only works from the root.
             if (prefab.GetComponent<Entity_VFX>() == null)
                 throw new InvalidOperationException(mob.name + " is missing the root Entity_VFX hit flash.");
-            bool shouldAttack = mob.name == "FlyingEye";
+            bool shouldAttack = mob.name == "FlyingEye" || mob.name == "Mushroom" || mob.name == "Skeleton";
             if (machine.HasAttackLogic != shouldAttack)
                 throw new InvalidOperationException(mob.name + (shouldAttack
                     ? " is missing its designed ranged attack logic."

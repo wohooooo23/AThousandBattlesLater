@@ -29,11 +29,14 @@ public sealed class BossSpriteAnimator : MonoBehaviour
 
     [Tooltip("Art faces right by default; used to flip toward the hero.")]
     public bool defaultFacesRight = true;
+    [Tooltip("Keeps imported bottom-left-pivot sheets centred when SpriteRenderer.flipX changes.")]
+    public bool compensateOffCenterPivot;
 
     public Clip idle = new Clip { name = "Idle", fps = 8f, loop = true };
     public Clip run = new Clip { name = "Run", fps = 12f, loop = true };
     public Clip attack1 = new Clip { name = "Attack1", fps = 12f, loop = false, releaseFrame = 5 };
     public Clip attack2 = new Clip { name = "Attack2", fps = 12f, loop = false, releaseFrame = 5 };
+    public Clip attack3 = new Clip { name = "Attack3", fps = 12f, loop = false, releaseFrame = 2 };
     public Clip takeHit = new Clip { name = "TakeHit", fps = 12f, loop = false };
     public Clip death = new Clip { name = "Death", fps = 10f, loop = false };
 
@@ -45,9 +48,11 @@ public sealed class BossSpriteAnimator : MonoBehaviour
     private int releaseFrame;
     private bool finished;
     private Action onComplete;
+    private float visualCenterLocalX;
 
     public bool IsPlaying(string clipName) => current != null && current.name == clipName;
     public bool CurrentFinished => finished;
+    public bool FacingRight { get; private set; } = true;
 
     private void Awake()
     {
@@ -56,6 +61,9 @@ public sealed class BossSpriteAnimator : MonoBehaviour
         if (spriteRenderer != null && spriteRenderer.sprite == null &&
             idle != null && idle.frames != null && idle.frames.Length > 0)
             spriteRenderer.sprite = idle.frames[0];
+        if (spriteRenderer != null && spriteRenderer.sprite != null)
+            visualCenterLocalX = transform.localPosition.x +
+                                 spriteRenderer.sprite.bounds.center.x * transform.localScale.x;
     }
 
     /// <summary>Normal looping/one-shot playback. Restarting a looping clip is a no-op.</summary>
@@ -107,7 +115,18 @@ public sealed class BossSpriteAnimator : MonoBehaviour
     public void SetFacing(bool towardRight)
     {
         if (spriteRenderer != null)
-            spriteRenderer.flipX = towardRight != defaultFacesRight;
+        {
+            bool flip = towardRight != defaultFacesRight;
+            FacingRight = towardRight;
+            spriteRenderer.flipX = flip;
+            if (compensateOffCenterPivot && spriteRenderer.sprite != null)
+            {
+                Vector3 position = transform.localPosition;
+                float centreOffset = spriteRenderer.sprite.bounds.center.x * transform.localScale.x;
+                position.x = visualCenterLocalX + (flip ? centreOffset : -centreOffset);
+                transform.localPosition = position;
+            }
+        }
     }
 
     private void Update()
@@ -168,6 +187,7 @@ public sealed class BossSpriteAnimator : MonoBehaviour
             case "Run": return run;
             case "Attack1": return attack1;
             case "Attack2": return attack2;
+            case "Attack3": return attack3;
             case "TakeHit": return takeHit;
             case "Death": return death;
             default: return null;

@@ -1,8 +1,8 @@
 using System.Collections;
 using UnityEngine;
 
-/// <summary>Which wizard cast animation a skill plays while it channels (Attack1 = spell, Attack2 = slash).</summary>
-public enum CastAnimation { Attack1, Attack2 }
+/// <summary>Which authored boss attack animation a skill plays while it channels.</summary>
+public enum CastAnimation { Attack1, Attack2, Attack3 }
 
 /// <summary>
 /// Base class shared by independently attachable enemy bullet-pattern scripts.
@@ -162,11 +162,54 @@ public abstract class EnemyAttackPattern : MonoBehaviour
         return Vector2.Distance(point, origin + direction * projection);
     }
 
+    protected GameObject CreateFilledSector(string name, Vector2 origin, Vector2 direction, float radius,
+        float angle, Color color, int sortingOrder)
+    {
+        GameObject effect = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        effect.transform.position = origin;
+        effect.transform.rotation = Quaternion.Euler(0f, 0f,
+            Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+
+        int segments = Mathf.Max(18, Mathf.CeilToInt(Mathf.Clamp(angle, 1f, 360f) / 8f));
+        Vector3[] vertices = new Vector3[segments + 2];
+        vertices[0] = Vector3.zero;
+        float halfAngle = angle * 0.5f;
+        for (int i = 0; i <= segments; i++)
+        {
+            float radians = Mathf.Lerp(-halfAngle, halfAngle, i / (float)segments) * Mathf.Deg2Rad;
+            vertices[i + 1] = new Vector3(Mathf.Cos(radians), Mathf.Sin(radians), 0f) * radius;
+        }
+        int[] triangles = new int[segments * 3];
+        for (int i = 0; i < segments; i++)
+        {
+            triangles[i * 3] = 0;
+            triangles[i * 3 + 1] = i + 1;
+            triangles[i * 3 + 2] = i + 2;
+        }
+
+        Mesh mesh = new Mesh { name = name + " Mesh", vertices = vertices, triangles = triangles };
+        mesh.RecalculateBounds();
+        effect.GetComponent<MeshFilter>().sharedMesh = mesh;
+        MeshRenderer renderer = effect.GetComponent<MeshRenderer>();
+        renderer.sharedMaterial = new Material(Shader.Find("Sprites/Default")) { color = color };
+        renderer.sortingLayerName = SceneArt.EffectSortingLayer;
+        renderer.sortingOrder = sortingOrder;
+        return effect;
+    }
+
+    protected static bool PointInSector(Vector2 point, Vector2 origin, Vector2 direction, float radius, float angle)
+    {
+        Vector2 offset = point - origin;
+        return offset.sqrMagnitude <= radius * radius &&
+               (offset.sqrMagnitude < 0.0001f || Vector2.Angle(direction, offset) <= angle * 0.5f);
+    }
+
     protected IEnumerator FadeAndDestroy(GameObject effect, float duration)
     {
         float elapsed = 0f;
         SpriteRenderer[] sprites = effect.GetComponentsInChildren<SpriteRenderer>();
         LineRenderer[] lines = effect.GetComponentsInChildren<LineRenderer>();
+        MeshRenderer[] meshes = effect.GetComponentsInChildren<MeshRenderer>();
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
@@ -182,6 +225,12 @@ public abstract class EnemyAttackPattern : MonoBehaviour
                 Color color = line.startColor;
                 color.a = alpha;
                 line.startColor = line.endColor = color;
+            }
+            foreach (MeshRenderer mesh in meshes)
+            {
+                Color color = mesh.material.color;
+                color.a = alpha;
+                mesh.material.color = color;
             }
             yield return null;
         }
@@ -223,5 +272,10 @@ public sealed class EnemyAttackContext
     {
         controller.FireFeedback();
         controller.NotifyCastFire();              // release the cast animation on the fire instant
+    }
+
+    public void CommitOwnerPosition(Vector2 position)
+    {
+        controller.CommitAttackPosition(position);
     }
 }

@@ -4,6 +4,9 @@ using UnityEngine.InputSystem;
 /// <summary>Player health, HUD, hit reaction and defeat/restart flow.</summary>
 public sealed class HeroHealth : CombatHealth
 {
+    public const float GreenRuneBaseHps = 2f;
+    public const float GreenRuneHpsPerForgeLevel = 2f;
+
     [SerializeField] private HPBarController healthBar;
     [SerializeField] private GameObject defeatedOverlay;
 
@@ -33,6 +36,8 @@ public sealed class HeroHealth : CombatHealth
 
     private void Update()
     {
+        if (!isDead && RunEquipment.GreenRune != null)
+            RestoreHealth(GetGreenRuneHps(RunProgress.ForgeGreenRuneLevel) * Time.deltaTime);
         if (isDead && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
             GameManager.RestartActiveScene();
     }
@@ -47,6 +52,19 @@ public sealed class HeroHealth : CombatHealth
     {
         base.RestoreFullHealth();
         healthBar?.SetHP(HealthFraction);
+    }
+
+    public static float GetGreenRuneHps(int forgeLevel)
+    {
+        return GreenRuneBaseHps + Mathf.Max(0, forgeLevel) * GreenRuneHpsPerForgeLevel;
+    }
+
+    public override bool RestoreHealth(float amount)
+    {
+        bool restored = base.RestoreHealth(amount);
+        if (restored)
+            healthBar?.SetHP(HealthFraction);
+        return restored;
     }
 
     protected override void OnDamaged(float amount, Transform source)

@@ -25,13 +25,14 @@ public sealed class ItemDetailPanel : MonoBehaviour
     private Canvas ownerCanvas;
     private ItemSlot source;
     private EquipmentSlotUI equipmentSource;
+    private AbilityEquipmentSlotUI abilitySource;
     private bool pinned;
 
     public static ItemDetailPanel Instance { get; private set; }
 
     public bool IsVisible => canvasGroup != null && canvasGroup.alpha > 0.5f;
     public bool IsPinned => pinned;
-    public ItemData CurrentItem => equipmentSource != null
+    public ItemData CurrentItem => abilitySource != null ? abilitySource.CurrentItem : equipmentSource != null
         ? RunEquipment.Get(equipmentSource.slotType)
         : source != null ? source.mItem : null;
     public bool IsEquipmentItem => equipmentSource != null;
@@ -64,6 +65,10 @@ public sealed class ItemDetailPanel : MonoBehaviour
             HideImmediate();
             return;
         }
+
+        // Passive abilities are automatically equipped and intentionally read-only.
+        if (abilitySource != null)
+            return;
 
         if (keyboard.eKey.wasPressedThisFrame && equipmentSource != null)
         {
@@ -197,11 +202,52 @@ public sealed class ItemDetailPanel : MonoBehaviour
             HideImmediate();
     }
 
+    public void ShowAbilityHover(AbilityEquipmentSlotUI abilitySlot, Vector2 screenPosition)
+    {
+        if (pinned || abilitySlot == null || abilitySlot.CurrentItem == null) return;
+        SetSource(abilitySlot);
+        Render(false);
+        PositionAt(screenPosition);
+        SetVisible(true);
+    }
+
+    public void MoveAbilityPointer(AbilityEquipmentSlotUI abilitySlot, Vector2 screenPosition)
+    {
+        if (!pinned && abilitySource == abilitySlot && IsVisible) PositionAt(screenPosition);
+    }
+
+    public void HideAbilityHover(AbilityEquipmentSlotUI abilitySlot)
+    {
+        if (!pinned && abilitySource == abilitySlot) HideImmediate();
+    }
+
+    public void PinAbility(AbilityEquipmentSlotUI abilitySlot, Vector2 screenPosition)
+    {
+        if (abilitySlot == null || abilitySlot.CurrentItem == null) return;
+        SetSource(abilitySlot);
+        pinned = true;
+        Render(true);
+        PositionAt(screenPosition);
+        SetVisible(true);
+    }
+
+    public void RefreshAbilitySource(AbilityEquipmentSlotUI abilitySlot)
+    {
+        if (abilitySource != abilitySlot) return;
+        if (abilitySlot.CurrentItem == null) HideImmediate(); else Render(pinned);
+    }
+
+    public void InvalidateAbilitySource(AbilityEquipmentSlotUI abilitySlot)
+    {
+        if (abilitySource == abilitySlot) HideImmediate();
+    }
+
     public void HideImmediate()
     {
         pinned = false;
         source = null;
         equipmentSource = null;
+        abilitySource = null;
         SetVisible(false);
     }
 
@@ -209,11 +255,20 @@ public sealed class ItemDetailPanel : MonoBehaviour
     {
         source = itemSlot;
         equipmentSource = null;
+        abilitySource = null;
     }
 
     private void SetSource(EquipmentSlotUI equipmentSlot)
     {
         equipmentSource = equipmentSlot;
+        source = null;
+        abilitySource = null;
+    }
+
+    private void SetSource(AbilityEquipmentSlotUI abilitySlot)
+    {
+        abilitySource = abilitySlot;
+        equipmentSource = null;
         source = null;
     }
 
@@ -225,16 +280,17 @@ public sealed class ItemDetailPanel : MonoBehaviour
 
         titleText.text = Localization.Translate(
             string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName);
-        typeText.text = TypeLabel(item.type);
-        statsText.text = BuildStats(item);
+        typeText.text = Localization.Translate(TypeLabel(item.type));
+        statsText.text = Localization.Translate(BuildStats(item));
         // Rewritten on every open, so translate here rather than through LocalizedText.
         descriptionText.text = Localization.Translate(
             string.IsNullOrWhiteSpace(item.description) ? "No description available." : item.description);
         promptText.text = Localization.Translate(actionMode
-            ? equipmentSource != null ? "[E] Unequip    [Q] Cancel"
+            ? abilitySource != null ? "[Q] Close"
+            : equipmentSource != null ? "[E] Unequip    [Q] Cancel"
             : item.IsEquippable ? "[E] Equip    [Q] Cancel"
             : item.type == ItemType.Potion ? "[E] Use    [Q] Cancel" : "[Q] Close"
-            : "Click for actions");
+            : abilitySource != null ? "Click to inspect" : "Click for actions");
     }
 
     private static string BuildStats(ItemData item)
@@ -248,7 +304,8 @@ public sealed class ItemDetailPanel : MonoBehaviour
             result.Append("DEF ").Append(item.defenseBonus.ToString("0.#"));
         }
         if (result.Length == 0)
-            result.Append(item.type == ItemType.Potion ? "Restores HP to full"
+            result.Append(item.type == ItemType.Ability ? "Passive movement ability"
+                : item.type == ItemType.Potion ? "Restores HP to full"
                 : item.type == ItemType.Ammunition ? "Stackable ranged ammunition"
                 : item.IsEquippable ? "No stat bonus" : "Stackable item");
         return result.ToString();
@@ -273,6 +330,8 @@ public sealed class ItemDetailPanel : MonoBehaviour
             ItemType.Weapon => "WEAPON",
             ItemType.Armor => "ARMOR",
             ItemType.Accessory => "ACCESSORY",
+            ItemType.GreenRune => "GREEN RUNE",
+            ItemType.Ability => "ABILITY",
             ItemType.Potion => "POTION",
             ItemType.Ammunition => "AMMUNITION",
             ItemType.Material => "MATERIAL",

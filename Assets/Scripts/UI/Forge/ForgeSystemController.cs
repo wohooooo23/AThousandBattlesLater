@@ -72,13 +72,14 @@ public class ForgeSystemController : MonoBehaviour
 
     /// <summary>
     /// The forge works on what the hero is actually wearing: each slot mirrors RunEquipment.
+    /// Slot 2 deliberately mirrors GreenRune, so the wearable Crimson Rune has no forge entry.
     /// An empty slot shows "Empty", which SelectEquipment refuses, so you cannot forge bare hands.
     /// </summary>
     private void RefreshEquippedSlots()
     {
         ApplyEquippedSlot(0, RunEquipment.Weapon, weaponIcon, weaponName);
         ApplyEquippedSlot(1, RunEquipment.Armor, armorIcon, armorName);
-        ApplyEquippedSlot(2, RunEquipment.Rune, accessoryIcon, accessoryName);
+        ApplyEquippedSlot(2, RunEquipment.GreenRune, accessoryIcon, accessoryName);
     }
 
     private void ApplyEquippedSlot(int index, ItemData item, Image iconImage, Text label)
@@ -96,15 +97,17 @@ public class ForgeSystemController : MonoBehaviour
                 : Localization.Translate("Empty");
     }
 
-    /// <summary>Pull the persisted weapon/armor levels back into the panel (they survive scene loads).</summary>
+    /// <summary>Pull persisted weapon, armor and Green Rune levels back into the panel.</summary>
     private void RestoreForgeLevels()
     {
         if (PlayerProgression.Instance == null)
             return;
         mEquipLevels[0] = PlayerProgression.Instance.ForgeWeaponLevel;
         mEquipLevels[1] = PlayerProgression.Instance.ForgeArmorLevel;
+        mEquipLevels[2] = PlayerProgression.Instance.ForgeGreenRuneLevel;
         SyncSlotName(weaponName, mEquipLevels[0]);
         SyncSlotName(armorName, mEquipLevels[1]);
+        SyncSlotName(accessoryName, mEquipLevels[2]);
     }
 
     private static void SyncSlotName(Text label, int level)
@@ -203,7 +206,7 @@ public class ForgeSystemController : MonoBehaviour
     private Sprite mForgeSprite;
     private string mForgeName;
     private int mForgeLevel;          // 当前选中装备的等级
-    private int[] mEquipLevels = { 0, 0, 0 }; // [0]=武器 [1]=防具 [2]=饰品 各自独立
+    private int[] mEquipLevels = { 0, 0, 0 }; // [0]=武器 [1]=防具 [2]=绿色符文 各自独立
     private bool mIsForging;
     private int mSelectedSlot = 0;
     private const int kBaseGoldCost = 200;
@@ -213,14 +216,14 @@ public class ForgeSystemController : MonoBehaviour
     // （由 Editor Builder 自动绑定到 Button.onClick）
     // ============================================================
 
-    /// <summary>What the hero is wearing in a panel slot. 0=武器 1=防具 2=饰品; null means empty.</summary>
+    /// <summary>What the hero is wearing in a panel slot. 0=武器 1=防具 2=绿色符文; null means empty.</summary>
     private static ItemData EquippedInSlot(int slotIndex)
     {
         switch (slotIndex)
         {
             case 0: return RunEquipment.Weapon;
             case 1: return RunEquipment.Armor;
-            case 2: return RunEquipment.Rune;
+            case 2: return RunEquipment.GreenRune;
             default: return null;
         }
     }
@@ -249,7 +252,8 @@ public class ForgeSystemController : MonoBehaviour
 
         // Emptiness is read from the gear itself, not from the label: the slots mirror RunEquipment,
         // and comparing against the word "Empty" would stop working the moment it is translated.
-        if (EquippedInSlot(slotIndex) == null) return;
+        ItemData equipped = EquippedInSlot(slotIndex);
+        if (equipped == null || !equipped.IsForgeable) return;
 
         mForgeSprite = sprite;
         mForgeName = name;
@@ -479,7 +483,7 @@ public class ForgeSystemController : MonoBehaviour
         }
 
         // Push the new weapon/armor levels onto the hero so ATK/DEF actually change.
-        PlayerProgression.Instance?.ApplyForgeStats(mEquipLevels[0], mEquipLevels[1]);
+        PlayerProgression.Instance?.ApplyForgeStats(mEquipLevels[0], mEquipLevels[1], mEquipLevels[2]);
 
         RefreshRightPanel();
         mIsForging = false;
@@ -500,13 +504,14 @@ public class ForgeSystemController : MonoBehaviour
             return;
         }
 
-        // 属性计算：武器+10攻/级，防具+2防/级，饰品无
+        // 属性计算：武器+10攻/级，防具+2防/级，绿色符文基础2 HPS且每级+2 HPS。
         int baseVal = 0, gain = 0;
         string statName = "";
         switch (mSelectedSlot)
         {
             case 0: baseVal = 10 + mForgeLevel * 10; gain = 10; statName = "ATK"; break;
             case 1: baseVal = 2  + mForgeLevel * 2;  gain = 2;  statName = "DEF"; break;
+            case 2: baseVal = 2  + mForgeLevel * 2;  gain = 2;  statName = "HPS"; break;
             default: baseVal = 0; gain = 0; statName = "--"; break;
         }
         statBeforeText.text = baseVal + " " + statName;

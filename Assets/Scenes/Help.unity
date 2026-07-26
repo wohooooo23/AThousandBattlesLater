@@ -1586,7 +1586,7 @@ MonoBehaviour:
     BACKPACK EQUIPMENT
 
     Slot
-    1: Sword    Slot 2: Shield    Slot 3: Red Rune
+    1: Sword    Slot 2: Shield    Slot 3: Red Rune    Slot 4: Green Rune
 
 
     FORGING
@@ -1594,8 +1594,8 @@ MonoBehaviour:
     Select equipment
     on the left, then press the centre Forge button.
 
-    Only swords and shields
-    can currently be forged.
+    Swords, shields and the Green Rune can be forged. The Red Rune cannot
+    be forged.
 
     A failed attempt lowers the equipment''s upgrade
     level.'

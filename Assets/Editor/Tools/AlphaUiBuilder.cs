@@ -31,6 +31,7 @@ public static class AlphaUiBuilder
     [MenuItem("Tools/Alpha UI/Repair Prefab and Gameplay Scenes")]
     public static void RepairAll()
     {
+        AbilityEquipmentBuilder.EnsureAssets();
         EnsureGoldCoinIcon();
         RepairItemSlotPrefab();
         RepairCanvasPrefab();
@@ -413,15 +414,27 @@ public static class AlphaUiBuilder
                 icon.raycastTarget = false;
                 icon.enabled = false;                          // empty until an item is equipped
 
-                // The left column's top three cells are the wearable Weapon / Armor / Rune slots.
+                // The complete left column is wearable: Weapon / Armor / Crimson Rune / Green Rune.
                 // Attaching them here keeps the panel functional even if only this menu is run.
-                if (c == 0 && r < 3)
+                if (c == 0)
                 {
                     EquipmentSlotUI wearable = slot.GetComponent<EquipmentSlotUI>();
                     if (wearable == null)
                         wearable = slot.AddComponent<EquipmentSlotUI>();
-                    wearable.slotType = r == 0 ? ItemType.Weapon : r == 1 ? ItemType.Armor : ItemType.Accessory;
+                    wearable.slotType = r == 0 ? ItemType.Weapon
+                        : r == 1 ? ItemType.Armor
+                        : r == 2 ? ItemType.Accessory
+                        : ItemType.GreenRune;
                     wearable.icon = icon;
+                }
+                else if (r < 3)
+                {
+                    // The right half is reserved for automatically-equipped, read-only abilities.
+                    // Save the components and references in Canvas.prefab; no UI is constructed at runtime.
+                    AbilityEquipmentSlotUI passive = slot.AddComponent<AbilityEquipmentSlotUI>();
+                    passive.ability = (AbilityEquipmentKind)r;
+                    passive.abilityItem = AbilityEquipmentBuilder.GetItem((AbilityEquipmentKind)r);
+                    passive.icon = icon;
                 }
             }
         }
@@ -685,7 +698,9 @@ public static class AlphaUiBuilder
         SetDescriptionIfEmpty("Assets/Prefab/Armor_Plate.asset",
             "Sturdy plate armor that reduces the damage received from every enemy hit.");
         SetDescriptionIfEmpty("Assets/Prefab/Rune_Crimson.asset",
-            "A crimson rune prepared for future accessory effects. It can already be equipped and forged.");
+            "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged.");
+        SetDescriptionIfEmpty(EquipmentBuilder.GreenRuneItemPath,
+            "Restores 2 HP per second while equipped. Each successful forge level adds another 2 HPS.");
         SetDescriptionIfEmpty("Assets/Prefab/DemoItem.asset",
             "A simple material used to demonstrate inventory stacking and rearrangement.");
     }

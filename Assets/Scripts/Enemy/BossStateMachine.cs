@@ -50,7 +50,8 @@ public sealed class BossStateMachine : MonoBehaviour
         if (state == State.Dead)
             return;
 
-        FaceHero();
+        if (state != State.Cast)
+            FaceHero();
 
         if (hurtTimer > 0f)
         {
@@ -75,9 +76,15 @@ public sealed class BossStateMachine : MonoBehaviour
     {
         if (state == State.Dead || pattern == null)
             return;
+        FaceHero(); // lock the authored attack direction before entering Cast
         state = State.Cast;
         hurtTimer = 0f;
-        string clip = pattern.CastAnim == CastAnimation.Attack2 ? "Attack2" : "Attack1";
+        string clip = pattern.CastAnim switch
+        {
+            CastAnimation.Attack2 => "Attack2",
+            CastAnimation.Attack3 => "Attack3",
+            _ => "Attack1"
+        };
         animator?.BeginCast(clip);
     }
 

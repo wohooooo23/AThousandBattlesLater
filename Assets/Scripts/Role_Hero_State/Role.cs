@@ -5,6 +5,10 @@ using UnityEngine.InputSystem;
 /// <summary>The only player controller: animated model, movement, combat and platform handling.</summary>
 public sealed class Role : Entity
 {
+    public const float CrimsonMoveMultiplier = 1.3f;
+    public const float CrimsonJumpMultiplier = 1.3f;
+    public const float CrimsonDashMultiplier = 1.5f;
+
     public Hero_idleState idleState { get; private set; }
     public Hero_moveState moveState { get; private set; }
     public Hero_jumpstartState jumpstartState { get; private set; }
@@ -73,6 +77,9 @@ public sealed class Role : Entity
     private HeroKunaiThrow kunaiThrow;
     private bool controlEnabled = true;
     private bool dashWasHeld;
+    private float baseMoveSpeed;
+    private float baseJumpForce;
+    private float baseDashSpeed;
 
     protected override void Awake()
     {
@@ -80,6 +87,10 @@ public sealed class Role : Entity
         roleCollider = GetComponent<Collider2D>();
         attackAudio = GetComponent<HeroAttackAudio>();
         kunaiThrow = GetComponent<HeroKunaiThrow>();
+        baseMoveSpeed = speed;
+        baseJumpForce = jumpForce;
+        baseDashSpeed = dashspeed;
+        ApplyRuneMovementStats();
         idleState = new Hero_idleState(stateMachine, "Idle", this);
         jumpstartState = new Hero_jumpstartState(stateMachine, "Jump", this);
         jumpfallState = new Hero_jumpfallState(stateMachine, "Jump", this);
@@ -91,6 +102,24 @@ public sealed class Role : Entity
         throwState = new Hero_throwState(stateMachine, "Throw", this);
         dashduration = dashAnimation != null ? Mathf.Max(0.08f, dashAnimation.length) : 0.16f;
         ResetJumpCount();
+    }
+
+    private void OnEnable()
+    {
+        RunEquipment.Changed += ApplyRuneMovementStats;
+    }
+
+    private void OnDisable()
+    {
+        RunEquipment.Changed -= ApplyRuneMovementStats;
+    }
+
+    private void ApplyRuneMovementStats()
+    {
+        bool crimsonEquipped = RunEquipment.Rune != null;
+        speed = baseMoveSpeed * (crimsonEquipped ? CrimsonMoveMultiplier : 1f);
+        jumpForce = baseJumpForce * (crimsonEquipped ? CrimsonJumpMultiplier : 1f);
+        dashspeed = baseDashSpeed * (crimsonEquipped ? CrimsonDashMultiplier : 1f);
     }
 
     /// <summary>True when a kunai throw is possible (component present and a Kunai is in the bag).</summary>

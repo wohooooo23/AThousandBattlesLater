@@ -24,6 +24,9 @@ public static class EquipmentBuilder
     public const string SwordPickupPath = PickupFolder + "/ClaymoreSwordPickup.prefab";
     public const string ShieldPickupPath = PickupFolder + "/PlateShieldPickup.prefab";
     public const string GemPickupPath = PickupFolder + "/CrimsonGemPickup.prefab";
+    public const string GreenRuneItemPath = "Assets/Prefab/Rune_Green.asset";
+    public const string GreenRuneIconPath = "Assets/Resources/Sprites/icons/rune_green.png";
+    public const string GreenRunePickupPath = PickupFolder + "/GreenRunePickup.prefab";
     public const string HealthPotionItemPath = "Assets/Prefab/HealthPotion.asset";
     public const string HealthPotionIconPath = "Assets/Prefab/HealthPotionIcon.png";
     public const string HealthPotionPickupPath = PickupFolder + "/HealthPotionPickup.prefab";
@@ -47,10 +50,9 @@ public static class EquipmentBuilder
         new GearSpec { sceneObject = "armor_plate_0",     assetName = "Armor_Plate",     displayName = "Plate Shield",
                        type = ItemType.Armor, attack = 0f, defense = 6f,
                        description = "A sturdy plate shield that reduces the damage received from every enemy hit." },
-        // The rune is a placeholder for now: no stats, but it equips and forges like the others.
         new GearSpec { sceneObject = "rune_crimson_0",    assetName = "Rune_Crimson",    displayName = "Crimson Gem",
                        type = ItemType.Accessory, attack = 0f, defense = 0f,
-                       description = "A crimson gem prepared for future accessory effects. It can already be equipped and forged." },
+                       description = "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged." },
     };
 
     [MenuItem("Tools/Inventory/Build Equipment And Wearable Slots")]
@@ -107,8 +109,32 @@ public static class EquipmentBuilder
             EditorUtility.SetDirty(item);
             CreatePickupPrefab(paths[i], item);
         }
+        EnsureGreenRunePickup();
         EnsureHealthPotionPickup();
         AssetDatabase.SaveAssets();
+    }
+
+    public static void EnsureGreenRunePickup()
+    {
+        Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>(GreenRuneIconPath);
+        if (icon == null)
+            throw new MissingReferenceException("Missing green rune icon: " + GreenRuneIconPath);
+
+        ItemData rune = AssetDatabase.LoadAssetAtPath<ItemData>(GreenRuneItemPath);
+        if (rune == null)
+        {
+            rune = ScriptableObject.CreateInstance<ItemData>();
+            AssetDatabase.CreateAsset(rune, GreenRuneItemPath);
+        }
+
+        rune.itemName = "Green Rune";
+        rune.description = "Restores 2 HP per second while equipped. Each successful forge level adds another 2 HPS.";
+        rune.icon = icon;
+        rune.type = ItemType.GreenRune;
+        rune.attackBonus = 0f;
+        rune.defenseBonus = 0f;
+        EditorUtility.SetDirty(rune);
+        CreatePickupPrefab(GreenRunePickupPath, rune, 0.5f);
     }
 
     private static void EnsureHealthPotionPickup()
@@ -173,13 +199,13 @@ public static class EquipmentBuilder
         return AssetDatabase.LoadAssetAtPath<Sprite>(HealthPotionIconPath);
     }
 
-    private static void CreatePickupPrefab(string path, ItemData item)
+    private static void CreatePickupPrefab(string path, ItemData item, float worldScale = 3f)
     {
         GameObject root = new GameObject(item.itemName + " Pickup", typeof(SpriteRenderer), typeof(Rigidbody2D),
             typeof(CircleCollider2D), typeof(ItemPickup));
         try
         {
-            root.transform.localScale = Vector3.one * 3f;
+            root.transform.localScale = Vector3.one * worldScale;
             SpriteRenderer renderer = root.GetComponent<SpriteRenderer>();
             renderer.sprite = item.icon;
             // "Default" is the parallax backdrop layer: a pickup left there is invisible
@@ -250,13 +276,14 @@ public static class EquipmentBuilder
         EditorUtility.SetDirty(prop);
     }
 
-    /// <summary>Makes the left paperdoll column (top to bottom) the Weapon / Armor / Rune slots.</summary>
-    private static void WireWearableSlots()
+    /// <summary>Makes the left paperdoll column the Weapon / Armor / Crimson Rune / Green Rune slots.</summary>
+    public static void WireWearableSlots()
     {
         GameObject root = PrefabUtility.LoadPrefabContents(CanvasPrefabPath);
         try
         {
-            ItemType[] slotTypes = { ItemType.Weapon, ItemType.Armor, ItemType.Accessory };
+            ItemType[] slotTypes =
+                { ItemType.Weapon, ItemType.Armor, ItemType.Accessory, ItemType.GreenRune };
             for (int i = 0; i < slotTypes.Length; i++)
             {
                 Transform slot = FindDeep(root.transform, "EquipSlot_L" + i);

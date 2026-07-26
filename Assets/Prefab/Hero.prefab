@@ -277,7 +277,8 @@ MonoBehaviour:
   attackduration: 0.1
   attackMoveMultiplier: 0.7
   attackresetduration: 0.2
-  throwmovespeed: 20
+  throwHorizontalFactor: 0
+  throwVerticalFactor: 0
   maxJumpCount: 2
   jumpCountRemaining: 2
 --- !u!50 &2409211609458095408

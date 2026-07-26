@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Enemy_Health), typeof(MobStateMachine))]
-public sealed class FlyingEyeRangedAttack : MonoBehaviour
+public sealed class FlyingEyeRangedAttack : MobAttackBehaviour
 {
     [SerializeField] private MobSpriteAnimator visual;
     [SerializeField] private GameObject projectilePrefab;
@@ -23,13 +23,13 @@ public sealed class FlyingEyeRangedAttack : MonoBehaviour
     private GameObject warning;
     private float nextAttackTime;
 
-    public float AttackRange => attackRange;
-    public float PreferredDistance => Mathf.Min(preferredDistance, attackRange);
+    public override float AttackRange => attackRange;
+    public override float PreferredDistance => Mathf.Min(preferredDistance, attackRange);
     public float WindupDuration => windupDuration;
     public float Cooldown => cooldown;
     public float ProjectileSpeed => projectileSpeed;
-    public bool IsAttacking => attackRoutine != null;
-    public bool CanAttack => !IsAttacking && Time.time >= nextAttackTime;
+    public override bool IsAttacking => attackRoutine != null;
+    public override bool CanAttack => !IsAttacking && Time.time >= nextAttackTime;
     public GameObject ProjectilePrefab => projectilePrefab;
 
     private void Awake()
@@ -45,7 +45,7 @@ public sealed class FlyingEyeRangedAttack : MonoBehaviour
         windupDuration *= Difficulty.MobWindupScale;
     }
 
-    public bool BeginAttack(Transform target)
+    public override bool BeginAttack(Transform target)
     {
         if (!CanAttack || target == null || Vector2.Distance(transform.position, target.position) > attackRange)
             return false;
@@ -53,7 +53,7 @@ public sealed class FlyingEyeRangedAttack : MonoBehaviour
         return true;
     }
 
-    public void CancelAttack()
+    public override void CancelAttack()
     {
         if (attackRoutine != null)
             StopCoroutine(attackRoutine);

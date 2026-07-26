@@ -139,6 +139,19 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     internal void FireFeedback() => cameraShake?.Shake();
 
+    /// <summary>
+    /// Commits an authored attack movement (the King's ground cleave landing) as the new pose that
+    /// ResetAttackPose restores. Without this, the generic cleanup would teleport the boss back to
+    /// the airborne position captured before the attack.
+    /// </summary>
+    internal void CommitAttackPosition(Vector2 position)
+    {
+        attackAnchor = new Vector3(position.x, position.y, attackAnchor.z);
+        transform.position = attackAnchor;
+        if (body != null)
+            body.position = position;
+    }
+
     private void ResetAttackPose()
     {
         transform.position = attackAnchor;

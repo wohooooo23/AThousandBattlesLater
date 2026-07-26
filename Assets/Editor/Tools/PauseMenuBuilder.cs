@@ -35,11 +35,11 @@ public static class PauseMenuBuilder
         "I                         Throw Kunai\n" +
         "\n" +
         "BACKPACK EQUIPMENT\n" +
-        "Slot 1: Sword    Slot 2: Shield    Slot 3: Red Rune\n" +
+        "Slot 1: Sword    Slot 2: Shield    Slot 3: Red Rune    Slot 4: Green Rune\n" +
         "\n" +
         "FORGING\n" +
         "Select equipment on the left, then press the centre Forge button.\n" +
-        "Only swords and shields can currently be forged.\n" +
+        "Swords, shields and the Green Rune can be forged; the Red Rune cannot.\n" +
         "A failed attempt lowers the equipment's upgrade level.";
 
     [MenuItem("Tools/Pause Menu/Build Pause Menu")]

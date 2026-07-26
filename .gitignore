@@ -1,6 +1,7 @@
 # This repository intentionally stores only the four Unity project source folders below.
 /*
 !/.gitignore
+!/README.md
 !/Assets/
 !/Packages/
 !/ProjectSettings/
@@ -33,3 +34,7 @@
 **/*.VC.db
 **/sysinfo.txt
 **/crashlytics-build.properties
+
+# Unity Test Framework may leave recovery scenes when a PlayMode run is interrupted.
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta

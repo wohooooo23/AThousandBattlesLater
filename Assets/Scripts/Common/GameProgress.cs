@@ -10,7 +10,8 @@ public static class GameProgress
     /// <summary>Whether anything at all has been progressed. Drives the settings button's styling.</summary>
     public static bool HasAny =>
         StoryProgress.HasAny || RunProgress.HasAny || RunInventory.Stacks.Count > 0 ||
-        RunEquipment.Weapon != null || RunEquipment.Armor != null || RunEquipment.Rune != null;
+        RunEquipment.Weapon != null || RunEquipment.Armor != null ||
+        RunEquipment.Rune != null || RunEquipment.GreenRune != null;
 
     /// <summary>Wipes story, abilities, forge levels, backpack and worn gear back to a first-ever start.</summary>
     public static void ClearAll()
