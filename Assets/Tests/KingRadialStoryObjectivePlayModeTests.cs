@@ -172,6 +172,28 @@ public sealed class KingRadialStoryObjectivePlayModeTests
 
         Behaviour navigator = boss.GetComponent("EnemyPlatformNavigator") as Behaviour;
         MonoBehaviour attacks = boss.GetComponent("EnemyAttackController") as MonoBehaviour;
+        navigator.GetType().GetMethod("RefreshNodes").Invoke(navigator, null);
+        int snapped = (int)navigator.GetType().GetMethod("SnapNavigationNodesToGround")
+            .Invoke(navigator, null);
+        Assert.That(snapped, Is.GreaterThan(5), "Boss-arena graph points must find authored platforms.");
+        Collider2D ownerCollider = boss.GetComponent<Collider2D>();
+        float bottomClearance = boss.transform.position.y - ownerCollider.bounds.min.y;
+        int alignedNodes = 0;
+        foreach (MonoBehaviour node in Object.FindObjectsByType<MonoBehaviour>(
+                     FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (node == null || node.GetType().Name != "EnemyNavigationNode")
+                continue;
+            RaycastHit2D ground = Physics2D.Raycast((Vector2)node.transform.position + Vector2.up,
+                Vector2.down, 11f, 1 << 6);
+            if (ground.collider == null)
+                continue;
+            Assert.That(node.transform.position.y - ground.point.y,
+                Is.EqualTo(bottomClearance + 0.03f).Within(0.08f),
+                "Every usable locator must place the King's collider feet on its platform.");
+            alignedNodes++;
+        }
+        Assert.That(alignedNodes, Is.GreaterThan(5));
         navigator.enabled = false;
         attacks.enabled = false;
         body.position += Vector2.up * 5f;
@@ -190,6 +212,38 @@ public sealed class KingRadialStoryObjectivePlayModeTests
             .Invoke(attacks, null);
         Assert.That(boss.transform.position, Is.EqualTo(physicsPosition),
             "Idle/attack cleanup must not restore the King's obsolete airborne cast anchor.");
+    }
+
+    [UnityTest]
+    public IEnumerator BothBossDeathsClearOwnedWarningsHitboxesAndProjectiles()
+    {
+        foreach (string sceneName in new[] { "stage1_full", "stage2_full" })
+        {
+            SceneManager.LoadScene(sceneName);
+            yield return null;
+
+            MonoBehaviour arena = FindBehaviour("BossArenaController");
+            GameObject boss = Property<GameObject>(arena, "BossRoot");
+            boss.SetActive(true);
+            yield return null;
+
+            MonoBehaviour pattern = boss.GetComponents<MonoBehaviour>()
+                .First(component => FindType("EnemyAttackPattern").IsAssignableFrom(component.GetType()));
+            GameObject warning = new GameObject(sceneName + " Test Warning");
+            GameObject projectile = new GameObject(sceneName + " Test Projectile");
+            MethodInfo track = FindType("EnemyAttackPattern").GetMethod("TrackEffect",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            track.Invoke(pattern, new object[] { warning });
+            track.Invoke(pattern, new object[] { projectile });
+
+            Component health = boss.GetComponent("EnemyHealth");
+            ApplyFatalDamage(health);
+            yield return null;
+            Assert.That(warning == null, Is.True,
+                sceneName + " Boss death must clear its active telegraph.");
+            Assert.That(projectile == null, Is.True,
+                sceneName + " Boss death must clear its active projectile/hitbox.");
+        }
     }
 
     private static MonoBehaviour FindBehaviour(string typeName) =>

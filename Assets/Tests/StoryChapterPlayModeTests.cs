@@ -40,11 +40,18 @@ public sealed class StoryChapterPlayModeTests
         Assert.That(comicRect.sizeDelta, Is.EqualTo(new Vector2(900f, 900f)),
             "Square source panels must not be stretched by the comic UI.");
         MethodInfo showPanel = panel.GetType().GetMethod("ShowPanel");
+        panel.GetType().GetMethod("Prepare").Invoke(panel, new object[] { prologue });
+        // WaitForEndOfFrame is not pumped by Unity's batch-mode Test Runner; a normal update plus
+        // ForceUpdateCanvases inside Prepare covers the same submitted UI state here.
+        yield return null;
         showPanel.Invoke(panel, new object[] { prologue, 0 });
+        yield return null;
         Assert.That(Property<bool>(panel, "IsVisible"), Is.True);
         Assert.That(Property(panel, "CurrentTexture"), Is.SameAs(prologue));
         Assert.That(panel.GetComponentInChildren<UnityEngine.UI.RawImage>(true).enabled, Is.True,
             "The first comic panel must submit its RawImage before Enter can advance it.");
+        Assert.That(panel.GetComponentInChildren<UnityEngine.UI.RawImage>(true).canvasRenderer.cull, Is.False,
+            "Panel zero must survive its first render pass instead of being culled while WebGL uploads it.");
         Assert.That((Rect)Property(panel, "CurrentUv"), Is.EqualTo(new Rect(0f, 0.5f, 0.5f, 0.5f)));
         showPanel.Invoke(panel, new object[] { prologue, 3 });
         Assert.That((Rect)Property(panel, "CurrentUv"), Is.EqualTo(new Rect(0.5f, 0f, 0.5f, 0.5f)));

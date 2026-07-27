@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Which authored boss attack animation a skill plays while it channels.</summary>
@@ -24,6 +25,11 @@ public abstract class EnemyAttackPattern : MonoBehaviour
     [Tooltip("Which wizard cast animation this skill plays while channelling.")]
     [SerializeField] private CastAnimation castAnimation = CastAnimation.Attack1;
 
+    // Attack visuals are intentionally spawned at scene root so they stay in world space while the
+    // boss moves. Keep explicit ownership here so a death/scene-completion interrupt can remove every
+    // telegraph, hitbox and projectile instead of leaving an orphaned attack alive on the victory UI.
+    private readonly HashSet<GameObject> activeEffects = new HashSet<GameObject>();
+
     public abstract string PatternName { get; }
     public abstract string WarningObjectName { get; }
     public float SelectionWeight => Mathf.Max(0.01f, selectionWeight);
@@ -36,9 +42,31 @@ public abstract class EnemyAttackPattern : MonoBehaviour
 
     public abstract IEnumerator Execute(EnemyAttackContext context);
 
+    protected GameObject TrackEffect(GameObject effect)
+    {
+        if (effect == null)
+            return null;
+        activeEffects.RemoveWhere(candidate => candidate == null);
+        activeEffects.Add(effect);
+        return effect;
+    }
+
+    public void ClearAttackEffects()
+    {
+        foreach (GameObject effect in activeEffects)
+        {
+            if (effect != null)
+                Destroy(effect);
+        }
+        activeEffects.Clear();
+    }
+
+    protected virtual void OnDisable() => ClearAttackEffects();
+    protected virtual void OnDestroy() => ClearAttackEffects();
+
     protected GameObject CreateCircularWarning(string name, Vector2 position, float diameter, out Transform fill)
     {
-        GameObject warning = new GameObject(name);
+        GameObject warning = TrackEffect(new GameObject(name));
         warning.transform.position = position;
         warning.transform.localScale = Vector3.one * diameter;
         SceneArt.CreateChildSprite(warning.transform, "Danger Range", SceneArt.CircleSprite, RangeColor, -1);
@@ -73,13 +101,13 @@ public abstract class EnemyAttackPattern : MonoBehaviour
         GameObject prefab = Resources.Load<GameObject>(circle ? CircleHitboxResource : RectHitboxResource);
         if (prefab != null)
         {
-            GameObject spawned = Instantiate(prefab);
+            GameObject spawned = TrackEffect(Instantiate(prefab));
             SceneArt.ApplyEffectSorting(spawned);   // the prefab is authored on the bottom "Default" layer
             return spawned;
         }
 
         SceneArt.EnsureSprites();
-        GameObject fallback = new GameObject(circle ? "CircleAttackHitbox" : "RectAttackHitbox");
+        GameObject fallback = TrackEffect(new GameObject(circle ? "CircleAttackHitbox" : "RectAttackHitbox"));
         SceneArt.AddSprite(fallback, circle ? SceneArt.CircleSprite : SceneArt.SquareSprite, Color.white, 5);
         Rigidbody2D body = fallback.AddComponent<Rigidbody2D>();
         body.bodyType = RigidbodyType2D.Kinematic;
@@ -165,7 +193,7 @@ public abstract class EnemyAttackPattern : MonoBehaviour
     protected GameObject CreateFilledSector(string name, Vector2 origin, Vector2 direction, float radius,
         float angle, Color color, int sortingOrder)
     {
-        GameObject effect = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        GameObject effect = TrackEffect(new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer)));
         effect.transform.position = origin;
         effect.transform.rotation = Quaternion.Euler(0f, 0f,
             Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
@@ -206,6 +234,7 @@ public abstract class EnemyAttackPattern : MonoBehaviour
 
     protected IEnumerator FadeAndDestroy(GameObject effect, float duration)
     {
+        TrackEffect(effect);
         float elapsed = 0f;
         SpriteRenderer[] sprites = effect.GetComponentsInChildren<SpriteRenderer>();
         LineRenderer[] lines = effect.GetComponentsInChildren<LineRenderer>();

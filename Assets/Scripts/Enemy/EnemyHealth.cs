@@ -70,7 +70,10 @@ public sealed class EnemyHealth : CombatHealth
     {
         stateMachine?.NotifyDead();
         foreach (EnemyAttackPattern pattern in GetComponents<EnemyAttackPattern>())
+        {
+            pattern.ClearAttackEffects();
             pattern.enabled = false;
+        }
 
         EnemyAttackController attacks = GetComponent<EnemyAttackController>();
         if (attacks != null)

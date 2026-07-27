@@ -15,7 +15,7 @@ public sealed class LaserAttackPattern : EnemyAttackPattern
 
     public override IEnumerator Execute(EnemyAttackContext context)
     {
-        GameObject warning = new GameObject(WarningObjectName);
+        GameObject warning = TrackEffect(new GameObject(WarningObjectName));
         SceneArt.AddSprite(warning, SceneArt.SquareSprite, RangeColor, -1);
         Transform fill = SceneArt.CreateChildSprite(warning.transform, "Countdown Fill", SceneArt.SquareSprite, ProgressColor, 0).transform;
 

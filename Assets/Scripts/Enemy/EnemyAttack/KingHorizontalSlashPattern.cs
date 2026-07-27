@@ -19,7 +19,7 @@ public sealed class KingHorizontalSlashPattern : EnemyAttackPattern
         SceneArt.EnsureSprites();
         Vector2 lockedCenter = PredictHeroPosition(context);
 
-        GameObject warning = new GameObject(WarningObjectName);
+        GameObject warning = TrackEffect(new GameObject(WarningObjectName));
         SpriteRenderer warningRenderer = SceneArt.AddSprite(warning, SceneArt.SquareSprite, warningColor, 28);
         warningRenderer.drawMode = SpriteDrawMode.Simple;
         warning.transform.position = lockedCenter;

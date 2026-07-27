@@ -45,7 +45,7 @@ public static class EquipmentBuilder
     private static readonly GearSpec[] Gear =
     {
         new GearSpec { sceneObject = "weapon_claymore_0", assetName = "Weapon_Claymore", displayName = "Claymore Sword",
-                       type = ItemType.Weapon, attack = 18f, defense = 0f,
+                       type = ItemType.Weapon, attack = 10f, defense = 0f,
                        description = "A heavy two-handed sword. Equip it to replace the hero's unarmed attack power." },
         new GearSpec { sceneObject = "armor_plate_0",     assetName = "Armor_Plate",     displayName = "Plate Shield",
                        type = ItemType.Armor, attack = 0f, defense = 6f,

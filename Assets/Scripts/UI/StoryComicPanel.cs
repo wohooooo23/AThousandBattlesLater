@@ -25,6 +25,28 @@ public sealed class StoryComicPanel : MonoBehaviour
 
     private void Awake() => Hide();
 
+    /// <summary>
+    /// Forces the complete comic texture through Unity's render-resource path before panel zero is
+    /// made visible. WebGL can otherwise finish the first RawImage geometry pass before the large
+    /// texture has an uploaded native handle, leaving only panel zero blank.
+    /// </summary>
+    public void Prepare(Texture2D comic)
+    {
+        if (comic == null)
+            throw new MissingReferenceException("StoryComicPanel requires a saved comic texture.");
+        if (canvasGroup == null || panelImage == null)
+            throw new MissingReferenceException("StoryComicPanel prefab references are incomplete.");
+
+        comic.GetNativeTexturePtr();
+        panelImage.texture = comic;
+        panelImage.uvRect = PanelUvs[0];
+        panelImage.enabled = true;
+        panelImage.canvasRenderer.SetTexture(comic);
+        panelImage.SetAllDirty();
+        canvasGroup.alpha = 0f;
+        Canvas.ForceUpdateCanvases();
+    }
+
     public void ShowPanel(Texture2D comic, int panelIndex)
     {
         if (comic == null)
@@ -37,6 +59,7 @@ public sealed class StoryComicPanel : MonoBehaviour
         panelImage.texture = comic;
         panelImage.uvRect = PanelUvs[panelIndex];
         panelImage.enabled = true;
+        panelImage.canvasRenderer.SetTexture(comic);
         panelImage.SetAllDirty();
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = false;

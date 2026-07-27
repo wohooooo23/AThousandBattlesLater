@@ -17,5 +17,5 @@ MonoBehaviour:
     power.
   icon: {fileID: 6297059752818194274, guid: dedd2421a02451b42853caee5a12c119, type: 3}
   type: 0
-  attackBonus: 18
+  attackBonus: 10
   defenseBonus: 0

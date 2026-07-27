@@ -21,7 +21,7 @@ public sealed class OrbitBurstAttackPattern : EnemyAttackPattern
         // direction with a light-red countdown fill that grows outward (same style as the
         // fan volley, but spread evenly across the full 360 degrees).
         Vector2[] directions = new Vector2[projectileCount];
-        GameObject warning = new GameObject(WarningObjectName);
+        GameObject warning = TrackEffect(new GameObject(WarningObjectName));
         warning.transform.position = origin;
         Transform[] fills = new Transform[projectileCount];
         for (int i = 0; i < projectileCount; i++)
@@ -50,7 +50,7 @@ public sealed class OrbitBurstAttackPattern : EnemyAttackPattern
         }
         Destroy(warning);
 
-        GameObject burst = new GameObject("Orbit Burst");
+        GameObject burst = TrackEffect(new GameObject("Orbit Burst"));
         Transform[] bullets = new Transform[projectileCount];
         bool hit = false;
         for (int i = 0; i < projectileCount; i++)

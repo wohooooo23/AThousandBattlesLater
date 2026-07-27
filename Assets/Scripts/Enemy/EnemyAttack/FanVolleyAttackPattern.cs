@@ -18,7 +18,7 @@ public sealed class FanVolleyAttackPattern : EnemyAttackPattern
     {
         Vector2 aim = context.DirectionToHero();
         float baseAngle = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
-        GameObject warning = new GameObject(WarningObjectName);
+        GameObject warning = TrackEffect(new GameObject(WarningObjectName));
         Transform[] fills = new Transform[projectileCount];
         Vector2[] directions = new Vector2[projectileCount];
         for (int i = 0; i < projectileCount; i++)
@@ -48,7 +48,7 @@ public sealed class FanVolleyAttackPattern : EnemyAttackPattern
         }
         Destroy(warning);
 
-        GameObject volley = new GameObject("Fan Volley");
+        GameObject volley = TrackEffect(new GameObject("Fan Volley"));
         Transform[] bullets = new Transform[projectileCount];
         bool hit = false;
         for (int i = 0; i < projectileCount; i++)

@@ -17,7 +17,7 @@ public sealed class CrossStrikeAttackPattern : EnemyAttackPattern
     public override IEnumerator Execute(EnemyAttackContext context)
     {
         Vector2 lockedPoint = context.Hero.position;
-        GameObject warning = new GameObject(WarningObjectName);
+        GameObject warning = TrackEffect(new GameObject(WarningObjectName));
         Transform horizontalFill = CreateLane(warning.transform, lockedPoint, 0f, out GameObject horizontal);
         Transform verticalFill = CreateLane(warning.transform, lockedPoint, 90f, out GameObject vertical);
         float elapsed = 0f;
@@ -34,7 +34,7 @@ public sealed class CrossStrikeAttackPattern : EnemyAttackPattern
 
         // Two perpendicular beams that persist and slowly rotate together, so the whole cross
         // sweeps the arena for a couple of seconds. One damage per attack (shared guard).
-        GameObject strike = new GameObject("Cross Strike");
+        GameObject strike = TrackEffect(new GameObject("Cross Strike"));
         strike.transform.position = lockedPoint;
         bool hit = false;
         System.Action reportHit = () =>

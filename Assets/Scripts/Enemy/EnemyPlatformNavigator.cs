@@ -25,6 +25,12 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     [SerializeField, Min(0.1f)] private float fallGravityScale = 6f;
     [SerializeField] private LayerMask groundMask = 1 << 6;
     [SerializeField, Min(0.1f)] private float landingTimeout = 2f;
+    [Tooltip("How far above an authored node the ground probe begins.")]
+    [SerializeField, Min(0.05f)] private float nodeProbeRise = 1f;
+    [Tooltip("Maximum distance below an authored node in which a landing surface is accepted.")]
+    [SerializeField, Min(0.5f)] private float nodeProbeDepth = 10f;
+    [Tooltip("Small separation retained between the boss collider and the landing surface.")]
+    [SerializeField, Min(0f)] private float landingSkin = 0.03f;
 
     private readonly List<EnemyNavigationNode> nodes = new List<EnemyNavigationNode>();
     private readonly List<EnemyNavigationNode> path = new List<EnemyNavigationNode>();
@@ -102,6 +108,46 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     {
         nodes.Clear();
         nodes.AddRange(FindObjectsByType<EnemyNavigationNode>(FindObjectsSortMode.None));
+        SnapNavigationNodesToGround();
+    }
+
+    /// <summary>
+    /// Normalizes authored graph points to the current boss collider. The same points are shared by
+    /// differently sized boss models, so storing a fixed world-space Y offset in the scene made the King
+    /// hover while a lower value buried the Wizard. Raycast to the platform, then place the root exactly
+    /// one collider-bottom clearance above it; the scripted hop and gravity now agree on the landing pose.
+    /// </summary>
+    public int SnapNavigationNodesToGround()
+    {
+        if (ownerCollider == null)
+            ownerCollider = GetComponent<Collider2D>();
+        if (ownerCollider == null || nodes.Count == 0)
+            return 0;
+
+        Physics2D.SyncTransforms();
+        float bottomClearance = transform.position.y - ownerCollider.bounds.min.y;
+        if (!float.IsFinite(bottomClearance) || bottomClearance <= 0.001f)
+            bottomClearance = Mathf.Max(0.01f, ownerCollider.bounds.extents.y);
+
+        int snapped = 0;
+        float rise = Mathf.Max(0.05f, nodeProbeRise);
+        float distance = rise + Mathf.Max(0.5f, nodeProbeDepth);
+        foreach (EnemyNavigationNode node in nodes)
+        {
+            if (node == null)
+                continue;
+            Vector2 authored = node.Position;
+            RaycastHit2D ground = Physics2D.Raycast(authored + Vector2.up * rise,
+                Vector2.down, distance, groundMask);
+            if (ground.collider == null)
+                continue;
+
+            node.transform.position = new Vector3(authored.x,
+                ground.point.y + bottomClearance + landingSkin, node.transform.position.z);
+            snapped++;
+        }
+        Physics2D.SyncTransforms();
+        return snapped;
     }
 
     public void ResetNavigation()

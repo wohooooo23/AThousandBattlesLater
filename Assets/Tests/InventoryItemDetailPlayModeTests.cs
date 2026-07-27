@@ -25,6 +25,7 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
     public IEnumerator HoverClickCancelAndKeyboardEquipUseTheAuthoredDetailPanel()
     {
         Time.timeScale = 1f;
+        SetLanguage("English");
         SceneManager.LoadScene("stage1_full");
         yield return null;
 
@@ -39,6 +40,8 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
         Assert.That(weapon, Is.Not.Null);
         Assert.That(potion, Is.Not.Null);
         Assert.That((string)itemType.GetField("description").GetValue(weapon), Is.Not.Empty);
+        Assert.That((float)itemType.GetField("attackBonus").GetValue(weapon), Is.EqualTo(10f),
+            "The claymore's un-forged combat value is 10 ATK.");
 
         inventoryType.GetMethod("Reset").Invoke(null, null);
         equipmentType.GetMethod("Reset").Invoke(null, null);
@@ -101,8 +104,25 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
         Text stats = (Text)ReadField(details, "statsText");
         float forgedAttack = (float)itemType.GetField("attackBonus").GetValue(weapon) + 10f;
         Assert.That(title.text, Is.EqualTo("Claymore Sword+1"));
-        Assert.That(stats.text, Is.EqualTo(forgedAttack.ToString("0.#") + " ATK"),
+        Assert.That(forgedAttack, Is.EqualTo(20f));
+        Assert.That(stats.text, Is.EqualTo("20 ATK"),
             "Backpack/equipped details must show the same forged ATK used by combat.");
+        Font bundledFont = (Font)FindRuntimeType("UiFont").GetProperty("Regular").GetValue(null);
+        Assert.That(title.font, Is.SameAs(bundledFont));
+        Assert.That(title.verticalOverflow, Is.EqualTo(VerticalWrapMode.Overflow));
+        Canvas.ForceUpdateCanvases();
+        Assert.That(title.cachedTextGenerator.vertexCount, Is.GreaterThan(0),
+            "The item name must generate visible geometry rather than only keeping a backing string.");
+
+        SetLanguage("Chinese");
+        details.GetType().GetMethod("ShowEquipmentHover").Invoke(details,
+            new object[] { wornWeaponSlot, new Vector2(900f, 500f) });
+        Assert.That(title.text, Is.EqualTo("巨剑+1"),
+            "The bundled CJK font must render the same item name in Chinese.");
+        Assert.That(title.cachedTextGenerator.vertexCount, Is.GreaterThan(0));
+        SetLanguage("English");
+        details.GetType().GetMethod("ShowEquipmentHover").Invoke(details,
+            new object[] { wornWeaponSlot, new Vector2(900f, 500f) });
 
         PointerEventData equipmentClick = new PointerEventData(EventSystem.current)
         {
@@ -154,6 +174,7 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
             "Using the potion must consume exactly one item.");
         Assert.That(ReadProperty<bool>(details, "IsVisible"), Is.False);
         progressType.GetMethod("SetForgeLevels").Invoke(null, new object[] { 0, 0, 0 });
+        SetLanguage("English");
     }
 
     [Test]
@@ -206,6 +227,14 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
                 return type;
         }
         throw new InvalidOperationException("Runtime type not found: " + name);
+    }
+
+    private static void SetLanguage(string language)
+    {
+        Type localization = FindRuntimeType("Localization");
+        MethodInfo method = localization.GetMethod("SetLanguage", BindingFlags.Public | BindingFlags.Static);
+        object enumValue = Enum.Parse(method.GetParameters()[0].ParameterType, language);
+        method.Invoke(null, new[] { enumValue });
     }
 
     private static T ReadProperty<T>(object target, string name)

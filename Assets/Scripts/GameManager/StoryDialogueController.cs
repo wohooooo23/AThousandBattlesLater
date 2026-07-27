@@ -358,12 +358,16 @@ public sealed class StoryDialogueController : MonoBehaviour
             yield break;
 
         HideAllBubbles();
+        comicPanel.Prepare(comic);
+        // Give WebGL one hidden frame to upload the full 2x2 source before revealing panel zero.
+        yield return new WaitForEndOfFrame();
         for (int panel = 0; panel < 4; panel++)
         {
             comicPanel.ShowPanel(comic, panel);
-            // WebGL uploads the first large comic texture asynchronously. Let this panel complete
-            // one render pass before accepting Enter, otherwise panel zero can be skipped visually
-            // even though the narrative coroutine is already waiting on it.
+            // Re-submit after one update as well as one render. This is intentionally two distinct
+            // frames: on WebGL the first frame may only create the texture handle.
+            yield return null;
+            comicPanel.ShowPanel(comic, panel);
             yield return new WaitForEndOfFrame();
             yield return WaitForAdvance();
         }

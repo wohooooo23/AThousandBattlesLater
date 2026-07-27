@@ -45,7 +45,7 @@ public sealed class KingRadialBladeBurstPattern : EnemyAttackPattern
         if (context.Hero != null && Vector2.Distance(context.Hero.position, origin) <= slashRadius)
             context.HitHero(origin);
 
-        GameObject strike = new GameObject("King Radial Circular Slash");
+        GameObject strike = TrackEffect(new GameObject("King Radial Circular Slash"));
         strike.transform.position = origin;
         SceneArt.CreateRing(strike.transform, slashRadius, 1.2f, strikeColor, 30, 72);
         SceneArt.CreateRing(strike.transform, slashRadius * 0.84f, 0.45f,
@@ -70,6 +70,7 @@ public sealed class KingRadialBladeBurstPattern : EnemyAttackPattern
             float angle = 360f * i / count;
             KingBladeWaveProjectile wave = Instantiate(bladeWavePrefab,
                 origin, Quaternion.identity);
+            TrackEffect(wave.gameObject);
             wave.name = "King Blade Wave " + (i + 1);
             wave.Launch(origin, angle, projectileSpawnRadius, projectileInitialSpeed,
                 projectileAcceleration, projectileOrbitSpeed, projectileLifetime, context.HitHero);

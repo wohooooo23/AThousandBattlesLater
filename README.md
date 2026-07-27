@@ -325,7 +325,7 @@ WebGL Player 无法像 Windows 编辑器一样从操作系统借用中文字形�
 1. **Legacy Text**：`LocalizedText` 在处理每个 `UnityEngine.UI.Text` 时同时绑定随包的 `Resources/Fonts/NotoSansSC-Regular.ttf`。即使旧场景仍保存 `LegacyRuntime.ttf`，进入 WebGL 后也会在显示中文前切换到真实随包字体。
 2. **TextMeshPro**：中文模式下，`LocalizedText` 将 TMP 标签切到 `Resources/Fonts/NotoSansSC SDF.asset`；英文模式恢复该对象原本的 TMP 字体。动态 SDF 的源 TTF 位于 Resources，WebGL 构建不会裁剪字形来源。
 3. **Help 场景**：标题、正文和返回按钮的 Noto 字体引用直接保存在 `Help.unity`。Help 正文的英文源文本与 `LocalizationTable` 使用完全一致的折叠空白 key，因此整页可一次性翻译，返回按钮显示“返回”。
-4. **构筑与检查**：`Tools > Localization > Build Chinese Font Fallback` 会保存 Help 字体并注册 TMP fallback；`Validate Chinese Font Fallback` 在 WebGL 目标下检查 TTF 数据、动态 TMP 字体、Help 全部字体引用及长文本翻译命中；`Build WebGL Localization Smoke Player` 会使用 Build Settings 中的完整场景列表在 `Library/CodexWebGLLocalization` 生成 Development WebGL Player，防止仅在编辑器中验证成功。
+4. **构筑与检查**：`Tools > Localization > Build Chinese Font Fallback` 会保存 Help 字体并注册 TMP fallback；`Validate Chinese Font Fallback` 在 WebGL 目标下检查 TTF 数据、动态 TMP 字体、Help 全部字体引用及长文本翻译命中；`Build WebGL Localization Smoke Player` 会使用 Build Settings 中的完整场景列表在 `Builds/CodexWebGLLocalization` 生成 Development WebGL Player，防止仅在编辑器中验证成功。Unity 6000.5 禁止把 Player 输出到内部 `Library` 工作目录，因此该可丢弃输出改用已被 `.gitignore` 排除的标准构建目录。
 5. **漫画首帧**：`StoryComicPanel.ShowPanel` 会重新启用 `RawImage`、标记 Canvas 为 dirty 并强制刷新。剧情协程在每一格显示后等待一个 `WaitForEndOfFrame`，保证 WebGL 完成大纹理上传和至少一次绘制后才开始监听 Enter，避免第一格逻辑存在但视觉为空。
 
 ```text
@@ -365,4 +365,27 @@ King finishes an attack
   -> Dynamic gravity restored
   -> collider contacts Ground
   -> Idle / next Attack keeps the landed transform
+```
+
+## 漫画、物品详情、Boss 落地与死亡清场修复管线
+
+本轮将四个表面上互不相关的问题收束到“资源准备—唯一数值源—运行时对象所有权—物理落点”四条明确管线中，避免依靠场景帧序或固定模型尺寸碰运气。
+
+1. **漫画首格预热**：`StoryComicPanel.Prepare` 在画面仍为透明时绑定完整漫画纹理、提交左上象限 UV、显式取得原生纹理句柄并刷新 Canvas。`StoryDialogueController` 先让隐藏画面完成一次帧末上传，再显示第一格；每格显示后下一帧重新提交一次纹理并等待帧末绘制，之后才开始接收 Enter。这样 WebGL 不会出现“逻辑停在第一格、纹理却要到第二格才出现”的情况。
+2. **物品名称显示**：`ItemDisplay.LocalizedName` 以 `itemName`、资源名和 `Unnamed Item` 依次兜底，本地化表的空结果不能再擦除名称。`ItemDetailPanel` 每次绘制都会重新绑定随包的 Noto Sans SC、请求当前文字字形、标记文字网格为 dirty；标题允许纵向溢出，避免 Noto 较高的字体度量在 WebGL 中把整行裁掉。中英文名称与 `+N` 锻造后缀走同一接口。
+3. **巨剑唯一数值源**：`Weapon_Claymore.asset` 与 `EquipmentBuilder` 的基础攻击统一为 10 ATK；`RunProgress` 每锻造一级增加 10，因此 +1 必须同时在背包、装备栏、锻造界面和实际伤害中得到 20 ATK。构筑器与持久化资源不再分别保留 18 和 10 两套初始值。
+4. **Boss 导航点贴地**：`EnemyPlatformNavigator.RefreshNodes` 收集场景中保存的导航点后，从每个点向 Ground 层探测实际平台表面，再按当前 Boss 碰撞体底部到根节点的真实距离修正 Y 坐标。Evil Wizard 与四倍尺寸的 Medieval King 可以复用同一套节点拓扑，同时保证脚底刚好落在平台上；跳跃结束后仍恢复动态重力完成最终接触。
+5. **攻击特效所有权**：所有 `EnemyAttackPattern` 统一登记其预警、命中框、扇形 Mesh、激光、弹幕容器与国王剑气。Boss 死亡时 `EnemyHealth` 先清除这些受管对象，再禁用攻击模式并停止控制器协程；组件被禁用或销毁时也执行相同兜底，因此第一关巫师和第二关国王都不会把攻击残影留到 Victory 画面。
+6. **验证**：`InventoryItemDetailPlayModeTests` 检查中英文标题确实生成文字网格、巨剑 10→20 ATK；`StoryChapterPlayModeTests` 检查首格纹理与左上 UV 已提交；`KingRadialStoryObjectivePlayModeTests` 检查国王节点按碰撞体贴地，并在两关分别模拟 Boss 死亡验证预警与弹体清除。
+
+```text
+Comic / item UI
+  -> prewarm bundled texture or font glyphs
+  -> bind saved UI component
+  -> rebuild Canvas geometry
+  -> reveal to player
+
+Boss navigation / death
+  -> saved navigation topology -> raycast platform -> collider-correct landing Y
+  -> pattern spawns tracked effect -> Boss death -> clear effects -> stop attacks -> victory flow
 ```

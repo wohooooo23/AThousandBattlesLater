@@ -70,7 +70,7 @@ public sealed class KingGroundCleavePattern : EnemyAttackPattern
     private GameObject CreateRectangle(string name, Vector2 center, Color color, int sortingOrder)
     {
         SceneArt.EnsureSprites();
-        GameObject effect = new GameObject(name);
+        GameObject effect = TrackEffect(new GameObject(name));
         effect.transform.position = center;
         effect.transform.localScale = new Vector3(reachDistance, cleaveHeight, 1f);
         SceneArt.AddSprite(effect, SceneArt.SquareSprite, color, sortingOrder);

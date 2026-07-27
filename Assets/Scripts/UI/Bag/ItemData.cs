@@ -69,8 +69,13 @@ public static class ItemDisplay
     {
         if (item == null)
             return string.Empty;
-        string baseName = Localization.Translate(
-            string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName);
+        string sourceName = string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName;
+        if (string.IsNullOrWhiteSpace(sourceName))
+            sourceName = "Unnamed Item";
+        string baseName = Localization.Translate(sourceName);
+        // A malformed localisation entry must never erase the identifying label.
+        if (string.IsNullOrWhiteSpace(baseName))
+            baseName = sourceName;
         int level = ForgeLevel(item);
         return level > 0 ? baseName + "+" + level : baseName;
     }

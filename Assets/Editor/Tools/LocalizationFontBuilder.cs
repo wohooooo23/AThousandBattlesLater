@@ -117,7 +117,9 @@ public static class LocalizationFontBuilder
         string[] scenes = EditorBuildSettings.scenes.Where(entry => entry.enabled)
             .Select(entry => entry.path).ToArray();
         string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-        string outputPath = Path.Combine(projectRoot, "Library", "CodexWebGLLocalization");
+        // Unity 6000.5 rejects Player output under its internal Library work directory. Builds is
+        // ignored by source control and is the supported location for this disposable smoke player.
+        string outputPath = Path.Combine(projectRoot, "Builds", "CodexWebGLLocalization");
         BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = scenes,
