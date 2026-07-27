@@ -94,6 +94,17 @@ public static class PauseMenuBuilder
             if (pause.Find("Resume Button") == null || pause.Find("Pause Help Button") == null ||
                 pause.Find("Return To Menu Button") == null)
                 throw new InvalidOperationException("The pause menu needs Resume, Help and Main Menu buttons.");
+            Transform savedBody = manager.PauseHelpPanel.transform.Find("Pause Help Body");
+            if (savedBody == null || savedBody.GetComponent<Text>() == null ||
+                savedBody.GetComponent<Text>().text != HelpBody)
+                throw new InvalidOperationException(
+                    "Canvas.prefab pause-help body has drifted from the localized Help scene key.");
+            foreach (string labelName in new[] { "Pause Help Title", "Pause Help Body", "Pause Help Back Button/Pause Help Back Label" })
+            {
+                Transform label = manager.PauseHelpPanel.transform.Find(labelName);
+                if (label == null || label.GetComponent<LocalizedText>() == null)
+                    throw new InvalidOperationException(labelName + " must store its LocalizedText component in Canvas.prefab.");
+            }
             if (!LocalizationTable.TryGetChinese(HelpBody, out _))
                 throw new InvalidOperationException("LocalizationTable has no Chinese entry for the help body.");
             MenuButtonSkin.ValidateSpriteAssets();
@@ -241,6 +252,8 @@ public static class PauseMenuBuilder
         text.alignment = TextAnchor.MiddleCenter;
         text.color = color;
         text.text = content;
+        if (textObject.GetComponent<LocalizedText>() == null)
+            textObject.AddComponent<LocalizedText>();
         return text;
     }
 

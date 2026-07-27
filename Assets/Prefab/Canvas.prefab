@@ -286,6 +286,7 @@ GameObject:
   - component: {fileID: 2939402920401119938}
   - component: {fileID: 8381165023718604964}
   - component: {fileID: 8413501748948688931}
+  - component: {fileID: 9000000000000000001}
   m_Layer: 0
   m_Name: Pause Help Back Label
   m_TagString: Untagged
@@ -354,6 +355,18 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: BACK
+--- !u!114 &9000000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64139340275772385}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ef273429bf0d10429ddae269c564c5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
 --- !u!1 &214194325544554184
 GameObject:
   m_ObjectHideFlags: 0
@@ -2170,6 +2183,7 @@ GameObject:
   - component: {fileID: 1029673460061351272}
   - component: {fileID: 1593012419826029454}
   - component: {fileID: 5874134836726466615}
+  - component: {fileID: 9000000000000000002}
   m_Layer: 0
   m_Name: Pause Help Body
   m_TagString: Untagged
@@ -2258,7 +2272,7 @@ MonoBehaviour:
     BACKPACK EQUIPMENT
 
     Slot
-    1: Sword    Slot 2: Shield    Slot 3: Red Rune
+    1: Sword    Slot 2: Shield    Slot 3: Red Rune    Slot 4: Green Rune
 
 
     FORGING
@@ -2266,11 +2280,23 @@ MonoBehaviour:
     Select equipment
     on the left, then press the centre Forge button.
 
-    Only swords and shields
-    can currently be forged.
+    Swords, shields
+    and the Green Rune can be forged. The Red Rune cannot be forged.
 
     A failed attempt lowers the equipment''s upgrade
     level.'
+--- !u!114 &9000000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2632614865509233156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ef273429bf0d10429ddae269c564c5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
 --- !u!1 &2751751104322114340
 GameObject:
   m_ObjectHideFlags: 0
@@ -4006,6 +4032,7 @@ GameObject:
   - component: {fileID: 1987345011185441478}
   - component: {fileID: 8869834054838667537}
   - component: {fileID: 3440757117718590730}
+  - component: {fileID: 9000000000000000003}
   m_Layer: 0
   m_Name: Pause Help Title
   m_TagString: Untagged
@@ -4074,6 +4101,18 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: CONTROLS
+--- !u!114 &9000000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4784100302498962531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ef273429bf0d10429ddae269c564c5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
 --- !u!1 &5010171509734270539
 GameObject:
   m_ObjectHideFlags: 0
