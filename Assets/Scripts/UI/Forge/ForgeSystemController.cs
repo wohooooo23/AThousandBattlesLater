@@ -79,9 +79,21 @@ public class ForgeSystemController : MonoBehaviour
     /// </summary>
     private void RefreshEquippedSlots()
     {
+        // The static run state already exists when this panel enables, even if PlayerProgression
+        // has not reached Awake yet. Reading it here also keeps every Changed redraw authoritative.
+        mEquipLevels[0] = RunProgress.ForgeWeaponLevel;
+        mEquipLevels[1] = RunProgress.ForgeArmorLevel;
+        mEquipLevels[2] = RunProgress.ForgeGreenRuneLevel;
         ApplyEquippedSlot(0, RunEquipment.Weapon, weaponIcon, weaponName);
         ApplyEquippedSlot(1, RunEquipment.Armor, armorIcon, armorName);
         ApplyEquippedSlot(2, RunEquipment.GreenRune, accessoryIcon, accessoryName);
+
+        if (activeForgeIcon != null && activeForgeIcon.activeSelf && mForgeItem != null)
+        {
+            mForgeLevel = mEquipLevels[mSelectedSlot];
+            RefreshSelectedItemPresentation();
+            RefreshRightPanel();
+        }
     }
 
     private void ApplyEquippedSlot(int index, ItemData item, Image iconImage, Text label)
@@ -102,25 +114,9 @@ public class ForgeSystemController : MonoBehaviour
     /// <summary>Pull persisted weapon, armor and Green Rune levels back into the panel.</summary>
     private void RestoreForgeLevels()
     {
-        if (PlayerProgression.Instance == null)
-            return;
-        mEquipLevels[0] = PlayerProgression.Instance.ForgeWeaponLevel;
-        mEquipLevels[1] = PlayerProgression.Instance.ForgeArmorLevel;
-        mEquipLevels[2] = PlayerProgression.Instance.ForgeGreenRuneLevel;
-        SyncSlotName(weaponName, mEquipLevels[0]);
-        SyncSlotName(armorName, mEquipLevels[1]);
-        SyncSlotName(accessoryName, mEquipLevels[2]);
-    }
-
-    private static void SyncSlotName(Text label, int level)
-    {
-        if (label == null)
-            return;
-        string baseName = label.text;
-        int plus = baseName.LastIndexOf('+');
-        if (plus > 0)
-            baseName = baseName.Substring(0, plus).Trim();
-        label.text = level > 0 ? baseName + "+" + level : baseName;
+        mEquipLevels[0] = RunProgress.ForgeWeaponLevel;
+        mEquipLevels[1] = RunProgress.ForgeArmorLevel;
+        mEquipLevels[2] = RunProgress.ForgeGreenRuneLevel;
     }
 
     private void BindButtons()
@@ -206,6 +202,7 @@ public class ForgeSystemController : MonoBehaviour
     }
 
     private Sprite mForgeSprite;
+    private ItemData mForgeItem;
     private string mForgeName;
     private int mForgeLevel;          // 当前选中装备的等级
     private int[] mEquipLevels = { 0, 0, 0 }; // [0]=武器 [1]=防具 [2]=绿色符文 各自独立
@@ -240,16 +237,12 @@ public class ForgeSystemController : MonoBehaviour
 
         // 读对应槽的精灵和名字
         Sprite sprite = null;
-        string name = "";
 
         switch (slotIndex)
         {
-            case 0: sprite = (weaponIcon != null) ? weaponIcon.sprite : null;
-                    name = (weaponName != null) ? weaponName.text : ""; break;
-            case 1: sprite = (armorIcon != null) ? armorIcon.sprite : null;
-                    name = (armorName != null) ? armorName.text : ""; break;
-            case 2: sprite = (accessoryIcon != null) ? accessoryIcon.sprite : null;
-                    name = (accessoryName != null) ? accessoryName.text : ""; break;
+            case 0: sprite = weaponIcon != null ? weaponIcon.sprite : null; break;
+            case 1: sprite = armorIcon != null ? armorIcon.sprite : null; break;
+            case 2: sprite = accessoryIcon != null ? accessoryIcon.sprite : null; break;
         }
 
         // Emptiness is read from the gear itself, not from the label: the slots mirror RunEquipment,
@@ -257,9 +250,10 @@ public class ForgeSystemController : MonoBehaviour
         ItemData equipped = EquippedInSlot(slotIndex);
         if (equipped == null || !equipped.IsForgeable) return;
 
+        mForgeItem = equipped;
         mForgeSprite = sprite;
-        mForgeName = name;
         mForgeLevel = mEquipLevels[slotIndex]; // 读这个装备的等级
+        mForgeName = ItemDisplay.LocalizedName(equipped, mForgeLevel);
 
         // 显示锻造槽
         emptySlotHint.SetActive(false);
@@ -267,7 +261,7 @@ public class ForgeSystemController : MonoBehaviour
         activeItemImage.sprite = sprite;
         activeItemImage.color = sprite != null ? Color.white : GetEquipmentColor(slotIndex);
         activeItemImage.enabled = true;
-        activeItemNameText.text = name;
+        activeItemNameText.text = mForgeName;
 
         // 刷新右侧面板
         RefreshRightPanel();
@@ -328,7 +322,11 @@ public class ForgeSystemController : MonoBehaviour
     /// </summary>
     public int GetWeaponATK()
     {
-        return 10 + mEquipLevels[0] * 10; // 武器：10基础 + 每级10
+        ItemData weapon = RunEquipment.Weapon;
+        float value = weapon != null
+            ? ItemDisplay.PrimaryStatValue(weapon, mEquipLevels[0])
+            : PlayerProgression.UnarmedAttack;
+        return Mathf.RoundToInt(value);
     }
 
     /// <summary>
@@ -336,7 +334,11 @@ public class ForgeSystemController : MonoBehaviour
     /// </summary>
     public int GetArmorDEF()
     {
-        return 2 + mEquipLevels[1] * 2; // 防具：2基础 + 每级2
+        ItemData armor = RunEquipment.Armor;
+        float value = armor != null
+            ? ItemDisplay.PrimaryStatValue(armor, mEquipLevels[1])
+            : PlayerProgression.UnarmoredDefense;
+        return Mathf.RoundToInt(value);
     }
 
     /// <summary>
@@ -345,6 +347,7 @@ public class ForgeSystemController : MonoBehaviour
     public void PlaceInForge(Sprite icon, string itemName)
     {
         if (mIsForging) return;
+        mForgeItem = EquippedInSlot(mSelectedSlot);
         mForgeSprite = icon;
         mForgeName = itemName;
         mForgeLevel = 0;
@@ -367,7 +370,7 @@ public class ForgeSystemController : MonoBehaviour
     public void StartForge()
     {
         if (mIsForging) return;
-        if (string.IsNullOrWhiteSpace(mForgeName))
+        if (mForgeItem == null || string.IsNullOrWhiteSpace(mForgeName))
         {
             progressStateText.text = Localization.Translate("SELECT EQUIPMENT FIRST");
             return;
@@ -450,24 +453,9 @@ public class ForgeSystemController : MonoBehaviour
         if (success)
         {
             mForgeLevel++;
-            mEquipLevels[mSelectedSlot] = mForgeLevel; // 保存
+            mEquipLevels[mSelectedSlot] = mForgeLevel;
             progressStateText.text = Localization.Format("SUCCESS! +{0}", mForgeLevel);
             progressStateText.color = Color.green;
-
-            // 更新锻造槽名字
-            string baseName = mForgeName;
-            int p = baseName.LastIndexOf('+');
-            if (p > 0) baseName = baseName.Substring(0, p).Trim();
-            mForgeName = baseName + "+" + mForgeLevel;
-            activeItemNameText.text = mForgeName;
-
-            // 同步回左面板
-            switch (mSelectedSlot)
-            {
-                case 0: weaponName.text = mForgeName; break;
-                case 1: armorName.text = mForgeName; break;
-                case 2: accessoryName.text = mForgeName; break;
-            }
         }
         else
         {
@@ -475,18 +463,11 @@ public class ForgeSystemController : MonoBehaviour
             mEquipLevels[mSelectedSlot] = mForgeLevel;
             progressStateText.text = Localization.Format("FAILED! -{0}", mForgeLevel);
             progressStateText.color = Color.red;
-
-            string failName = mForgeName;
-            int p = failName.LastIndexOf('+');
-            if (p > 0) failName = failName.Substring(0, p);
-            mForgeName = failName + "+" + mForgeLevel;
-            activeItemNameText.text = mForgeName;
-            SetSelectedEquipmentName(mForgeName);
         }
 
-        // Push the new weapon/armor levels onto the hero so ATK/DEF actually change.
+        // Save first; gameplay and every UI then read the same three authoritative levels.
         PlayerProgression.Instance?.ApplyForgeStats(mEquipLevels[0], mEquipLevels[1], mEquipLevels[2]);
-
+        RefreshSelectedItemPresentation();
         RefreshRightPanel();
         mIsForging = false;
         smashForgeButton.interactable = true;
@@ -495,7 +476,7 @@ public class ForgeSystemController : MonoBehaviour
 
     void RefreshRightPanel()
     {
-        if (string.IsNullOrWhiteSpace(mForgeName))
+        if (mForgeItem == null || string.IsNullOrWhiteSpace(mForgeName))
         {
             statBeforeText.text = Localization.Translate("-- ATK");
             statAfterText.text = "";
@@ -506,18 +487,11 @@ public class ForgeSystemController : MonoBehaviour
             return;
         }
 
-        // 属性计算：武器+10攻/级，防具+2防/级，绿色符文基础2 HPS且每级+2 HPS。
-        int baseVal = 0, gain = 0;
-        string statName = "";
-        switch (mSelectedSlot)
-        {
-            case 0: baseVal = 10 + mForgeLevel * 10; gain = 10; statName = "ATK"; break;
-            case 1: baseVal = 2  + mForgeLevel * 2;  gain = 2;  statName = "DEF"; break;
-            case 2: baseVal = 2  + mForgeLevel * 2;  gain = 2;  statName = "HPS"; break;
-            default: baseVal = 0; gain = 0; statName = "--"; break;
-        }
-        statBeforeText.text = baseVal + " " + statName;
-        statAfterText.text = "→ " + (baseVal + gain) + " " + statName;
+        float currentValue = ItemDisplay.PrimaryStatValue(mForgeItem, mForgeLevel);
+        float gain = ItemDisplay.ForgeStatPerLevel(mForgeItem);
+        string statName = ItemDisplay.PrimaryStatLabel(mForgeItem);
+        statBeforeText.text = ItemDisplay.FormatStat(currentValue) + " " + statName;
+        statAfterText.text = "→ " + ItemDisplay.FormatStat(currentValue + gain) + " " + statName;
 
         if (mForgeLevel >= 5)
         {
@@ -541,6 +515,17 @@ public class ForgeSystemController : MonoBehaviour
             // can show an explicit message instead of appearing broken.
             smashForgeButton.interactable = !mIsForging;
         }
+    }
+
+    private void RefreshSelectedItemPresentation()
+    {
+        if (mForgeItem == null)
+            return;
+
+        mForgeName = ItemDisplay.LocalizedName(mForgeItem, mForgeLevel);
+        if (activeItemNameText != null)
+            activeItemNameText.text = mForgeName;
+        SetSelectedEquipmentName(mForgeName);
     }
 
     public void ClosePanel()

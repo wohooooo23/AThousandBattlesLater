@@ -67,6 +67,12 @@ public static class ItemDisplay
 
     public static string LocalizedName(ItemData item)
     {
+        return LocalizedName(item, ForgeLevel(item));
+    }
+
+    /// <summary>Builds a name for an explicit level, used by the forge before the run level changes.</summary>
+    public static string LocalizedName(ItemData item, int forgeLevel)
+    {
         if (item == null)
             return string.Empty;
         string sourceName = string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName;
@@ -76,21 +82,23 @@ public static class ItemDisplay
         // A malformed localisation entry must never erase the identifying label.
         if (string.IsNullOrWhiteSpace(baseName))
             baseName = sourceName;
-        int level = ForgeLevel(item);
+        int level = Mathf.Max(0, forgeLevel);
         return level > 0 ? baseName + "+" + level : baseName;
     }
 
     public static string LocalizedStats(ItemData item)
     {
+        return LocalizedStats(item, ForgeLevel(item));
+    }
+
+    /// <summary>Builds the displayed primary stat from the same formula used by gameplay.</summary>
+    public static string LocalizedStats(ItemData item, int forgeLevel)
+    {
         if (item == null)
             return string.Empty;
-        int level = ForgeLevel(item);
-        if (item.type == ItemType.Weapon)
-            return Format(item.attackBonus + level * WeaponAttackPerLevel) + " ATK";
-        if (item.type == ItemType.Armor)
-            return Format(item.defenseBonus + level * ArmorDefensePerLevel) + " DEF";
-        if (item.type == ItemType.GreenRune)
-            return Format(HeroHealth.GetGreenRuneHps(level)) + " HPS";
+        string statLabel = PrimaryStatLabel(item);
+        if (!string.IsNullOrEmpty(statLabel))
+            return Format(PrimaryStatValue(item, forgeLevel)) + " " + statLabel;
 
         string result = string.Empty;
         if (item.attackBonus > 0f)
@@ -105,5 +113,47 @@ public static class ItemDisplay
             : item.IsEquippable ? "No stat bonus" : "Stackable item");
     }
 
-    private static string Format(float value) => value.ToString("0.#");
+    public static float PrimaryStatValue(ItemData item, int forgeLevel)
+    {
+        if (item == null)
+            return 0f;
+        int level = Mathf.Max(0, forgeLevel);
+        return item.type switch
+        {
+            ItemType.Weapon => item.attackBonus + level * WeaponAttackPerLevel,
+            ItemType.Armor => item.defenseBonus + level * ArmorDefensePerLevel,
+            ItemType.GreenRune => HeroHealth.GetGreenRuneHps(level),
+            _ => 0f
+        };
+    }
+
+    public static float ForgeStatPerLevel(ItemData item)
+    {
+        if (item == null)
+            return 0f;
+        return item.type switch
+        {
+            ItemType.Weapon => WeaponAttackPerLevel,
+            ItemType.Armor => ArmorDefensePerLevel,
+            ItemType.GreenRune => HeroHealth.GreenRuneHpsPerForgeLevel,
+            _ => 0f
+        };
+    }
+
+    public static string PrimaryStatLabel(ItemData item)
+    {
+        if (item == null)
+            return string.Empty;
+        return item.type switch
+        {
+            ItemType.Weapon => "ATK",
+            ItemType.Armor => "DEF",
+            ItemType.GreenRune => "HPS",
+            _ => string.Empty
+        };
+    }
+
+    public static string FormatStat(float value) => value.ToString("0.#");
+
+    private static string Format(float value) => FormatStat(value);
 }
