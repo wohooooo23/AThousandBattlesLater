@@ -9,6 +9,8 @@ public sealed class EnemyHealth : CombatHealth
     [SerializeField] private GameObject victoryOverlay;
     [SerializeField] private string victoryReturnSceneName = "StartMenu";
     [SerializeField] private StoryDialogueController storyController;
+    [Tooltip("Optional multi-enemy victory gate. When assigned, Boss death waits for every required enemy.")]
+    [SerializeField] private BossEncounterObjective victoryObjective;
 
     [Header("Campaign Flow")]
     [Tooltip("Non-empty only for an intermediate-stage Boss. The final Boss leaves this empty and shows Victory.")]
@@ -35,6 +37,7 @@ public sealed class EnemyHealth : CombatHealth
 
     private BossStateMachine stateMachine;
     private Entity_VFX entityVFX;
+    private bool completionStarted;
 
     protected override void OnDamaged(float amount, Transform source)
     {
@@ -65,20 +68,7 @@ public sealed class EnemyHealth : CombatHealth
 
     protected override void OnDefeated(Transform source)
     {
-        GameManager.MarkMatchOver();
-        bool hasNextStage = !string.IsNullOrWhiteSpace(nextStageSceneName);
-        // Only the final Boss ends the run. An intermediate Boss must preserve the backpack,
-        // equipped runes, abilities and forge levels for the next stage.
-        if (!hasNextStage)
-            StoryProgress.Reset();
         stateMachine?.NotifyDead();
-        bool victoryDialogueStarted = storyController != null &&
-                                       storyController.PlayBossVictory(!hasNextStage);
-        if (hasNextStage)
-            StartCoroutine(TransitionToNextStage(victoryDialogueStarted));
-        else if (!victoryDialogueStarted)
-            victoryOverlay.SetActive(true);
-
         foreach (EnemyAttackPattern pattern in GetComponents<EnemyAttackPattern>())
             pattern.enabled = false;
 
@@ -103,6 +93,36 @@ public sealed class EnemyHealth : CombatHealth
         MeshRenderer renderer = GetComponent<MeshRenderer>();
         if (renderer != null)
             renderer.material.color = new Color(0.35f, 0.35f, 0.35f, 1f);
+
+        if (victoryObjective == null)
+            CompleteVictory();
+    }
+
+    /// <summary>Called by the saved multi-enemy objective after the Boss and all companions die.</summary>
+    internal void CompleteVictoryFromObjective()
+    {
+        if (!isDead)
+            return;
+        CompleteVictory();
+    }
+
+    private void CompleteVictory()
+    {
+        if (completionStarted)
+            return;
+        completionStarted = true;
+        GameManager.MarkMatchOver();
+        bool hasNextStage = !string.IsNullOrWhiteSpace(nextStageSceneName);
+        // Only the final Boss ends the run. An intermediate Boss must preserve the backpack,
+        // equipped runes, abilities and forge levels for the next stage.
+        if (!hasNextStage)
+            StoryProgress.Reset();
+        bool victoryDialogueStarted = storyController != null &&
+                                       storyController.PlayBossVictory(!hasNextStage);
+        if (hasNextStage)
+            StartCoroutine(TransitionToNextStage(victoryDialogueStarted));
+        else if (!victoryDialogueStarted)
+            victoryOverlay.SetActive(true);
     }
 
     private IEnumerator TransitionToNextStage(bool waitForVictoryDialogue)

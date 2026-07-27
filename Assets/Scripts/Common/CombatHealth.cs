@@ -23,6 +23,7 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
     public float MaximumHealth => maximumHealth;
     public float HealthFraction => maximumHealth > 0f ? currentHealth / maximumHealth : 0f;
     public event Action<float> HealthChanged;
+    public event Action<CombatHealth> Defeated;
 
     protected virtual void Awake()
     {
@@ -60,6 +61,7 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
         {
             isDead = true;
             OnDefeated(source);
+            Defeated?.Invoke(this);
         }
         return true;
     }

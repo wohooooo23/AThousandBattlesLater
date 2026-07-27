@@ -2,15 +2,16 @@
 
 ## 两章剧情、英文对白与四格漫画管线
 
-正式流程现在用两张带英文人物对白框的像素风四格漫画和两组独立的章节台词，完整交代武士对国王的敬仰、国王牺牲村落牟利的真相，以及“未来武士刺杀国王—原时间线武士因此复仇”的时间闭环。中文大纲只作为创作源，游戏内正文全部采用润色后的英文。
+正式流程现在用两张带英文人物对白框的像素风四格漫画和两组独立的章节台词，完整交代武士对国王的敬仰、国王牺牲村落牟利的真相，以及“未来武士刺杀国王—原时间线武士因此复仇”的时间闭环。英文是场景中保存的规范正文；运行时继续通过现有语言切换系统，把全部 48 句正文映射为润色后的简体中文。
 
 1. **序章漫画**：`Assets/Resources/Story/Comic_Prologue.png` 复用 Hero、Medieval King、Evil Wizard 和 Orc 的轮廓与配色，并改为参考图所示的大颗粒、低内部像素分辨率画风。四个严格正方形分格依次表现国王在重伤武士与平民前迎战怪物、武士宣誓效忠、尸横遍野的战场上传来国王遇刺消息、老年武士来到巫师城堡坚守誓言；每格带一条简短英文对白。
 2. **真相漫画**：`Assets/Resources/Story/Comic_Betrayal.png` 的四个正方形分格表现国王把领地划给巫师与怪物、国王守着金币而远处村民受难、未来武士亲手斩杀国王、原时间线武士跪在国王身旁而未来武士携绿色符文光藏在阴影里。具体分镜以仓库根目录的 `comic.txt` 为创作来源。
 3. **逐格播放**：两张素材都是正方形的 2×2 漫画纹理，每个象限也是严格正方形。场景保存的 `StoryComicPanel` 使用 `RawImage.uvRect` 按“左上—右上—左下—右下”依次裁出四格；每按一次 Enter 才进入下一格。单格以 900×900 原比例显示，不会被横向拉伸或压缩到难以阅读。
 4. **保存式 UI**：`Assets/Prefab/StoryComicPanel.prefab` 保存 Screen Space Overlay Canvas、黑色遮罩、漫画 RawImage、白色描边和 `Press Enter to continue` 提示。两关各保存一个 prefab 实例，并由 `StoryDialogueController.comicPanel` 直接引用；运行时不临时创建任何核心 Canvas 或 Component。
 5. **第一关插入点**：首次进入 `stage1_full` 时，序章漫画显示在黑幕之上；四格播放完成后才淡入地图，再播放五句武士独白。遭遇怪物、进入巫师 Boss 房和击败巫师后的台词均按新大纲重写。最后一句 `Wait... why is the crimson rune glowing?` 在第一关切换黑幕开始时保持可见，直到第二关加载。
-6. **第二关插入点**：`StoryBeat.Stage2Opening` 与第一关 `Opening` 分开记录，因此转场后会播放四句穿越独白，死亡重载时又不会重复。进入国王房后，先播放武士与巫师的六句对话；巫师说完 `First, see the truth for yourself.` 后逐格播放真相漫画，再继续国王、怪物和武士的十四句现场对话并进入战斗。
-7. **说话者路由**：`StorySpeaker` 增加 `King` 和 `Monster`。Samurai 台词继续显示在 Hero 对话框，其余角色台词显示在 Boss 侧对话框；漫画内的对白框已经烘焙进图片，不依赖字体本地化或运行时排版。
+6. **第二关插入点**：`StoryBeat.Stage2Opening` 与第一关 `Opening` 分开记录，因此转场后会播放四句穿越独白，死亡重载时又不会重复。进入国王房后先显示国王；第 4 句前显示只有 `Idle_0` 的巫师演员并把巫师台词挂到他头顶，巫师说完 `First, see the truth for yourself.` 后逐格播放真相漫画；第 12 句前隐藏巫师、显示国王身边的完整 Orc，并继续国王、怪物和武士的现场对话。
+7. **说话者路由**：`StoryDialogueController` 在原 Hero/Boss 两个气泡之外保存 `additionalSpeakerBubbles`，将 `EvilWizard` 与 `Monster` 分别路由到巫师和 Orc 自己的世界空间气泡。四名演员的台词不再共享国王气泡；漫画内的对白框仍烘焙进图片，不依赖运行时排版。
+8. **中英双语**：场景只存一份英文键，`LocalizationTable` 为当前两章 48 句逐句保存中文翻译。对话框仍调用统一的 `Localization.Get`，所以开始菜单已有的语言切换会同时影响剧情、提示与界面，不另建第二套剧情组件。
 8. **进度兼容**：`Stage2Opening` 追加在 `StoryBeat` 枚举末尾，避免改变旧教学触发器已经保存的枚举数值。`PrepareForNextStage` 仍只重置 Boss Introduction，第二关开场由自己的进度位控制。
 9. **重建与验证**：`Tools > Narrative & Audio > Build Two-Chapter Story` 配置两张纹理为 Point Filter、无 mipmap、无压缩，重建漫画 prefab，并幂等写入两关台词、图片引用和插入索引。`Validate Two-Chapter Story` 检查台词数量、章节进度位、漫画引用、插入位置与保存式 Canvas；`StoryChapterPlayModeTests` 进一步验证两关关键英文台词和四个 UV 裁切区域。
 
@@ -211,7 +212,7 @@ Hero enters detection range
 2. **动画驱动**：`BossSpriteAnimator` 新增 `Attack3` Clip；KingVisual 直接保存 Idle、Run、Attack1、Attack2、Attack3、Take Hit、Death 的 sliced Sprite 数组。三招在技能充能阶段逐帧推进到 releaseFrame，结算时播放剩余动作，分别固定使用 Attack1、Attack2、Attack3；针对资源的左下角 Pivot，朝向翻转时还会补偿水平位移，避免模型左右跳动。
 3. **横斩**：`KingHorizontalSlashPattern` 使用 `heroY + Rigidbody2D.linearVelocity.y × warningDuration` 计算竖直预测位置。前摇的前 50% 持续读取玩家当前位置和速度、更新预测矩形；进入后 50% 时锁定最后一次预测结果，直到攻击结算都不再移动。
 4. **上捞**：`KingUppercutArcPattern` 以 King 为圆心生成 240° 白色优弧扇形。Boss 在进入 Cast 前锁定朝向，扇形主体朝面向侧、120° 缺口固定在背后，前摇期间不再跟随玩家；结算通过半径与夹角直接判断伤害。
-5. **下劈**：`KingGroundCleavePattern` 使用 Ground 层向下检测地面，将刚刚落地的位置提交为攻击后的新移动锚点，再生成面向侧 245×32 单位的白色巨型矩形，水平长度对应第二关竞技场约一半宽度；这样通用攻击收尾不会把 King 拉回空中位置。
+5. **下劈**：`KingGroundCleavePattern` 使用 Ground 层向下检测地面，将刚刚落地的位置提交为攻击后的新移动锚点，再生成面向侧 245×32 单位的白色巨型矩形。矩形的近侧边中点严格落在 King 中心，竖直范围以 King 的 Y 坐标向上、向下各覆盖一半，不再只偏向角色上方；水平长度对应第二关竞技场约一半宽度。
 6. **攻击计数换位**：`EnemyAttackController` 在每次完整攻击结算后通知保存于 Boss 根对象的 `BossTeleport`。该组件现已抽象为两种换位模式，但保留原类名和资源 GUID，避免破坏第一关已有引用；`attacksPerRelocation` 是 Inspector 可调计数，默认每完成 3 次攻击触发一次换位，攻击冷却仍在换位结束后完整计算。
 7. **复用跳跃追逐**：Evil Wizard 继续使用 `Blink`，King 则在 `stage2_full` 中直接保存同一换位组件的 `Jump` 配置。Jump 不再自行复制曲线或随机挑选落点，而是调用 `EnemyPlatformNavigator.RetreatHopRoutine`，共享原追逐系统的节点收集、连边限制、A*、`navigationSpeed`、`minimumHopDuration`、`jumpHeight` 与 `Rigidbody2D.MovePosition` 抛物线实现。
 8. **远离 Hero 选点与加速**：国王以当前位置最近节点为 A* 起点，遍历所有可达节点并选择距 Hero 最远者，只执行该撤离路径的下一段，因此不会跳过墙体或跨越不相连的平台。`jumpSpeedMultiplier` 是相对 Navigator 原始跳跃速度的可调倍率，场景默认 1.75；持续时间和最短跳跃时间都会按倍率缩短，弧线高度仍使用 Navigator 保存的 8，从视觉和物理上保持与原跳跃追逐一致。落地后重建普通追逐路径，移动期间攻击状态阻止 `FixedUpdate` 与显式跳跃争抢刚体。
@@ -230,7 +231,8 @@ Hero enters stage2 arena
   -> attacks 1/2: full cooldown
   -> attack 3: find farthest reachable node from Hero -> take next A* step
               -> 1.75x navigator parabolic hop -> reset pursuit A* -> full cooldown
-  -> EnemyHealth death -> original story / victory / return flow
+  -> King and companion Orc are both defeated
+  -> BossEncounterObjective -> original story / victory / return flow
 ```
 
 ## 小怪血条实现管线
@@ -248,7 +250,7 @@ Hero enters stage2 arena
 1. **招式选择与动作**：`KingRadialBladeBurstPattern` 与横斩、上捞、半场下劈一起作为保存于 `stage2_full` 国王根对象上的第四个 `EnemyAttackPattern`。有效距离为 0–250、默认权重 1.05，`castAnimation` 固定为 `Attack2`，会继续参与现有的距离过滤、加权随机、避免连续重复以及三次攻击后跳跃换位流程。
 2. **圆斩预警与伤害**：前摇持续 1.15 秒，白色圆形填充从中心扩张至 28 单位半径；结算时按 Hero 与国王中心的距离进行一次范围伤害，并生成内外两道白色圆环作为短暂斩击残影。预警会在国王前摇期间保持以攻击锚点为中心，不追踪 Hero。
 3. **十二向散射**：结算帧把 360° 等分为十二个方向，每个方向从国王外侧 4 单位处实例化一个 `KingBladeWave.prefab`。剑气初速 10、线性加速度 18、寿命 3 秒，参数均保存在攻击组件中可由 Inspector 调节；相邻剑气分别顺、逆时针以 300°/s 自转，但平移始终沿生成时锁定的放射方向，不会追踪玩家。
-4. **纯白尖锐弧形**：`KingBladeWave_White.mat` 是独立保存的纯白 `Sprites/Default` 材质。`KingBladeWaveProjectile` 在实例初始化时生成一条弯曲带状网格：中心线使用抛物弧，宽度使用 `sin(πt)` 从中央向两端收缩到零，形成“一段白色圆环、两端尖锐”的轮廓；相同轮廓同时写入 `PolygonCollider2D`，因此画面和命中形状一致，不依赖额外贴图。
+4. **纯白尖锐弧形**：`KingBladeWave_White.mat` 是独立保存的纯白 `Sprites/Default` 材质。`KingBladeWaveProjectile` 在实例初始化时生成一条弯曲带状网格：中心线使用抛物弧，宽度使用 `sin(πt)` 从中央向两端收缩到零，形成“一段白色圆环、两端尖锐”的轮廓；端点直接写入零宽度，内部采样先 `Clamp01` 再做非整数幂，避免浮点负零产生 NaN 和 `abnormal mesh bounds`。相同有限轮廓同时写入 `PolygonCollider2D`，因此画面和命中形状一致。
 5. **剑气碰撞**：剑气 prefab 直接保存 `MeshFilter`、`MeshRenderer`、触发式 `PolygonCollider2D`、Kinematic `Rigidbody2D` 和 `KingBladeWaveProjectile`，运行时只实例化这类短生命周期攻击实体。命中 Player 后通过当前 `EnemyAttackContext.HitHero` 走国王统一伤害计算并销毁；碰到 Ground 层墙体或寿命结束也会销毁。
 6. **三动作音效加载器**：国王根对象直接保存 `KingAttackAudio` 与 `AudioSource`，三个 Inspector 槽依次对应 Attack1、Attack2、Attack3。当前三个 AudioClip 刻意保持为空，后续只需把音频拖入槽位；所有国王技能在实际结算帧统一调用 `FireFeedback`，由当前技能的 `CastAnim` 选择并 `PlayOneShot`，不会因第四个技能再增加重复音频槽。
 7. **屏幕抖动**：探索相机与 Boss Arena Camera 都继续使用场景中已保存的 `CameraShake2D`。攻击结算不再只使用国王启动时缓存的探索相机，而是在每次出手时从当前 `Camera.main` 获取抖动组件；因此进入 Boss 房切换相机后，横斩、上捞、下劈和圆斩剑气都会抖动实际正在显示的镜头。
@@ -267,4 +269,33 @@ EnemyAttackController selects King Radial Blade Burst
        -> hit Hero / Ground / lifetime -> destroy
   -> active MainCamera shake + Attack2 audio slot
   -> normal cooldown / every-third-attack retreat hop
+```
+
+## 第二关多演员剧情与联合胜利管线
+
+国王房的剧情演员和战斗目标都直接保存在 `stage2_full`。巫师只承担回忆画面，Orc 则从剧情无缝进入战斗；最终胜利要求国王与该 Orc 全部被击败，击杀顺序不受限制。
+
+1. **保存式演员**：场景根对象 `Boss Introduction Cast` 保存 `Story Evil Wizard Idle_0`、完整 `Mob_Orc.prefab` 实例以及 `BossEncounterObjective`。两名演员初始均为 inactive；核心组件不会在运行时补挂。
+2. **巫师仅作演出**：Builder 从 `Boss_EvilWizard.prefab` 的 `BossSpriteAnimator.idle.frames[0]` 取得准确的 `Idle_0`，场景演员只保存 `SpriteRenderer`，没有 Collider、生命、AI 或攻击组件，因此不会与国王视觉重叠，也不会被误判为战斗目标。
+3. **Orc 进入战斗**：第 12 句开始前隐藏巫师并激活 `Boss Companion Orc`。该对象保留 `Enemy_Orc`、`Enemy_Health`、状态机状态、Animator、Collider、Rigidbody、攻击与世界血条；剧情结束后不销毁，直接按普通 Orc 逻辑索敌和攻击。
+4. **逐句演员提示**：`bossIntroductionActorCues` 在显示指定行之前执行。当前 cue 为第 4 句显示巫师、第 12 句隐藏巫师并显示 Orc；若玩家进度已经跳过入场剧情，`ApplyBossIntroductionPostState` 会直接保存正确战斗状态：巫师隐藏、Orc 激活。
+5. **独立气泡**：`Wizard Story Dialogue` 与 `Orc Story Dialogue` 都是保存于 `Dialogue Bubbles` 下的 `WorldDialogueBubble.prefab` 实例，分别跟随各自演员。Samurai、King、EvilWizard、Monster 四类 speaker 均解析到不同气泡，剧情结束时统一隐藏。
+6. **联合目标**：`CombatHealth.Defeated` 提供统一死亡事件；`BossEncounterObjective.requiredEnemies` 在场景中明确引用 King 的 `EnemyHealth` 和 Orc 的 `Enemy_Health`。国王先死时只停止国王战斗，不立刻触发结算；Orc 先死时也不会胜利。两者都进入 `IsDead` 后，目标只调用一次 `EnemyHealth.CompleteVictoryFromObjective`，再进入原有最终剧情与 Victory 流程。
+7. **中英存储**：两关英文台词仍由 `StoryChapterBuilder` 写入场景，简体中文逐句写在 `LocalizationTable`；`ValidateTranslations` 会枚举两章全部 48 句，拒绝缺失、空白或仍与英文相同的翻译。
+8. **幂等构筑**：菜单 `Tools > Narrative & Audio > Build Stage2 Boss Cast and Localization` 会删除旧 `Boss Introduction Cast` 后重建演员、气泡、cue 和目标引用，但保留场景里当前 Hero、King、地图和宝箱位置。随后验证 Idle_0、完整 Orc、四气泡、三个 cue、双目标与 48 句本地化。
+9. **自动测试**：`KingRadialStoryObjectivePlayModeTests` 验证剑气网格全部顶点与 Bounds 有限、剑气确实向外加速并旋转、半场攻击上下对称、四名说话者路由正确、中文翻译生效，以及两种击杀顺序都只在 King 与 Orc 全灭后结束战斗。
+
+运行路径：
+
+```text
+Hero enters the stage2 boss arena
+  -> King appears
+  -> line 4 cue: show Wizard Idle_0 -> Wizard bubble speaks
+  -> betrayal comic
+  -> line 12 cues: hide Wizard + enable full Orc -> Orc bubble speaks
+  -> dialogue ends -> King and Orc fight together
+  -> either enemy may die first -> no victory yet
+  -> both CombatHealth.IsDead
+  -> BossEncounterObjective completes once
+  -> bilingual boss-victory dialogue -> final Victory screen
 ```

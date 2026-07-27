@@ -63,33 +63,67 @@ public static class LocalizationTable
 
     private static readonly Dictionary<string, string> Chinese = new Dictionary<string, string>
     {
-        // ---------- Story: opening ----------
+        // ---------- Story: stage 1 opening ----------
         { "Decades have passed... and now I have returned.", "数十年过去了……如今我回来了。" },
         { "Since that day, I have lost count of the battles I have fought.", "自那日起，我已记不清身经了多少场战斗。" },
-        { "Even on the quietest nights, I have never known a moment's rest.", "纵是最寂静的夜里，我也不曾有过片刻安宁。" },
-        { "Today, I have finally made my choice.", "今日，我终于做出了抉择。" },
-        { "I will put the past to rest.", "我要让过往就此安息。" },
+        { "Even on the quietest nights, my heart has never known a moment's rest.", "纵是最寂静的夜里，我的心也不曾有过片刻安宁。" },
+        { "Today, I have finally made my choice—", "今日，我终于做出了抉择——" },
+        { "I swear to defend justice and demand the truth for my lord!", "我发誓守护正义，也要为主公讨回真相！" },
 
-        // ---------- Story: first encounter ----------
-        { "These monsters again? How familiar.", "又是这些魔物？真是熟悉。" },
+        // ---------- Story: stage 1 first encounter ----------
+        { "These monsters again... It feels all too familiar.", "又是这些魔物……这一切实在太熟悉了。" },
         { "Time has rusted my blade—and weathered its wielder.", "岁月锈蚀了我的刀——也磨损了持刀之人。" },
         { "I should find equipment worthy of the road ahead.", "我该寻些配得上前路的装备。" },
 
-        // ---------- Story: boss introduction ----------
+        // ---------- Story: stage 1 boss introduction ----------
         { "You...?", "是你……？" },
-        { "Me. I have come to settle an old debt.", "是我。我为了结一笔旧债而来。" },
-        { "So you finally came. You never could let go of what happened.", "你终究还是来了。当年之事，你从来放不下。" },
-        { "Your lord met a truly wretched end.", "你的主君，死得实在凄惨。" },
+        { "Yes. I have come to demand the truth.", "不错。我是来讨一个真相的。" },
+        { "So you finally came. You never could let go of that day.", "你终究还是来了。那一天的事，你始终无法放下。" },
+        { "Your precious lord met a truly wretched end.", "你那位敬爱的主公，死得实在凄惨。" },
         { "Do not dare speak of him!", "不许你提起他！" },
-        { "Ha! Whether I have the right is yours to prove in battle!", "哈！我有没有资格，就由你在战斗中证明吧！" },
+        { "Ha! If you would silence me, prove your right in battle!", "哈！想让我闭嘴，就用你的刀来证明吧！" },
 
-        // ---------- Story: boss victory ----------
-        { "You have grown stronger. All those years of battle...", "你变强了。这些年的厮杀……" },
-        { "You did not kill my lord! Who are you?", "杀我主君的不是你！你到底是谁？" },
-        { "...and wiser, too. Your eyes have sharpened.", "……也变得更明智了。你的眼睛锐利了许多。" },
-        { "You are right. It was not me. Take the crimson rune you found and seek the truth.", "你说得对，不是我。带上你寻得的绯红符文，去追寻真相吧。" },
+        // ---------- Story: stage 1 boss victory ----------
+        { "You have grown stronger through all those years of battle...", "经历了这么多年的战斗，你果然变强了……" },
+        { "That technique... You were not the one who killed my lord! What happened that day?", "这招式……杀害主公的人不是你！那一天究竟发生了什么？" },
+        { "And wiser, too. Age has sharpened your eyes.", "也更明智了。岁月让你的眼睛变得锐利。" },
+        { "You are right. It was not me. Take the crimson rune you found—and seek the truth yourself.", "你说得对，并不是我。带上你找到的绯红符文——亲自去追寻真相吧。" },
         { "...", "……" },
         { "Then today, at last, the truth will be revealed.", "那么今日，真相终将大白。" },
+        { "Wait... why is the crimson rune glowing?", "等等……绯红符文为什么在发光？" },
+
+        // ---------- Story: stage 2 opening ----------
+        { "This rune... it brought me back to—", "这枚符文……把我带回了——" },
+        { "The wizard's castle, on the very day my lord died.", "巫师的城堡，而且正是主公遇害的那一天。" },
+        { "Then I can finally see it with my own eyes...", "那么，我终于能亲眼看清一切……" },
+        { "Whoever killed my lord will repay that blood a hundredfold.", "无论是谁杀了主公，我都要让他百倍血偿。" },
+
+        // ---------- Story: stage 2 boss introduction ----------
+        { "My lord!", "主公！" },
+        { "I was fighting elsewhere that day. I could not save you.", "那一天我还在别处厮杀，没能赶来救您。" },
+        { "This time, I will keep my oath. I will defend you with my life!", "这一次，我定会履行誓言，拼上性命守护您！" },
+        { "He is unworthy of your oath.", "他不配得到你的效忠。" },
+        { "What? Why are you here—alive?", "什么？你为什么会在这里——而且还活着？" },
+        { "First, see the truth for yourself.", "先亲眼看看真相吧。" },
+        { "What... my lord was behind it all?", "什么……这一切竟然都是主公安排的？" },
+        { "But why should I believe you?", "可我凭什么相信你？" },
+        { "You will, once you see your lord with your own eyes.", "等你亲眼看见自己的主公，就会相信了。" },
+        { "I forged the crimson and verdant runes. The green rune can return you to the future.", "绯红与翠绿符文都出自我手。绿色符文能送你回到未来。" },
+        { "My part is finished. How amusing...", "我的任务完成了。真是有趣……" },
+        { "On your next raid, take this village. I will leave enough 'food' for you.", "下一次袭击就去这个村子。我会为你们留下足够的‘食物’。" },
+        { "Graaagh!", "吼——！" },
+        { "In return, you will bring me the gold we agreed upon.", "作为交换，你们要把约定好的黄金带给我。" },
+        { "Wait. Who is there?", "等等。谁在那里？" },
+        { "What is this? Why is my lord bargaining with the enemy?", "这是怎么回事？主公为何在与敌人交易？" },
+        { "Was the man I followed nothing but a hypocrite?", "难道我一直追随的，只是一个伪君子？" },
+        { "What have I done...?", "我究竟都做了些什么……？" },
+        { "But it is not too late. I will still honor my oath—", "但现在还不算太迟。我仍会履行自己的誓言——" },
+        { "I will defend justice!", "我要守护正义！" },
+
+        // ---------- Story: stage 2 boss victory ----------
+        { "To think I killed my own lord to keep the very oath I made to him...", "没想到，为了履行向主公立下的誓言，我竟亲手杀了他……" },
+        { "At last, everything I came here to do is done.", "终于，我来到这里要做的一切都结束了。" },
+        { "I will return to the future with one vow intact: justice, no matter the cost.", "我会回到未来，并守住唯一不变的誓言：无论代价如何，都要维护正义。" },
 
         // ---------- Guidance prompts ----------
         { "WASD / Arrow Keys — Move", "WASD / 方向键 —— 移动" },

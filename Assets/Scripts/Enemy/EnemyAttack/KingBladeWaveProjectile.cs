@@ -76,6 +76,14 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
 
     private void BuildTaperedArc()
     {
+        if (generatedMesh != null)
+        {
+            Destroy(generatedMesh);
+            generatedMesh = null;
+        }
+        length = IsFinite(length) ? Mathf.Max(0.5f, length) : 8f;
+        thickness = IsFinite(thickness) ? Mathf.Max(0.05f, thickness) : 1.25f;
+        arcDepth = IsFinite(arcDepth) ? Mathf.Max(0f, arcDepth) : 1.6f;
         int count = Mathf.Max(8, segments);
         Vector3[] vertices = new Vector3[(count + 1) * 2];
         int[] triangles = new int[count * 6];
@@ -90,7 +98,11 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
                 arcDepth * (1f - normalizedX * normalizedX));
             float slope = -4f * arcDepth * normalizedX / Mathf.Max(0.001f, length);
             Vector2 normal = new Vector2(-slope, 1f).normalized;
-            float taper = Mathf.Pow(Mathf.Sin(Mathf.PI * t), 0.72f);
+            // Mathf.Sin(PI) can be a tiny negative float. Pow(negative, fractional exponent)
+            // produces NaN, poisoning the last vertices and aborting the twelve-wave spawn loop.
+            float taper = i == 0 || i == count
+                ? 0f
+                : Mathf.Pow(Mathf.Clamp01(Mathf.Sin(Mathf.PI * t)), 0.72f);
             Vector2 offset = normal * (thickness * 0.5f * taper);
             upper.Add(centre + offset);
             lower.Add(centre - offset);
@@ -125,6 +137,8 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
         for (int i = count - 1; i > 0; i--) path.Add(lower[i]);
         GetComponent<PolygonCollider2D>().SetPath(0, path);
     }
+
+    private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
     private void OnDestroy()
     {

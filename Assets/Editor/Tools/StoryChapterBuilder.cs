@@ -14,11 +14,17 @@ public static class StoryChapterBuilder
     private const string Stage1Path = "Assets/Scenes/stage1_full.unity";
     private const string Stage2Path = "Assets/Scenes/stage2_full.unity";
     private const string ComicPrefabPath = "Assets/Prefab/StoryComicPanel.prefab";
+    private const string DialoguePrefabPath = "Assets/Prefab/WorldDialogueBubble.prefab";
+    private const string WizardPrefabPath = "Assets/Enemy/Bosses/EvilWizard/Boss_EvilWizard.prefab";
+    private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
     private const string ProloguePath = "Assets/Resources/Story/Comic_Prologue.png";
     private const string BetrayalPath = "Assets/Resources/Story/Comic_Betrayal.png";
     private const string FontPath =
         "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private const string ComicObjectName = "Story Comic Panel";
+    private const string Stage2CastName = "Boss Introduction Cast";
+    private const string WizardActorName = "Story Evil Wizard Idle_0";
+    private const string OrcActorName = "Boss Companion Orc";
 
     [MenuItem("Tools/Narrative & Audio/Build Two-Chapter Story")]
     public static void Build()
@@ -34,6 +40,16 @@ public static class StoryChapterBuilder
         Debug.Log("STORY_CHAPTER_BUILD_OK: polished two-stage dialogue and two panel-by-panel comics are saved.");
     }
 
+    [MenuItem("Tools/Narrative & Audio/Build Stage2 Boss Cast and Localization")]
+    public static void BuildStage2BossCast()
+    {
+        ConfigureStage2();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Validate();
+        Debug.Log("STAGE2_BOSS_CAST_BUILD_OK: Wizard, combat Orc, speaker bubbles and joint victory are saved.");
+    }
+
     [MenuItem("Tools/Narrative & Audio/Validate Two-Chapter Story")]
     public static void Validate()
     {
@@ -41,6 +57,8 @@ public static class StoryChapterBuilder
         ValidateComicTexture(BetrayalPath);
         ValidateStage(Stage1Path, StoryBeat.Opening, 5, 3, 6, 7, true, false);
         ValidateStage(Stage2Path, StoryBeat.Stage2Opening, 4, 0, 20, 3, false, true);
+        ValidateTranslations();
+        ValidateStage2BossCast();
         Debug.Log("STORY_CHAPTER_VALIDATE_OK: story text, comic insertion points and saved UI references are valid.");
     }
 
@@ -82,8 +100,122 @@ public static class StoryChapterBuilder
         SetLines(data.FindProperty("firstEncounterLines"), Array.Empty<(StorySpeaker, string)>());
         SetLines(data.FindProperty("bossIntroductionLines"), Stage2BossIntroduction());
         SetLines(data.FindProperty("bossVictoryLines"), Stage2BossVictory());
+        ConfigureStage2BossCast(scene, story, data);
         data.ApplyModifiedPropertiesWithoutUndo();
         Save(scene, Stage2Path);
+    }
+
+    private static void ConfigureStage2BossCast(Scene scene, StoryDialogueController story,
+        SerializedObject storyData)
+    {
+        Transform oldCast = FindInScene<Transform>(scene).FirstOrDefault(candidate =>
+            candidate.parent == null && candidate.name == Stage2CastName);
+        if (oldCast != null)
+            UnityEngine.Object.DestroyImmediate(oldCast.gameObject);
+
+        EnemyHealth boss = FindInScene<EnemyHealth>(scene).SingleOrDefault() ??
+            throw new MissingReferenceException("stage2 requires exactly one King EnemyHealth.");
+        Collider2D bossCollider = boss.GetComponent<Collider2D>();
+        float groundY = bossCollider != null ? bossCollider.bounds.min.y : boss.transform.position.y;
+
+        GameObject castRoot = new GameObject(Stage2CastName, typeof(BossEncounterObjective));
+        SceneManager.MoveGameObjectToScene(castRoot, scene);
+
+        GameObject wizard = CreateWizardStoryActor(castRoot.transform, boss.transform.position, groundY);
+        GameObject orc = CreateCompanionOrc(scene, castRoot.transform, boss.transform.position, groundY,
+            out Enemy_Health orcHealth);
+        WorldDialogueBubble wizardBubble = CreateStoryBubble(scene, wizard.transform,
+            "Wizard Story Dialogue", new Vector3(0f, 12f, 0f));
+        WorldDialogueBubble orcBubble = CreateStoryBubble(scene, orc.transform,
+            "Orc Story Dialogue", new Vector3(0f, 9f, 0f));
+
+        SetSpeakerBindings(storyData.FindProperty("additionalSpeakerBubbles"),
+            (StorySpeaker.EvilWizard, wizardBubble), (StorySpeaker.Monster, orcBubble));
+        SetActorCues(storyData.FindProperty("bossIntroductionActorCues"),
+            (3, wizard, true), (11, wizard, false), (11, orc, true));
+        SetObjectArray(storyData.FindProperty("actorsHiddenAfterBossIntroduction"), wizard);
+        SetObjectArray(storyData.FindProperty("actorsActiveAfterBossIntroduction"), orc);
+
+        BossEncounterObjective objective = castRoot.GetComponent<BossEncounterObjective>();
+        SerializedObject objectiveData = new SerializedObject(objective);
+        SetObject(objectiveData, "boss", boss);
+        SetObjectArray(objectiveData.FindProperty("requiredEnemies"), boss, orcHealth);
+        objectiveData.ApplyModifiedPropertiesWithoutUndo();
+
+        SerializedObject bossData = new SerializedObject(boss);
+        SetObject(bossData, "victoryObjective", objective);
+        bossData.ApplyModifiedPropertiesWithoutUndo();
+
+        wizard.SetActive(false);
+        orc.SetActive(false);
+        EditorUtility.SetDirty(story);
+        EditorUtility.SetDirty(objective);
+    }
+
+    private static GameObject CreateWizardStoryActor(Transform parent, Vector3 bossPosition, float groundY)
+    {
+        GameObject wizardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WizardPrefabPath) ??
+            throw new MissingReferenceException("Missing " + WizardPrefabPath);
+        BossSpriteAnimator sourceAnimator = wizardPrefab.GetComponentInChildren<BossSpriteAnimator>(true);
+        Sprite idle0 = sourceAnimator != null && sourceAnimator.idle.frames.Length > 0
+            ? sourceAnimator.idle.frames[0]
+            : null;
+        if (idle0 == null)
+            throw new MissingReferenceException("The Evil Wizard prefab has no Idle_0 sprite.");
+
+        GameObject wizard = new GameObject(WizardActorName, typeof(SpriteRenderer));
+        wizard.transform.SetParent(parent, false);
+        SpriteRenderer renderer = wizard.GetComponent<SpriteRenderer>();
+        renderer.sprite = idle0;
+        renderer.sortingLayerName = SceneArt.EffectSortingLayer;
+        renderer.sortingOrder = 10;
+        float scale = 10f / Mathf.Max(0.01f, idle0.bounds.size.y);
+        wizard.transform.localScale = Vector3.one * scale;
+        wizard.transform.position = new Vector3(bossPosition.x - 18f,
+            groundY - idle0.bounds.min.y * scale, bossPosition.z);
+        return wizard;
+    }
+
+    private static GameObject CreateCompanionOrc(Scene scene, Transform parent, Vector3 bossPosition,
+        float groundY, out Enemy_Health health)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(OrcPrefabPath) ??
+            throw new MissingReferenceException("Missing " + OrcPrefabPath);
+        GameObject orc = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+        orc.name = OrcActorName;
+        orc.transform.SetParent(parent, true);
+        orc.transform.position = new Vector3(bossPosition.x + 14f, bossPosition.y, bossPosition.z);
+        Physics2D.SyncTransforms();
+        Collider2D collider = orc.GetComponent<Collider2D>();
+        if (collider != null)
+            orc.transform.position += Vector3.up * (groundY - collider.bounds.min.y);
+        health = orc.GetComponent<Enemy_Health>() ??
+            throw new MissingReferenceException("The companion Orc prefab has no Enemy_Health.");
+        return orc;
+    }
+
+    private static WorldDialogueBubble CreateStoryBubble(Scene scene, Transform target, string name,
+        Vector3 offset)
+    {
+        Transform dialogueRoot = FindInScene<Transform>(scene).FirstOrDefault(candidate =>
+            candidate.parent == null && candidate.name == "Dialogue Bubbles") ??
+            throw new MissingReferenceException("stage2 requires the saved Dialogue Bubbles root.");
+        Transform old = dialogueRoot.Find(name);
+        if (old != null)
+            UnityEngine.Object.DestroyImmediate(old.gameObject);
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(DialoguePrefabPath) ??
+            throw new MissingReferenceException("Missing " + DialoguePrefabPath);
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, dialogueRoot);
+        instance.name = name;
+        WorldDialogueBubble bubble = instance.GetComponent<WorldDialogueBubble>();
+        SerializedObject bubbleData = new SerializedObject(bubble);
+        SetObject(bubbleData, "followTarget", target);
+        bubbleData.FindProperty("followOffset").vector3Value = offset;
+        bubbleData.FindProperty("initialText").stringValue = "...";
+        bubbleData.FindProperty("visibleOnAwake").boolValue = false;
+        bubbleData.ApplyModifiedPropertiesWithoutUndo();
+        instance.transform.position = target.position + offset;
+        return bubble;
     }
 
     private static StoryDialogueController OpenStory(string path, out Scene scene)
@@ -234,6 +366,70 @@ public static class StoryChapterBuilder
             throw new InvalidOperationException(path + " comic presentation prefab is incomplete.");
     }
 
+    private static void ValidateTranslations()
+    {
+        (StorySpeaker speaker, string text)[][] groups =
+        {
+            Stage1Opening(), Stage1Encounter(), Stage1BossIntroduction(), Stage1BossVictory(),
+            Stage2Opening(), Stage2BossIntroduction(), Stage2BossVictory()
+        };
+        int count = 0;
+        foreach ((StorySpeaker speaker, string text)[] group in groups)
+        foreach ((StorySpeaker speaker, string text) line in group)
+        {
+            count++;
+            if (!LocalizationTable.TryGetChinese(line.text, out string chinese) ||
+                string.IsNullOrWhiteSpace(chinese) || chinese == line.text)
+                throw new InvalidOperationException("Missing Chinese story translation for: " + line.text);
+        }
+        if (count != 48)
+            throw new InvalidOperationException("The current two chapters must contain exactly 48 dialogue entries.");
+    }
+
+    private static void ValidateStage2BossCast()
+    {
+        StoryDialogueController story = OpenStory(Stage2Path, out Scene scene);
+        Transform cast = FindInScene<Transform>(scene).SingleOrDefault(candidate =>
+            candidate.parent == null && candidate.name == Stage2CastName);
+        if (cast == null || !cast.gameObject.activeSelf)
+            throw new InvalidOperationException("stage2 must save one active Boss Introduction Cast root.");
+        Transform wizard = cast.Find(WizardActorName);
+        Transform orc = cast.Find(OrcActorName);
+        if (wizard == null || orc == null || wizard.gameObject.activeSelf || orc.gameObject.activeSelf)
+            throw new InvalidOperationException("The Wizard and companion Orc must be saved dormant under the cast root.");
+
+        GameObject wizardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WizardPrefabPath);
+        Sprite expectedIdle0 = wizardPrefab.GetComponentInChildren<BossSpriteAnimator>(true).idle.frames[0];
+        SpriteRenderer wizardRenderer = wizard.GetComponent<SpriteRenderer>();
+        if (wizardRenderer == null || wizardRenderer.sprite != expectedIdle0 ||
+            wizard.GetComponent<Collider2D>() != null || wizard.GetComponent<CombatHealth>() != null)
+            throw new InvalidOperationException("The story Wizard must be the exact Idle_0 sprite without combat components.");
+
+        Enemy_Health orcHealth = orc.GetComponent<Enemy_Health>();
+        if (orcHealth == null || orc.GetComponent<Enemy_Orc>() == null)
+            throw new InvalidOperationException("The stage2 companion must preserve the complete combat Orc prefab.");
+        WorldDialogueBubble wizardBubble = story.GetBubbleForSpeaker(StorySpeaker.EvilWizard);
+        WorldDialogueBubble orcBubble = story.GetBubbleForSpeaker(StorySpeaker.Monster);
+        if (wizardBubble == null || orcBubble == null || wizardBubble == orcBubble ||
+            wizardBubble.FollowTarget != wizard || orcBubble.FollowTarget != orc)
+            throw new InvalidOperationException("Wizard and Monster dialogue must route to their own saved bubbles.");
+
+        SerializedObject storyData = new SerializedObject(story);
+        SerializedProperty cues = storyData.FindProperty("bossIntroductionActorCues");
+        if (story.AdditionalSpeakerBubbleCount != 2 || story.BossIntroductionActorCueCount != 3 ||
+            cues.GetArrayElementAtIndex(0).FindPropertyRelative("beforeLineIndex").intValue != 3 ||
+            cues.GetArrayElementAtIndex(1).FindPropertyRelative("beforeLineIndex").intValue != 11 ||
+            cues.GetArrayElementAtIndex(2).FindPropertyRelative("beforeLineIndex").intValue != 11)
+            throw new InvalidOperationException("stage2 actor reveal/hide cues do not match the authored dialogue.");
+
+        EnemyHealth boss = FindInScene<EnemyHealth>(scene).Single();
+        BossEncounterObjective objective = cast.GetComponent<BossEncounterObjective>();
+        if (objective == null || objective.Boss != boss || objective.RequiredEnemyCount != 2 ||
+            !objective.RequiredEnemies.Contains(orcHealth) ||
+            ReferencedObject(boss, "victoryObjective") != objective)
+            throw new InvalidOperationException("King victory must wait for the saved companion Orc objective.");
+    }
+
     private static (StorySpeaker, string)[] Stage1Opening() => new[]
     {
         (StorySpeaker.Samurai, "Decades have passed... and now I have returned."),
@@ -320,6 +516,41 @@ public static class StoryChapterBuilder
             line.FindPropertyRelative("text").stringValue = lines[i].text;
         }
     }
+
+    private static void SetSpeakerBindings(SerializedProperty property,
+        params (StorySpeaker speaker, WorldDialogueBubble bubble)[] bindings)
+    {
+        property.arraySize = bindings.Length;
+        for (int i = 0; i < bindings.Length; i++)
+        {
+            SerializedProperty binding = property.GetArrayElementAtIndex(i);
+            binding.FindPropertyRelative("speaker").enumValueIndex = (int)bindings[i].speaker;
+            binding.FindPropertyRelative("bubble").objectReferenceValue = bindings[i].bubble;
+        }
+    }
+
+    private static void SetActorCues(SerializedProperty property,
+        params (int line, GameObject actor, bool active)[] cues)
+    {
+        property.arraySize = cues.Length;
+        for (int i = 0; i < cues.Length; i++)
+        {
+            SerializedProperty cue = property.GetArrayElementAtIndex(i);
+            cue.FindPropertyRelative("beforeLineIndex").intValue = cues[i].line;
+            cue.FindPropertyRelative("actor").objectReferenceValue = cues[i].actor;
+            cue.FindPropertyRelative("active").boolValue = cues[i].active;
+        }
+    }
+
+    private static void SetObjectArray(SerializedProperty property, params UnityEngine.Object[] values)
+    {
+        property.arraySize = values.Length;
+        for (int i = 0; i < values.Length; i++)
+            property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+    }
+
+    private static UnityEngine.Object ReferencedObject(UnityEngine.Object target, string property) =>
+        new SerializedObject(target).FindProperty(property)?.objectReferenceValue;
 
     private static void SetObject(SerializedObject data, string property, UnityEngine.Object value) =>
         data.FindProperty(property).objectReferenceValue = value;

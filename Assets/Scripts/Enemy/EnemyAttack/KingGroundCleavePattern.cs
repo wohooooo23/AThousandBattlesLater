@@ -36,8 +36,9 @@ public sealed class KingGroundCleavePattern : EnemyAttackPattern
         }
 
         float facing = context.Hero != null && context.Hero.position.x < origin.x ? -1f : 1f;
-        Vector2 center = new Vector2(origin.x + facing * reachDistance * 0.5f,
-            groundY + cleaveHeight * 0.5f);
+        // The King is the midpoint of the rectangle's facing side: the attack extends forward
+        // horizontally and covers equal vertical distance above and below the King.
+        Vector2 center = CleaveCenter(origin, facing);
         GameObject warning = CreateRectangle(WarningObjectName, center, warningColor, 28);
 
         float elapsed = 0f;
@@ -54,7 +55,7 @@ public sealed class KingGroundCleavePattern : EnemyAttackPattern
             Vector2 hero = context.Hero.position;
             float forward = (hero.x - origin.x) * facing;
             if (forward >= 0f && forward <= reachDistance &&
-                hero.y >= groundY && hero.y <= groundY + cleaveHeight)
+                Mathf.Abs(hero.y - origin.y) <= cleaveHeight * 0.5f)
                 context.HitHero(origin);
         }
 
@@ -62,6 +63,9 @@ public sealed class KingGroundCleavePattern : EnemyAttackPattern
         context.FireFeedback();
         yield return FadeAndDestroy(strike, strikeDuration);
     }
+
+    private Vector2 CleaveCenter(Vector2 origin, float facing) =>
+        new Vector2(origin.x + facing * reachDistance * 0.5f, origin.y);
 
     private GameObject CreateRectangle(string name, Vector2 center, Color color, int sortingOrder)
     {

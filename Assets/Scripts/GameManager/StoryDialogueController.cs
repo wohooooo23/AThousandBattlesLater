@@ -24,6 +24,21 @@ public struct StoryDialogueLine
     [TextArea] public string text;
 }
 
+[Serializable]
+public struct StorySpeakerBubbleBinding
+{
+    public StorySpeaker speaker;
+    public WorldDialogueBubble bubble;
+}
+
+[Serializable]
+public struct StoryActorCue
+{
+    [Min(0)] public int beforeLineIndex;
+    public GameObject actor;
+    public bool active;
+}
+
 /// <summary>
 /// Scene-authored story flow. It owns the translated lines, fade overlay and explicit Hero/Boss
 /// bubble references so narrative content remains visible and editable in the Inspector.
@@ -34,6 +49,8 @@ public sealed class StoryDialogueController : MonoBehaviour
     [SerializeField] private StorySceneMode sceneMode;
     [SerializeField] private WorldDialogueBubble heroBubble;
     [SerializeField] private WorldDialogueBubble bossBubble;
+    [Tooltip("Optional saved bubbles for additional actors such as the stage2 Wizard and Orc.")]
+    [SerializeField] private StorySpeakerBubbleBinding[] additionalSpeakerBubbles;
     [SerializeField] private Transform bossVisualRoot;
     [SerializeField] private CanvasGroup fadeOverlay;
     [SerializeField] private GameObject victoryOverlay;
@@ -49,6 +66,10 @@ public sealed class StoryDialogueController : MonoBehaviour
     [SerializeField] private StoryDialogueLine[] firstEncounterLines;
     [SerializeField] private StoryDialogueLine[] bossIntroductionLines;
     [SerializeField] private StoryDialogueLine[] bossVictoryLines;
+    [Header("Boss introduction actors")]
+    [SerializeField] private StoryActorCue[] bossIntroductionActorCues;
+    [SerializeField] private GameObject[] actorsHiddenAfterBossIntroduction;
+    [SerializeField] private GameObject[] actorsActiveAfterBossIntroduction;
     [SerializeField, TextArea] private string movementPrompt = "WASD / Arrow Keys — Move";
     [SerializeField, TextArea] private string combatPrompt =
         "Press J to attack. Press I to throw a kunai.";
@@ -86,6 +107,12 @@ public sealed class StoryDialogueController : MonoBehaviour
     public Texture2D BossIntroductionComic => bossIntroductionComic;
     public int BossIntroductionComicAfterLine => bossIntroductionComicAfterLine;
     public StoryBeat OpeningProgressBeat => openingProgressBeat;
+    public int AdditionalSpeakerBubbleCount => additionalSpeakerBubbles != null
+        ? additionalSpeakerBubbles.Length
+        : 0;
+    public int BossIntroductionActorCueCount => bossIntroductionActorCues != null
+        ? bossIntroductionActorCues.Length
+        : 0;
 
     /// <summary>
     /// True while a time-stopping dialogue holds the game paused. UIManager reads it to refuse
@@ -109,6 +136,8 @@ public sealed class StoryDialogueController : MonoBehaviour
 
         heroBubble.Hide();
         bossBubble?.Hide();
+        HideAdditionalBubbles();
+        ResetBossIntroductionActors();
         comicPanel?.Hide();
         if (fadeOverlay != null)
         {
@@ -190,13 +219,22 @@ public sealed class StoryDialogueController : MonoBehaviour
     /// <summary>Starts the in-map Boss introduction once when the arena entrance is crossed.</summary>
     public bool PlayBossIntroduction()
     {
-        if (bossIntroductionPlayed || StoryProgress.IsPassed(StoryBeat.BossIntroduction) ||
-            bossBubble == null || bossIntroductionLines == null || bossIntroductionLines.Length == 0)
+        if (bossIntroductionPlayed)
             return false;
+        if (StoryProgress.IsPassed(StoryBeat.BossIntroduction) || bossBubble == null ||
+            bossIntroductionLines == null || bossIntroductionLines.Length == 0)
+        {
+            ApplyPostBossIntroductionActorState();
+            return false;
+        }
         bossIntroductionPlayed = true;
         // Automated combat tests enter the real arena and must remain frame-driven.
         if (Application.isBatchMode)
+        {
+            ApplyPostBossIntroductionActorState();
+            StoryProgress.MarkPassed(StoryBeat.BossIntroduction);
             return false;
+        }
         StartCoroutine(PlayBossIntroductionSequence());
         return true;
     }
@@ -262,15 +300,17 @@ public sealed class StoryDialogueController : MonoBehaviour
             yield return null;
         isPlaying = true;
         AcquirePause();
+        ResetBossIntroductionActors();
         for (int i = 0; i < bossIntroductionLines.Length; i++)
         {
+            ApplyBossIntroductionActorCues(i);
             ShowLine(bossIntroductionLines[i]);
             yield return WaitForAdvance();
             if (i + 1 == bossIntroductionComicAfterLine)
                 yield return PlayComic(bossIntroductionComic);
         }
-        heroBubble.Hide();
-        bossBubble.Hide();
+        HideAllBubbles();
+        ApplyPostBossIntroductionActorState();
         ReleasePause();
         isPlaying = false;
         StoryProgress.MarkPassed(StoryBeat.BossIntroduction);
@@ -290,8 +330,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         }
         if (showFinalVictoryOverlay || !keepLastVictoryLineVisible)
         {
-            heroBubble.Hide();
-            bossBubble.Hide();
+            HideAllBubbles();
         }
         victoryOverlay.SetActive(showFinalVictoryOverlay);
         isPlaying = false;
@@ -315,8 +354,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         if (comic == null || comicPanel == null)
             yield break;
 
-        heroBubble.Hide();
-        bossBubble?.Hide();
+        HideAllBubbles();
         for (int panel = 0; panel < 4; panel++)
         {
             comicPanel.ShowPanel(comic, panel);
@@ -327,16 +365,70 @@ public sealed class StoryDialogueController : MonoBehaviour
 
     private void ShowLine(StoryDialogueLine line)
     {
-        if (line.speaker != StorySpeaker.Samurai && bossBubble != null)
-        {
-            heroBubble.Hide();
-            bossBubble.Show(line.text, 0f, true);
-        }
-        else
-        {
-            bossBubble?.Hide();
-            heroBubble.Show(line.text, 0f, true);
-        }
+        HideAllBubbles();
+        WorldDialogueBubble bubble = GetBubbleForSpeaker(line.speaker);
+        (bubble != null ? bubble : heroBubble).Show(line.text, 0f, true);
+    }
+
+    public WorldDialogueBubble GetBubbleForSpeaker(StorySpeaker speaker)
+    {
+        if (speaker == StorySpeaker.Samurai)
+            return heroBubble;
+        if (speaker == StorySpeaker.King)
+            return bossBubble;
+        if (additionalSpeakerBubbles != null)
+            foreach (StorySpeakerBubbleBinding binding in additionalSpeakerBubbles)
+                if (binding.speaker == speaker && binding.bubble != null)
+                    return binding.bubble;
+        return bossBubble;
+    }
+
+    private void HideAllBubbles()
+    {
+        heroBubble?.Hide();
+        bossBubble?.Hide();
+        HideAdditionalBubbles();
+    }
+
+    private void HideAdditionalBubbles()
+    {
+        if (additionalSpeakerBubbles == null)
+            return;
+        foreach (StorySpeakerBubbleBinding binding in additionalSpeakerBubbles)
+            binding.bubble?.Hide();
+    }
+
+    private void ResetBossIntroductionActors()
+    {
+        if (bossIntroductionActorCues == null)
+            return;
+        foreach (StoryActorCue cue in bossIntroductionActorCues)
+            if (cue.actor != null)
+                cue.actor.SetActive(false);
+    }
+
+    private void ApplyBossIntroductionActorCues(int lineIndex)
+    {
+        if (bossIntroductionActorCues == null)
+            return;
+        foreach (StoryActorCue cue in bossIntroductionActorCues)
+            if (cue.beforeLineIndex == lineIndex && cue.actor != null)
+                cue.actor.SetActive(cue.active);
+    }
+
+    private void ApplyPostBossIntroductionActorState()
+    {
+        SetActorGroupActive(actorsHiddenAfterBossIntroduction, false);
+        SetActorGroupActive(actorsActiveAfterBossIntroduction, true);
+    }
+
+    private static void SetActorGroupActive(GameObject[] actors, bool active)
+    {
+        if (actors == null)
+            return;
+        foreach (GameObject actor in actors)
+            if (actor != null)
+                actor.SetActive(active);
     }
 
     private static IEnumerator WaitForAdvance()
