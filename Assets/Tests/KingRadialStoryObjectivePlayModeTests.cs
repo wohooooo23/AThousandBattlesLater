@@ -227,7 +227,7 @@ public sealed class KingRadialStoryObjectivePlayModeTests
     }
 
     [UnityTest]
-    public IEnumerator Stage2RoutesFourSpeakersAndWaitsForKingAndOrc()
+    public IEnumerator Stage2RoutesFourSpeakersThenHidesTheStoryOrcForCombat()
     {
         SceneManager.LoadScene("stage2_full");
         yield return null;
@@ -262,44 +262,34 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         Assert.That(Property<string>(wizard, "CurrentText"), Is.EqualTo("他不配得到你的效忠。"));
         SetLanguage("English");
 
-        MonoBehaviour objective = FindBehaviour("BossEncounterObjective");
-        Component bossHealth = Property<Component>(objective, "Boss");
-        Component orcHealth = monsterTarget.GetComponent("Enemy_Health");
-        bossHealth.gameObject.SetActive(true);
-        monsterTarget.gameObject.SetActive(true);
-        yield return null;
-        ApplyFatalDamage(bossHealth);
-        Assert.That(MatchIsOver(), Is.False,
-            "King death must wait while the required companion Orc survives.");
-        ApplyFatalDamage(orcHealth);
-        Assert.That(MatchIsOver(), Is.True);
-        Assert.That(Property<bool>(objective, "IsComplete"), Is.True);
+        story.GetType().GetMethod("ApplyPostBossIntroductionActorState",
+            BindingFlags.Instance | BindingFlags.NonPublic).Invoke(story, null);
+        Assert.That(wizardTarget.gameObject.activeSelf, Is.False);
+        Assert.That(monsterTarget.gameObject.activeSelf, Is.False,
+            "The companion Orc is a story actor and must disappear when combat starts.");
     }
 
     [UnityTest]
-    public IEnumerator Stage2AlsoWaitsForTheKingWhenTheOrcFallsFirst()
+    public IEnumerator Stage2VictoryOnlyRequiresTheKing()
     {
         SceneManager.LoadScene("stage2_full");
         yield return null;
 
-        MonoBehaviour objective = FindBehaviour("BossEncounterObjective");
-        Component bossHealth = Property<Component>(objective, "Boss");
-        Component orcHealth = ((IEnumerable<Component>)Property(objective, "RequiredEnemies"))
-            .Single(health => health != bossHealth);
-        bossHealth.gameObject.SetActive(true);
-        orcHealth.gameObject.SetActive(true);
+        MonoBehaviour story = FindBehaviour("StoryDialogueController");
+        story.GetType().GetMethod("ApplyPostBossIntroductionActorState",
+            BindingFlags.Instance | BindingFlags.NonPublic).Invoke(story, null);
+        MonoBehaviour arena = FindBehaviour("BossArenaController");
+        GameObject boss = Property<GameObject>(arena, "BossRoot");
+        boss.SetActive(true);
         yield return null;
 
-        ApplyFatalDamage(orcHealth);
-        Assert.That(MatchIsOver(), Is.False,
-            "Orc death must wait while the King survives.");
-        Object.Destroy(orcHealth.gameObject);
-        yield return null;
-        Assert.That(orcHealth == null, Is.True,
-            "The test must reproduce the real Orc cleanup before the King dies.");
+        Assert.That(Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None)
+            .Any(component => component != null && component.GetType().Name == "BossEncounterObjective"),
+            Is.False);
+        Component bossHealth = boss.GetComponent("EnemyHealth");
         ApplyFatalDamage(bossHealth);
         Assert.That(MatchIsOver(), Is.True);
-        Assert.That(Property<bool>(objective, "IsComplete"), Is.True);
     }
 
     [UnityTest]

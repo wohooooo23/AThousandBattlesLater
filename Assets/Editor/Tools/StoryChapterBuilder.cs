@@ -47,7 +47,7 @@ public static class StoryChapterBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Validate();
-        Debug.Log("STAGE2_BOSS_CAST_BUILD_OK: Wizard, combat Orc, speaker bubbles and joint victory are saved.");
+        Debug.Log("STAGE2_BOSS_CAST_BUILD_OK: Wizard, story-only Orc, speaker bubbles and King-only victory are saved.");
     }
 
     [MenuItem("Tools/Narrative & Audio/Validate Two-Chapter Story")]
@@ -124,12 +124,12 @@ public static class StoryChapterBuilder
         Collider2D bossCollider = boss.GetComponent<Collider2D>();
         float groundY = bossCollider != null ? bossCollider.bounds.min.y : boss.transform.position.y;
 
-        GameObject castRoot = new GameObject(Stage2CastName, typeof(BossEncounterObjective));
+        GameObject castRoot = new GameObject(Stage2CastName);
         SceneManager.MoveGameObjectToScene(castRoot, scene);
 
         GameObject wizard = CreateWizardStoryActor(castRoot.transform, boss.transform.position, groundY);
         GameObject orc = CreateCompanionOrc(scene, castRoot.transform, boss.transform.position, groundY,
-            out Enemy_Health orcHealth);
+            out _);
         WorldDialogueBubble wizardBubble = CreateStoryBubble(scene, wizard.transform,
             "Wizard Story Dialogue", new Vector3(0f, 12f, 0f));
         WorldDialogueBubble orcBubble = CreateStoryBubble(scene, orc.transform,
@@ -139,23 +139,16 @@ public static class StoryChapterBuilder
             (StorySpeaker.EvilWizard, wizardBubble), (StorySpeaker.Monster, orcBubble));
         SetActorCues(storyData.FindProperty("bossIntroductionActorCues"),
             (3, wizard, true), (11, wizard, false), (11, orc, true));
-        SetObjectArray(storyData.FindProperty("actorsHiddenAfterBossIntroduction"), wizard);
-        SetObjectArray(storyData.FindProperty("actorsActiveAfterBossIntroduction"), orc);
-
-        BossEncounterObjective objective = castRoot.GetComponent<BossEncounterObjective>();
-        SerializedObject objectiveData = new SerializedObject(objective);
-        SetObject(objectiveData, "boss", boss);
-        SetObjectArray(objectiveData.FindProperty("requiredEnemies"), boss, orcHealth);
-        objectiveData.ApplyModifiedPropertiesWithoutUndo();
+        SetObjectArray(storyData.FindProperty("actorsHiddenAfterBossIntroduction"), wizard, orc);
+        SetObjectArray(storyData.FindProperty("actorsActiveAfterBossIntroduction"));
 
         SerializedObject bossData = new SerializedObject(boss);
-        SetObject(bossData, "victoryObjective", objective);
+        SetObject(bossData, "victoryObjective", null);
         bossData.ApplyModifiedPropertiesWithoutUndo();
 
         wizard.SetActive(false);
         orc.SetActive(false);
         EditorUtility.SetDirty(story);
-        EditorUtility.SetDirty(objective);
     }
 
     private static GameObject CreateWizardStoryActor(Transform parent, Vector3 bossPosition, float groundY)
@@ -434,11 +427,15 @@ public static class StoryChapterBuilder
             throw new InvalidOperationException("stage2 actor reveal/hide cues do not match the authored dialogue.");
 
         EnemyHealth boss = FindInScene<EnemyHealth>(scene).Single();
-        BossEncounterObjective objective = cast.GetComponent<BossEncounterObjective>();
-        if (objective == null || objective.Boss != boss || objective.RequiredEnemyCount != 2 ||
-            !objective.RequiredEnemies.Contains(orcHealth) ||
-            ReferencedObject(boss, "victoryObjective") != objective)
-            throw new InvalidOperationException("King victory must wait for the saved companion Orc objective.");
+        SerializedObject storyDataForActors = new SerializedObject(story);
+        SerializedProperty hiddenActors = storyDataForActors.FindProperty("actorsHiddenAfterBossIntroduction");
+        SerializedProperty activeActors = storyDataForActors.FindProperty("actorsActiveAfterBossIntroduction");
+        bool orcHiddenAtCombatStart = Enumerable.Range(0, hiddenActors.arraySize)
+            .Any(index => hiddenActors.GetArrayElementAtIndex(index).objectReferenceValue == orc.gameObject);
+        if (!orcHiddenAtCombatStart || activeActors.arraySize != 0 ||
+            cast.GetComponent<BossEncounterObjective>() != null ||
+            ReferencedObject(boss, "victoryObjective") != null)
+            throw new InvalidOperationException("The story Orc must disappear at combat start and King death must end the encounter.");
     }
 
     private static (StorySpeaker, string)[] Stage1Opening() => new[]

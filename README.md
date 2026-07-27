@@ -230,8 +230,8 @@ Hero enters stage2 arena
   -> completed attack counter +1
   -> every attack: find farthest reachable node from Hero -> take next A* step
                    -> 2.5x navigator parabolic hop -> reset pursuit A* -> full cooldown
-  -> King and companion Orc are both defeated
-  -> BossEncounterObjective -> original story / victory / return flow
+  -> story companion Orc disappears when the introduction ends
+  -> King is defeated -> original story / victory / return flow
 ```
 
 ## 小怪血条实现管线
@@ -270,19 +270,19 @@ EnemyAttackController selects King Radial Blade Burst
   -> every-attack retreat hop / normal cooldown
 ```
 
-## 第二关多演员剧情与联合胜利管线
+## 第二关多演员剧情与 Boss 单目标胜利管线
 
-国王房的剧情演员和战斗目标都直接保存在 `stage2_full`。巫师只承担回忆画面，Orc 则从剧情无缝进入战斗；最终胜利要求国王与该 Orc 全部被击败，击杀顺序不受限制。
+国王房的剧情演员直接保存在 `stage2_full`。巫师与 Orc 都只承担入场演出；剧情结束、正式开战时 Orc 会消失，最终胜利只要求击败国王。
 
-1. **保存式演员**：场景根对象 `Boss Introduction Cast` 保存 `Story Evil Wizard Idle_0`、完整 `Mob_Orc.prefab` 实例以及 `BossEncounterObjective`。两名演员初始均为 inactive；核心组件不会在运行时补挂。
+1. **保存式演员**：场景根对象 `Boss Introduction Cast` 保存 `Story Evil Wizard Idle_0` 和完整 `Mob_Orc.prefab` 实例。两名演员初始均为 inactive；核心组件不会在运行时补挂。
 2. **巫师仅作演出**：Builder 从 `Boss_EvilWizard.prefab` 的 `BossSpriteAnimator.idle.frames[0]` 取得准确的 `Idle_0`，场景演员只保存 `SpriteRenderer`，没有 Collider、生命、AI 或攻击组件，因此不会与国王视觉重叠，也不会被误判为战斗目标。
-3. **Orc 进入战斗**：第 12 句开始前隐藏巫师并激活 `Boss Companion Orc`。该对象保留 `Enemy_Orc`、`Enemy_Health`、状态机状态、Animator、Collider、Rigidbody、攻击与世界血条；剧情结束后不销毁，直接按普通 Orc 逻辑索敌和攻击。
-4. **逐句演员提示**：`bossIntroductionActorCues` 在显示指定行之前执行。当前 cue 为第 4 句显示巫师、第 12 句隐藏巫师并显示 Orc；若玩家进度已经跳过入场剧情，`ApplyBossIntroductionPostState` 会直接保存正确战斗状态：巫师隐藏、Orc 激活。
+3. **Orc 仅作演出**：第 12 句开始前隐藏巫师并激活 `Boss Companion Orc`，让怪物台词仍显示在 Orc 自己头顶；最后一句结束后，`actorsHiddenAfterBossIntroduction` 同时关闭巫师和 Orc。跳过已经看过的剧情时也会直接应用相同状态，不会让 Orc 短暂进入战斗。
+4. **逐句演员提示**：`bossIntroductionActorCues` 在显示指定行之前执行。当前 cue 为第 4 句显示巫师、第 12 句隐藏巫师并显示 Orc；剧情收尾统一隐藏两名临时演员，只留下 Hero 与 King。
 5. **独立气泡**：`Wizard Story Dialogue` 与 `Orc Story Dialogue` 都是保存于 `Dialogue Bubbles` 下的 `WorldDialogueBubble.prefab` 实例，分别跟随各自演员。Samurai、King、EvilWizard、Monster 四类 speaker 均解析到不同气泡，剧情结束时统一隐藏。
-6. **联合目标**：`CombatHealth.Defeated` 提供统一死亡事件；`BossEncounterObjective.requiredEnemies` 在场景中明确引用 King 的 `EnemyHealth` 和 Orc 的 `Enemy_Health`。目标在事件到达时把对应槽位锁存为已死亡，而不是在结算时重新访问尸体引用；因此 Orc 的死亡动画结束并销毁 GameObject 后，死亡记录仍然存在。无论先杀国王还是先杀 Orc，都只会在两个锁存槽位全部完成后调用一次 `EnemyHealth.CompleteVictoryFromObjective`。
+6. **单一胜利目标**：第二关国王的 `EnemyHealth.victoryObjective` 为空，场景不再挂载 `BossEncounterObjective`。国王死亡后直接进入现有双语胜利剧情与 Victory 界面，剧情 Orc 的生命状态完全不参与结算。
 7. **中英存储**：两关英文台词仍由 `StoryChapterBuilder` 写入场景，简体中文逐句写在 `LocalizationTable`；`ValidateTranslations` 会枚举两章全部 48 句，拒绝缺失、空白或仍与英文相同的翻译。
-8. **幂等构筑**：菜单 `Tools > Narrative & Audio > Build Stage2 Boss Cast and Localization` 会删除旧 `Boss Introduction Cast` 后重建演员、气泡、cue 和目标引用，但保留场景里当前 Hero、King、地图和宝箱位置。随后验证 Idle_0、完整 Orc、四气泡、三个 cue、双目标与 48 句本地化。
-9. **自动测试**：`KingRadialStoryObjectivePlayModeTests` 验证剑气网格全部顶点与 Bounds 有限、剑气确实向外加速并旋转、半场攻击上下对称、四名说话者路由正确、中文翻译生效，以及两种击杀顺序都只在 King 与 Orc 全灭后结束战斗。
+8. **幂等构筑**：菜单 `Tools > Narrative & Audio > Build Stage2 Boss Cast and Localization` 会删除旧 `Boss Introduction Cast` 后重建演员、气泡和 cue，并清除旧联合目标引用，但保留场景里当前 Hero、King、地图和宝箱位置。随后验证 Idle_0、完整 Orc、四气泡、三个 cue、开战隐藏状态、King 单目标结算与 48 句本地化。
+9. **自动测试**：`KingRadialStoryObjectivePlayModeTests` 验证剑气网格全部顶点与 Bounds 有限、剑气确实向外加速并旋转、半场攻击上下对称、四名说话者路由正确、中文翻译生效、开战时 Orc 消失，以及只击败 King 即可结束战斗。
 10. **第二关漫画显示**：`Story Comic Panel` 作为 active 的 Screen Space Overlay Canvas 保存于场景，隐藏只通过 `CanvasGroup.alpha` 完成，避免 inactive Canvas 无法重新渲染。第一关与第二关 Boss 入场分别使用 `BossIntroduction`、`Stage2BossIntroduction` 两个 `StoryBeat`；第一关的历史进度不再跳过第二关背叛漫画，完整流程进入第二关时会清理第二关入场标记，而第二关死亡重试仍不会重复播放已经看过的剧情。
 
 运行路径：
@@ -293,10 +293,9 @@ Hero enters the stage2 boss arena
   -> line 4 cue: show Wizard Idle_0 -> Wizard bubble speaks
   -> betrayal comic
   -> line 12 cues: hide Wizard + enable full Orc -> Orc bubble speaks
-  -> dialogue ends -> King and Orc fight together
-  -> either enemy may die first -> no victory yet
-  -> both CombatHealth.IsDead
-  -> BossEncounterObjective completes once
+  -> dialogue ends -> Wizard and Orc disappear
+  -> King fights alone
+  -> King EnemyHealth is defeated
   -> bilingual boss-victory dialogue -> final Victory screen
 ```
 

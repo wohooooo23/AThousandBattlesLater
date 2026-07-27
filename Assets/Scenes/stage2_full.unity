@@ -18424,8 +18424,8 @@ MonoBehaviour:
     active: 1
   actorsHiddenAfterBossIntroduction:
   - {fileID: 1446331412}
-  actorsActiveAfterBossIntroduction:
   - {fileID: 1271626920}
+  actorsActiveAfterBossIntroduction: []
   movementPrompt: "WASD / Arrow Keys \u2014 Move"
   combatPrompt: Press J to attack. Press I to throw a kunai.
   chestPrompt: Press F to open treasure chests.
@@ -19133,7 +19133,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1183528502}
-  - component: {fileID: 1183528501}
   m_Layer: 0
   m_Name: Boss Introduction Cast
   m_TagString: Untagged
@@ -19141,22 +19140,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1183528501
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1183528500}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4bad7a298cee524bb7be1aa744a6440, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossEncounterObjective
-  boss: {fileID: 1194950431586997719}
-  requiredEnemies:
-  - {fileID: 1194950431586997719}
-  - {fileID: 1271626918}
 --- !u!4 &1183528502
 Transform:
   m_ObjectHideFlags: 0
@@ -28860,7 +28843,7 @@ MonoBehaviour:
   victoryOverlay: {fileID: 1687958375}
   victoryReturnSceneName: StartMenu
   storyController: {fileID: 1046162212}
-  victoryObjective: {fileID: 1183528501}
+  victoryObjective: {fileID: 0}
   nextStageSceneName: 
   transitionFade: {fileID: 1388268344}
   transitionFadeDuration: 1.15
