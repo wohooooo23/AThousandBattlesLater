@@ -46,6 +46,12 @@ public static class KunaiHudBuilder
             data.FindProperty("countText").objectReferenceValue = countText;
             data.ApplyModifiedPropertiesWithoutUndo();
 
+            UIManager manager = root.GetComponent<UIManager>() ??
+                throw new InvalidOperationException(CanvasPrefabPath + " has no UIManager.");
+            SerializedObject managerData = new SerializedObject(manager);
+            managerData.FindProperty("kunaiHud").objectReferenceValue = icon;
+            managerData.ApplyModifiedPropertiesWithoutUndo();
+
             PrefabUtility.SaveAsPrefabAsset(root, CanvasPrefabPath);
             AssetDatabase.SaveAssets();
             Debug.Log("KUNAI_HUD_OK: kunai counter placed right of the health bar and wired to RunInventory.");
@@ -71,6 +77,9 @@ public static class KunaiHudBuilder
                 throw new InvalidOperationException("KunaiCountHud is missing its item or count-text reference.");
             if (hud.GetComponent<Image>() == null || hud.GetComponent<Image>().sprite == null)
                 throw new InvalidOperationException("The kunai icon has no sprite.");
+            UIManager manager = root.GetComponent<UIManager>();
+            if (manager == null || manager.KunaiHud != hud.gameObject)
+                throw new InvalidOperationException("UIManager is not wired to hide KunaiCountHud behind panels.");
             Debug.Log("KUNAI_HUD_VALIDATE_OK.");
         }
         finally

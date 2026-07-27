@@ -21,6 +21,10 @@ public sealed class UIManager : MonoBehaviour
     private GameObject minimapHud;
     private bool minimapAllowed = true;
 
+    [Header("Gameplay HUD visibility")]
+    [Tooltip("HUD element hidden while inventory, forge or pause UI is open.")]
+    [SerializeField] private GameObject kunaiHud;
+
     [Header("Pause menu")]
     [SerializeField] private GameObject pauseMenu;
     [SerializeField] private GameObject pauseHelpPanel;
@@ -35,6 +39,7 @@ public sealed class UIManager : MonoBehaviour
     public bool IsPauseOpen => pauseMenu != null && pauseMenu.activeSelf;
     public GameObject PauseMenu => pauseMenu;
     public GameObject PauseHelpPanel => pauseHelpPanel;
+    public GameObject KunaiHud => kunaiHud;
 
     private void Awake()
     {
@@ -229,6 +234,8 @@ public sealed class UIManager : MonoBehaviour
     {
         bool anyOpen = openPanels.Count > 0 || IsPauseOpen;
         Time.timeScale = anyOpen ? 0f : 1f;
+        if (kunaiHud != null)
+            kunaiHud.SetActive(!anyOpen);
         UpdateMinimapVisibility();
     }
 

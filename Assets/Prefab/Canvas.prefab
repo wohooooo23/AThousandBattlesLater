@@ -3137,6 +3137,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d45a58896454e004babe544c631ab6e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
+  kunaiHud: {fileID: 2284340456107985706}
   pauseMenu: {fileID: 8528731625880214794}
   pauseHelpPanel: {fileID: 8212037870468746931}
   resumeButton: {fileID: 8195487679592665543}

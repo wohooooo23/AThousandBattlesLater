@@ -49,9 +49,11 @@ public static class RuneBossGateBuilder
             RightChest, GreenMarker, new Dictionary<string, string[]>
             {
                 { SupplyChest, Array.Empty<string>() },
-                { LeftChest, new[] { EquipmentBuilder.HealthPotionPickupPath, KunaiInventoryBuilder.PickupPath } },
-                { RightChest, new[] { EquipmentBuilder.GreenRunePickupPath } }
+                { LeftChest, new[] { EquipmentBuilder.HealthPotionPickupPath, KunaiInventoryBuilder.PickupPath,
+                    EquipmentBuilder.SwordPickupPath } },
+                { RightChest, new[] { EquipmentBuilder.GreenRunePickupPath, EquipmentBuilder.ShieldPickupPath } }
             });
+        ValidateStage2RecoveryOrbs();
         Debug.Log("RUNE_GATE_VALIDATE_OK: both equipped-rune gates, stage-specific drops and key markers are saved.");
     }
 
@@ -77,11 +79,42 @@ public static class RuneBossGateBuilder
             UnityEngine.Object.DestroyImmediate(upper.gameObject);
         DestroyNamed(scene, MarkerPrefix + SupplyChest);
 
-        SetDrops(RequireChest(scene, LeftChest), EquipmentBuilder.HealthPotionPickupPath,
-            KunaiInventoryBuilder.PickupPath);
-        SetDrops(RequireChest(scene, RightChest), EquipmentBuilder.GreenRunePickupPath);
+        TreasureChest2D left = RequireChest(scene, LeftChest);
+        TreasureChest2D right = RequireChest(scene, RightChest);
+        SetDrops(left, EquipmentBuilder.HealthPotionPickupPath, KunaiInventoryBuilder.PickupPath,
+            EquipmentBuilder.SwordPickupPath);
+        SetDrops(right, EquipmentBuilder.GreenRunePickupPath, EquipmentBuilder.ShieldPickupPath);
+        ConfigureRecoveryOrb(scene, AbilityUnlockKind.DoubleJump, left);
+        ConfigureRecoveryOrb(scene, AbilityUnlockKind.Dash, right);
         ConfigureKeyMarker(scene, RightChest, GreenMarker);
         Save(scene, Stage2Path);
+    }
+
+    private static void ConfigureRecoveryOrb(Scene scene, AbilityUnlockKind ability, TreasureChest2D chest)
+    {
+        AbilityUnlockOrb2D orb = FindInScene<AbilityUnlockOrb2D>(scene)
+            .SingleOrDefault(candidate => candidate.Ability == ability) ??
+            throw new MissingReferenceException(scene.path + " is missing its " + ability + " recovery orb.");
+        SerializedObject data = new SerializedObject(orb);
+        data.FindProperty("ability").enumValueIndex = (int)ability;
+        data.FindProperty("sourceChest").objectReferenceValue = chest;
+        data.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(orb);
+    }
+
+    private static void ValidateStage2RecoveryOrbs()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != Stage2Path)
+            scene = EditorSceneManager.OpenScene(Stage2Path, OpenSceneMode.Single);
+        AbilityUnlockOrb2D[] orbs = FindInScene<AbilityUnlockOrb2D>(scene).ToArray();
+        if (orbs.Length != 2)
+            throw new InvalidOperationException("stage2 must contain exactly the Double Jump and Dash recovery orbs.");
+        TreasureChest2D left = RequireChest(scene, LeftChest);
+        TreasureChest2D right = RequireChest(scene, RightChest);
+        if (orbs.SingleOrDefault(orb => orb.Ability == AbilityUnlockKind.DoubleJump)?.SourceChest != left ||
+            orbs.SingleOrDefault(orb => orb.Ability == AbilityUnlockKind.Dash)?.SourceChest != right)
+            throw new InvalidOperationException("stage2 recovery orbs are linked to the wrong treasure chests.");
     }
 
     private static void ConfigureGate(Scene scene, ItemType slot, string message)

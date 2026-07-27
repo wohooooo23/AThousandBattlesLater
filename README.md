@@ -90,7 +90,7 @@ Rune_Crimson equipped
 1. **场景保存式配置**：两关现有的 `BossArenaController` 增加 `requiresEquippedRune`、`requiredRuneSlot` 和 `missingRuneMessage` 三个序列化字段。`stage1_full` 保存为 `Accessory`（红符文），`stage2_full` 保存为 `GreenRune`；不在运行时创建门禁组件。
 2. **开门检查**：Hero 进入 Boss 门触发器时先调用 `RunEquipment.Get(requiredRuneSlot)`。对应槽为空时取消传送并由 `PlayerProgression` 显示提示；红、绿门分别显示“大门上有一个红色/绿色的符文凹槽”。装备正确符文后再次接触门，才进入原有的相机、BGM、Boss 激活和剧情流程。
 3. **第一关奖励**：保留全部三个宝箱及其编辑器位置。上方 `Supply Treasure Chest` 固定掉落红符文、回复药水和一组飞镖；上方宝箱的小地图圆点改为比普通宝箱大 35% 的红色圆点。左下、右下宝箱及其能力光球不变。
-4. **第二关奖励**：删除上方 Supply 宝箱及其小地图标记；左下 `Double Jump Treasure Chest` 改为回复药水和一组飞镖，右下 `Dash Treasure Chest` 只掉落绿色符文。两只下方宝箱的位置和既有能力光球关系不修改。
+4. **第二关奖励**：删除上方 Supply 宝箱及其小地图标记；左下 `Double Jump Treasure Chest` 提供回复药水、一组飞镖、遗漏的剑与遗漏的二段跳，右下 `Dash Treasure Chest` 提供绿色符文、遗漏的盾与遗漏的冲刺。两只下方宝箱的位置不修改，唯一装备和能力均按跨场景进度去重。
 5. **第二关小地图**：右下绿符文宝箱使用比普通宝箱大 35% 的绿色圆点；Boss 门和其他地图信息仍沿用原小地图相机与 Marker Layer。
 6. **重建安全**：`DemoSceneBuilder` 的第一关完整地图生成路径已同步红符文宝箱、红色标记和红符文门禁，重建第一关不会恢复旧掉落。菜单 `Tools > A Thousand Battles Later > Build Rune Boss Gates` 可幂等地把最终规则重新写入两个场景，并刻意不写宝箱坐标；`Validate Rune Boss Gates` 会检查门槽位、提示、掉落顺序、被删除的第二关上方宝箱以及彩色大圆点。
 
@@ -103,8 +103,33 @@ Hero touches Boss gate
   -> matching rune equipped: enter arena (rune remains equipped)
 
 stage1 upper chest -> Red Rune + Health Potion + Kunai -> enlarged red minimap dot
-stage2 lower-left  -> Health Potion + Kunai
-stage2 lower-right -> Green Rune -> enlarged green minimap dot
+stage2 lower-left  -> Health Potion + Kunai + missing Sword / Double Jump
+stage2 lower-right -> Green Rune + missing Shield / Dash -> enlarged green minimap dot
+```
+
+## 第二关缺失奖励补领与飞镖 HUD 管线
+
+第二关的两只下方宝箱现在同时承担第一关遗漏奖励的补领职责；判断依据是跨场景保存的背包、装备栏和能力进度，因此正常取得过的奖励不会复制，遗漏的奖励则一定还有第二次获取机会。
+
+1. **左下宝箱**：`Double Jump Treasure Chest` 直接保存回复药水、16 枚飞镖和 Claymore Sword 三个掉落 prefab；其上方原有 `AbilityUnlockOrb2D(DoubleJump)` 继续保存为该宝箱的能力奖励。药水和飞镖维持可重复补给，剑只补领一次。
+2. **右下宝箱**：`Dash Treasure Chest` 直接保存 Green Rune 和 Plate Shield 两个掉落 prefab；其上方原有 `AbilityUnlockOrb2D(Dash)` 继续绑定该宝箱。绿色符文和盾均为唯一装备，取得后不再重复生成。
+3. **装备去重**：`TreasureChest2D.RemainingDrops` 在开箱前逐项读取 `ItemPickup.itemData`。对于剑、盾、符文等 `IsEquippable` 物品，同时检查 `RunInventory.Count(item)` 与 `RunEquipment.Get(item.type)`；物品无论放在背包还是已经穿戴，都会从本次生成列表排除。普通消耗品和弹药不参与唯一物品去重。
+4. **能力去重**：二段跳和冲刺光球在 `Awake` 中读取 `RunProgress.IsUnlocked`。第一关已经取得对应能力时，第二关光球直接进入 `collected` 状态并保持隐藏；尚未取得时，打开绑定宝箱才显示光球，触碰后继续走统一的 `RunProgress.Unlock` 与 Hero 能力刷新流程。
+5. **保存式场景配置**：宝箱 prefab 数组、两个能力光球及 `sourceChest` 引用全部直接保存在 `stage2_full`，不在运行时创建核心奖励 Component，也不修改已在编辑器中确定的宝箱坐标。
+6. **飞镖 HUD 遮挡修复**：`Canvas.prefab` 的 `UIManager.kunaiHud` 直接引用现有 `Kunai Count` 对象。背包、锻造或暂停界面进入 `openPanels/IsPauseOpen` 状态时，`UpdatePauseState` 隐藏飞镖 HUD；所有面板关闭后再恢复，从而不依赖透明背景或 Canvas 绘制顺序。
+7. **重建与验证**：`Tools > A Thousand Battles Later > Build Rune Boss Gates` 会恢复第二关的五个物品掉落和两个能力光球绑定；对应 Validate 同时检查左右宝箱顺序及能力来源。`Tools > HUD > Build Kunai Count` 会保存 UIManager 的 HUD 引用。`Stage2RecoveryRewardsPlayModeTests` 验证背包内的剑、身上装备的盾均不再掉落，已解锁能力不会再次出现，并验证面板打开/关闭时飞镖 HUD 的隐藏与恢复。
+
+```text
+stage2 left chest
+  -> missing sword only + repeatable potion/kunai
+  -> Double Jump orb only when RunProgress.DoubleJumpUnlocked == false
+
+stage2 right chest
+  -> missing Green Rune / shield only
+  -> Dash orb only when RunProgress.DashUnlocked == false
+
+inventory / forge / pause opens -> UIManager hides Kunai Count
+all panels close                -> UIManager restores Kunai Count
 ```
 
 ## 能力光球装备实现管线
