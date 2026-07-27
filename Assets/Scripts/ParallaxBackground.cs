@@ -8,12 +8,14 @@ public sealed class ParallaxBackground : MonoBehaviour
     private Camera mainCamera;
     private Vector2 lastCameraPosition;
 
+    public int LayerCount => backgroundLayers != null ? backgroundLayers.Length : 0;
+    public Camera TrackedCamera => mainCamera;
+
     private void Awake()
     {
         mainCamera = Camera.main;
         if (mainCamera == null)
         {
-            enabled = false;
             return;
         }
 
@@ -26,6 +28,9 @@ public sealed class ParallaxBackground : MonoBehaviour
 
     private void LateUpdate()
     {
+        Camera activeMainCamera = Camera.main;
+        if (activeMainCamera != null)
+            mainCamera = activeMainCamera;
         if (mainCamera == null)
             return;
 

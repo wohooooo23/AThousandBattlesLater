@@ -41,9 +41,17 @@ public sealed class ParallaxLayer
         // tile keeps the neighbouring copies seamless without creating objects at runtime.
         float centreRightEdge = background.position.x + imageHalfWidth - imageWidthOffset;
         float centreLeftEdge = background.position.x - imageHalfWidth + imageWidthOffset;
-        if (centreRightEdge < cameraLeftEdge)
+        while (centreRightEdge < cameraLeftEdge)
+        {
             background.position += Vector3.right * imageFullWidth;
-        else if (centreLeftEdge > cameraRightEdge)
+            centreRightEdge += imageFullWidth;
+            centreLeftEdge += imageFullWidth;
+        }
+        while (centreLeftEdge > cameraRightEdge)
+        {
             background.position -= Vector3.right * imageFullWidth;
+            centreRightEdge -= imageFullWidth;
+            centreLeftEdge -= imageFullWidth;
+        }
     }
 }

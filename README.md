@@ -413,3 +413,27 @@ Dialogue line begins
   -> clamp Bubble Root inside viewport
   -> Overlay Canvas order 32767 draws above every HUD panel
 ```
+
+## Stage2 三层视差背景管线
+
+第二关使用独立的 `Stage2Background.prefab`，直接保存于 `stage2_full` 场景中。它复用第一关的摄像机位移驱动方式，但按新素材的三张分层图建立真正的远、中、近景视差。
+
+1. **素材导入**：`Assets/Textures/background 2/1.png`、`2.png`、`3.png` 分别作为天空、远山云层和近景云层。构筑器把它们统一导入为 32 PPU、Point Filter、Full Rect、无 Mipmap 的单张 Sprite，透明中前景不会产生黑边。
+2. **保存式预制体**：每个图层由中心、左侧、右侧三个 `SpriteRenderer` 构成，全部保存在 `Stage2Background.prefab` 内，不在运行时临时创建。三层缩放均为 8，排序值依次为 `-120 / -110 / -100`。
+3. **跟随与景深**：天空使用水平/垂直 `1.0 / 1.0`，始终铺满镜头；中景使用 `0.92 / 0.98`，前景使用 `0.78 / 0.95`，角色移动时产生克制的横向视差，同时纵向不会轻易露出空白。
+4. **无限横向覆盖**：`ParallaxLayer` 根据 Sprite 的世界宽度循环移动三联画根节点；摄像机一次跨越多个图宽时使用循环校正，因此场景切换或大距离传送也不会只补偿一格后露出背景边缘。
+5. **镜头切换**：`ParallaxBackground` 每帧重新识别当前 `Camera.main`。普通探索镜头切换到 `Boss Arena Camera` 后，位移计算和背景追踪会无缝交给 Boss 镜头。
+6. **构筑与验证**：菜单 `Tools > Background > Build Stage2 Parallax Background` 负责导入素材、重建预制体并只替换 `stage2_full` 的背景；对应 PlayMode 测试验证三张素材、九个 Renderer、三组视差倍率及 Boss 镜头切换。
+
+```text
+Active camera moves
+  -> ParallaxBackground reads camera displacement
+  -> sky moves 100%
+  -> middle layer moves 92% / 98%
+  -> foreground moves 78% / 95%
+  -> horizontal triplets wrap until camera is covered
+
+Boss arena camera becomes Camera.main
+  -> tracker changes camera reference
+  -> same displacement pipeline continues
+```

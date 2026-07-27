@@ -11,8 +11,18 @@ using UnityEngine.SceneManagement;
 public static class BackgroundBuilder
 {
     private const string PrefabPath = "Assets/Prefab/Background.prefab";
+    private const string Stage2PrefabPath = "Assets/Prefab/Stage2Background.prefab";
+    private const string Stage2ScenePath = "Assets/Scenes/stage2_full.unity";
     private const string SceneObjectName = "Parallax Background";
     private const int BackgroundLayer = 8;
+    private const float Stage2PixelsPerUnit = 32f;
+    private const float Stage2LayerScale = 8f;
+    private static readonly string[] Stage2TexturePaths =
+    {
+        "Assets/Textures/background 2/1.png",
+        "Assets/Textures/background 2/2.png",
+        "Assets/Textures/background 2/3.png"
+    };
     private static readonly string[] GameplayScenePaths =
     {
         "Assets/Scenes/stage1.unity",
@@ -45,6 +55,49 @@ public static class BackgroundBuilder
         Scene scene = SceneManager.GetActiveScene();
         InstallIntoScene(scene);
         EditorSceneManager.MarkSceneDirty(scene);
+    }
+
+    [MenuItem("Tools/Background/Build Stage2 Parallax Background")]
+    public static void BuildStage2ParallaxBackground()
+    {
+        ConfigureStage2TextureImports();
+        BuildStage2Prefab();
+
+        Scene scene = EditorSceneManager.OpenScene(Stage2ScenePath, OpenSceneMode.Single);
+        InstallIntoScene(scene, Stage2PrefabPath);
+        if (!EditorSceneManager.SaveScene(scene, Stage2ScenePath))
+            throw new InvalidOperationException("Failed to save " + Stage2ScenePath);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        ValidateStage2Background();
+        Debug.Log("STAGE2_PARALLAX_BACKGROUND_OK: three authored layers follow the active gameplay camera.");
+    }
+
+    [MenuItem("Tools/Background/Validate Stage2 Parallax Background")]
+    public static void ValidateStage2Background()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Stage2PrefabPath);
+        ParallaxBackground parallax = prefab != null ? prefab.GetComponent<ParallaxBackground>() : null;
+        SpriteRenderer[] renderers = prefab != null
+            ? prefab.GetComponentsInChildren<SpriteRenderer>(true)
+            : Array.Empty<SpriteRenderer>();
+        if (parallax == null || parallax.LayerCount != 3 || renderers.Length != 9)
+            throw new InvalidOperationException("Stage2 background prefab must contain three parallax triplets.");
+
+        string[] usedSprites = renderers.Select(renderer => AssetDatabase.GetAssetPath(renderer.sprite))
+            .Distinct().OrderBy(path => path).ToArray();
+        if (!usedSprites.SequenceEqual(Stage2TexturePaths.OrderBy(path => path)))
+            throw new InvalidOperationException("Stage2 background must use background 2 layers 1, 2 and 3.");
+        if (renderers.Any(renderer => renderer.gameObject.layer != BackgroundLayer ||
+                                     renderer.sortingLayerName != "Default"))
+            throw new InvalidOperationException("Stage2 background renderers use an invalid layer or sorting layer.");
+
+        Scene scene = EditorSceneManager.OpenScene(Stage2ScenePath, OpenSceneMode.Single);
+        ParallaxBackground[] instances = FindInScene<ParallaxBackground>(scene);
+        if (instances.Length != 1 || instances[0].name != SceneObjectName ||
+            PrefabUtility.GetCorrespondingObjectFromSource(instances[0].gameObject) != prefab)
+            throw new InvalidOperationException("stage2_full must contain one Stage2Background prefab instance.");
     }
 
     [MenuItem("Tools/Background/Validate Parallax Background")]
@@ -113,6 +166,92 @@ public static class BackgroundBuilder
         }
     }
 
+    private static void ConfigureStage2TextureImports()
+    {
+        foreach (string texturePath in Stage2TexturePaths)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            if (importer == null)
+                throw new InvalidOperationException("Missing stage2 background texture at " + texturePath);
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = Stage2PixelsPerUnit;
+            TextureImporterSettings settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect;
+            importer.SetTextureSettings(settings);
+            importer.mipmapEnabled = false;
+            importer.filterMode = FilterMode.Point;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.alphaIsTransparency = true;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.maxTextureSize = 2048;
+            importer.SaveAndReimport();
+        }
+    }
+
+    private static void BuildStage2Prefab()
+    {
+        GameObject root = new GameObject("Stage2 Background", typeof(ParallaxBackground));
+        try
+        {
+            root.layer = BackgroundLayer;
+            Transform sky = CreateStage2Layer(root.transform, "Stage2 Sky", Stage2TexturePaths[0], -120);
+            Transform middle = CreateStage2Layer(root.transform, "Stage2 Middle Clouds", Stage2TexturePaths[1], -110);
+            Transform foreground = CreateStage2Layer(root.transform, "Stage2 Foreground Clouds", Stage2TexturePaths[2], -100);
+
+            SerializedObject data = new SerializedObject(root.GetComponent<ParallaxBackground>());
+            SerializedProperty layers = data.FindProperty("backgroundLayers");
+            layers.arraySize = 3;
+            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(0), sky, 1f, 1f);
+            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(1), middle, 0.92f, 0.98f);
+            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(2), foreground, 0.78f, 0.95f);
+            data.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(root, Stage2PrefabPath);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    private static Transform CreateStage2Layer(Transform parent, string name, string spritePath, int order)
+    {
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+        if (sprite == null)
+            throw new InvalidOperationException(spritePath + " was not imported as a Sprite.");
+
+        GameObject centre = new GameObject(name, typeof(SpriteRenderer));
+        centre.layer = BackgroundLayer;
+        centre.transform.SetParent(parent, false);
+        centre.transform.localScale = Vector3.one * Stage2LayerScale;
+        ConfigureStage2Renderer(centre.GetComponent<SpriteRenderer>(), sprite, order);
+
+        float imageWidth = sprite.bounds.size.x;
+        CreateStage2Side(centre.transform, name + " Left", sprite, -imageWidth, order);
+        CreateStage2Side(centre.transform, name + " Right", sprite, imageWidth, order);
+        return centre.transform;
+    }
+
+    private static void CreateStage2Side(Transform parent, string name, Sprite sprite, float localX, int order)
+    {
+        GameObject side = new GameObject(name, typeof(SpriteRenderer));
+        side.layer = BackgroundLayer;
+        side.transform.SetParent(parent, false);
+        side.transform.localPosition = new Vector3(localX, 0f, 0f);
+        ConfigureStage2Renderer(side.GetComponent<SpriteRenderer>(), sprite, order);
+    }
+
+    private static void ConfigureStage2Renderer(SpriteRenderer renderer, Sprite sprite, int order)
+    {
+        renderer.sprite = sprite;
+        renderer.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
+        renderer.sortingLayerName = "Default";
+        renderer.sortingOrder = order;
+    }
+
     private static void ConfigureParallaxEntry(SerializedProperty entry, Transform target,
         float horizontal, float vertical)
     {
@@ -178,14 +317,23 @@ public static class BackgroundBuilder
 
     private static void InstallIntoScene(Scene scene)
     {
+        InstallIntoScene(scene, PrefabPath);
+    }
+
+    private static void InstallIntoScene(Scene scene, string prefabPath)
+    {
         foreach (GameObject root in scene.GetRootGameObjects())
             if (root.name == SceneObjectName || root.name == "Background")
                 UnityEngine.Object.DestroyImmediate(root);
 
-        Camera camera = FindInScene<Camera>(scene).FirstOrDefault(candidate => candidate.CompareTag("MainCamera"));
+        Camera camera = FindInScene<Camera>(scene).FirstOrDefault(candidate =>
+                            candidate.CompareTag("MainCamera") && candidate.gameObject.activeInHierarchy)
+                        ?? FindInScene<Camera>(scene).FirstOrDefault(candidate => candidate.CompareTag("MainCamera"));
         if (camera == null)
             throw new InvalidOperationException(scene.path + " has no MainCamera for the background.");
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null)
+            throw new InvalidOperationException("Missing background prefab at " + prefabPath);
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
         instance.name = SceneObjectName;
         instance.transform.position = new Vector3(camera.transform.position.x, camera.transform.position.y, 0f);

@@ -4,12 +4,79 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 public sealed class KingRadialStoryObjectivePlayModeTests
 {
+    [UnityTest]
+    public IEnumerator Stage2UsesThreeNewParallaxLayersAndTracksCameraSwitches()
+    {
+        SceneManager.LoadScene("stage2_full");
+        yield return null;
+
+        MonoBehaviour background = Object.FindObjectsByType<MonoBehaviour>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Single(component => component != null && component.GetType().Name == "ParallaxBackground");
+        Assert.That(background, Is.Not.Null);
+        Assert.That(background.name, Is.EqualTo("Parallax Background"));
+        Assert.That(Property<int>(background, "LayerCount"), Is.EqualTo(3));
+
+        SpriteRenderer[] renderers = background.GetComponentsInChildren<SpriteRenderer>(true);
+        Assert.That(renderers.Length, Is.EqualTo(9));
+        string[] spritePaths = renderers.Select(renderer => AssetDatabase.GetAssetPath(renderer.sprite))
+            .Distinct().OrderBy(path => path).ToArray();
+        Assert.That(spritePaths, Is.EqualTo(new[]
+        {
+            "Assets/Textures/background 2/1.png",
+            "Assets/Textures/background 2/2.png",
+            "Assets/Textures/background 2/3.png"
+        }));
+
+        Transform sky = background.transform.Find("Stage2 Sky");
+        Transform middle = background.transform.Find("Stage2 Middle Clouds");
+        Transform foreground = background.transform.Find("Stage2 Foreground Clouds");
+        Assert.That(sky, Is.Not.Null);
+        Assert.That(middle, Is.Not.Null);
+        Assert.That(foreground, Is.Not.Null);
+
+        Camera explorationCamera = Camera.main;
+        Assert.That(explorationCamera, Is.Not.Null);
+        MethodInfo lateUpdate = background.GetType().GetMethod(
+            "LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        lateUpdate.Invoke(background, null);
+        Vector3 skyStart = sky.position;
+        Vector3 middleStart = middle.position;
+        Vector3 foregroundStart = foreground.position;
+        Vector3 displacement = new Vector3(6f, 3f, 0f);
+        explorationCamera.transform.position += displacement;
+        lateUpdate.Invoke(background, null);
+
+        Assert.That(sky.position.x - skyStart.x, Is.EqualTo(displacement.x).Within(0.01f));
+        Assert.That(sky.position.y - skyStart.y, Is.EqualTo(displacement.y).Within(0.01f));
+        Assert.That(middle.position.x - middleStart.x, Is.EqualTo(5.52f).Within(0.01f));
+        Assert.That(middle.position.y - middleStart.y, Is.EqualTo(2.94f).Within(0.01f));
+        Assert.That(foreground.position.x - foregroundStart.x, Is.EqualTo(4.68f).Within(0.01f));
+        Assert.That(foreground.position.y - foregroundStart.y, Is.EqualTo(2.85f).Within(0.01f));
+
+        Camera bossCamera = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Single(camera => camera.name == "Boss Arena Camera");
+        Vector3 switchDisplacement = new Vector3(4f, 2f, 0f);
+        Vector3 explorationPosition = explorationCamera.transform.position;
+        explorationCamera.gameObject.SetActive(false);
+        bossCamera.gameObject.SetActive(true);
+        bossCamera.transform.position = explorationPosition + switchDisplacement;
+        lateUpdate.Invoke(background, null);
+
+        Assert.That(Property<Camera>(background, "TrackedCamera"), Is.SameAs(bossCamera));
+        Assert.That(sky.position.x - skyStart.x,
+            Is.EqualTo(displacement.x + switchDisplacement.x).Within(0.01f));
+        Assert.That(sky.position.y - skyStart.y,
+            Is.EqualTo(displacement.y + switchDisplacement.y).Within(0.01f));
+    }
+
     [UnityTest]
     public IEnumerator Stage2KingAttackAudioPreloadsAndPlaysAllThreeActions()
     {
