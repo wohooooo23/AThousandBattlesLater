@@ -240,3 +240,31 @@ Hero enters stage2 arena
 3. **现有场景迁移**：构筑器修复 `stage1_full` 与 `stage2_full` 的现有 prefab 实例；如旧关卡残留了额外的场景血条，优先保留 prefab 自带血条并删除同一怪物下的重复项。
 4. **后续重建**：`DemoSceneBuilder` 创建场景血条时直接使用持久 Sprite；`EnemyContentBuilder` 重建敌人目录后会重新执行 prefab 血条构筑，因此不会再次丢失。
 5. **可重复构筑**：菜单 `Tools > Enemies > Repair Prefab Health Bars` 执行修复；`Validate Prefab Health Bars` 校验五个 prefab 的唯一血条、Sprite、跟随目标及生命组件引用。
+
+## 国王圆斩、旋转剑气与攻击反馈管线
+
+第二关国王现在拥有第四种独立攻击模式：以自身为圆心的大范围圆斩，并向十二个等分方向发射旋转、持续加速的白色剑气。该招固定使用 `Attack2` 动作；音效按动画动作而不是技能数量分槽，因此圆斩剑气与原上捞共同使用 Attack2 音效槽。
+
+1. **招式选择与动作**：`KingRadialBladeBurstPattern` 与横斩、上捞、半场下劈一起作为保存于 `stage2_full` 国王根对象上的第四个 `EnemyAttackPattern`。有效距离为 0–250、默认权重 1.05，`castAnimation` 固定为 `Attack2`，会继续参与现有的距离过滤、加权随机、避免连续重复以及三次攻击后跳跃换位流程。
+2. **圆斩预警与伤害**：前摇持续 1.15 秒，白色圆形填充从中心扩张至 28 单位半径；结算时按 Hero 与国王中心的距离进行一次范围伤害，并生成内外两道白色圆环作为短暂斩击残影。预警会在国王前摇期间保持以攻击锚点为中心，不追踪 Hero。
+3. **十二向散射**：结算帧把 360° 等分为十二个方向，每个方向从国王外侧 4 单位处实例化一个 `KingBladeWave.prefab`。剑气初速 10、线性加速度 18、寿命 3 秒，参数均保存在攻击组件中可由 Inspector 调节；相邻剑气分别顺、逆时针以 300°/s 自转，但平移始终沿生成时锁定的放射方向，不会追踪玩家。
+4. **纯白尖锐弧形**：`KingBladeWave_White.mat` 是独立保存的纯白 `Sprites/Default` 材质。`KingBladeWaveProjectile` 在实例初始化时生成一条弯曲带状网格：中心线使用抛物弧，宽度使用 `sin(πt)` 从中央向两端收缩到零，形成“一段白色圆环、两端尖锐”的轮廓；相同轮廓同时写入 `PolygonCollider2D`，因此画面和命中形状一致，不依赖额外贴图。
+5. **剑气碰撞**：剑气 prefab 直接保存 `MeshFilter`、`MeshRenderer`、触发式 `PolygonCollider2D`、Kinematic `Rigidbody2D` 和 `KingBladeWaveProjectile`，运行时只实例化这类短生命周期攻击实体。命中 Player 后通过当前 `EnemyAttackContext.HitHero` 走国王统一伤害计算并销毁；碰到 Ground 层墙体或寿命结束也会销毁。
+6. **三动作音效加载器**：国王根对象直接保存 `KingAttackAudio` 与 `AudioSource`，三个 Inspector 槽依次对应 Attack1、Attack2、Attack3。当前三个 AudioClip 刻意保持为空，后续只需把音频拖入槽位；所有国王技能在实际结算帧统一调用 `FireFeedback`，由当前技能的 `CastAnim` 选择并 `PlayOneShot`，不会因第四个技能再增加重复音频槽。
+7. **屏幕抖动**：探索相机与 Boss Arena Camera 都继续使用场景中已保存的 `CameraShake2D`。攻击结算不再只使用国王启动时缓存的探索相机，而是在每次出手时从当前 `Camera.main` 获取抖动组件；因此进入 Boss 房切换相机后，横斩、上捞、下劈和圆斩剑气都会抖动实际正在显示的镜头。
+8. **可重复构筑与验证**：菜单 `Tools > Boss > Replace Stage2 Boss With King` 会生成/更新白色材质与剑气 prefab，重建四个攻击组件，保留将来已经填入的三个音效 Clip，并把音频加载器引用保存给 `EnemyAttackController`。`Validate Stage2 Medieval King` 会检查四招及动作映射、十二发数量、圆斩尺寸、剑气 prefab/白材质、两个相机的抖动组件、音频加载器和原有跳跃换位，同时确认第一关 Evil Wizard 未被改动。
+
+运行路径：
+
+```text
+EnemyAttackController selects King Radial Blade Burst
+  -> BossStateMachine channels Attack2
+  -> expanding circular warning (1.15 s)
+  -> radius-28 melee hit + white double-ring slash
+  -> 12 saved KingBladeWave prefab instances
+       -> tapered white arc mesh + matching polygon collider
+       -> alternating spin + outward linear acceleration
+       -> hit Hero / Ground / lifetime -> destroy
+  -> active MainCamera shake + Attack2 audio slot
+  -> normal cooldown / every-third-attack retreat hop
+```

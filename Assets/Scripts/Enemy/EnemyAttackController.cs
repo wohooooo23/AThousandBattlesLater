@@ -9,6 +9,9 @@ public sealed class EnemyAttackController : MonoBehaviour
     [SerializeField] private float cooldown = 2f;
     [Tooltip("Damage per boss attack hit. Kept separate from the shared enemy damage so the Boss can be tuned alone.")]
     [SerializeField, Min(0f)] private float attackDamage = 12f;
+    [Header("Attack Feedback")]
+    [Tooltip("Saved on the King. Three optional clips map to Attack1, Attack2 and Attack3.")]
+    [SerializeField] private KingAttackAudio attackAudio;
 
     private readonly List<EnemyAttackPattern> availablePatterns = new List<EnemyAttackPattern>();
     private Transform hero;
@@ -48,6 +51,8 @@ public sealed class EnemyAttackController : MonoBehaviour
             heroDamageable = player;
         }
         cameraShake = Camera.main != null ? Camera.main.GetComponent<CameraShake2D>() : null;
+        if (attackAudio == null)
+            attackAudio = GetComponent<KingAttackAudio>();
         bossFsm = GetComponent<BossStateMachine>();
         animationDriven = bossFsm != null;
         relocation = GetComponent<BossTeleport>();
@@ -137,7 +142,16 @@ public sealed class EnemyAttackController : MonoBehaviour
             heroDamageable.ApplyDamage(attackDamage, transform);
     }
 
-    internal void FireFeedback() => cameraShake?.Shake();
+    internal void FireFeedback()
+    {
+        // Camera.main changes when the arena switches from exploration to its dedicated camera.
+        // Resolve the active camera on each impact and retain the startup component as a fallback.
+        CameraShake2D activeShake = Camera.main != null
+            ? Camera.main.GetComponent<CameraShake2D>()
+            : null;
+        (activeShake != null ? activeShake : cameraShake)?.Shake();
+        attackAudio?.Play(CurrentPattern != null ? CurrentPattern.CastAnim : CastAnimation.Attack1);
+    }
 
     /// <summary>
     /// Commits an authored attack movement (the King's ground cleave landing) as the new pose that

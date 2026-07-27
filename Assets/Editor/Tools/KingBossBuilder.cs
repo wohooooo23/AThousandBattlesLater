@@ -15,6 +15,8 @@ public static class KingBossBuilder
     private const string SpriteFolder = "Assets/Enemy/Bosses/Medieval King Pack 2/Sprites/";
     private const string VisualName = "KingVisual";
     private const string OnDamageMaterialPath = "Assets/Material/OnDamage_Material.mat";
+    private const string BladeWaveMaterialPath = "Assets/Material/KingBladeWave_White.mat";
+    private const string BladeWavePrefabPath = "Assets/Resources/AttackHitboxes/KingBladeWave.prefab";
     private const float TargetWorldHeight = 10f;
 
     [MenuItem("Tools/Boss/Replace Stage2 Boss With King")]
@@ -30,16 +32,32 @@ public static class KingBossBuilder
             PrefabUtility.UnpackPrefabInstance(prefabRoot, PrefabUnpackMode.Completely,
                 InteractionMode.AutomatedAction);
 
+        bool alreadyKing = boss.transform.Find(VisualName) != null;
         boss.name = "Arena Boss - Medieval King";
-        RemoveWizardVisuals(boss);
-        RemoveComponents<EnemyAttackPattern>(boss);
-        RemoveComponents<BossTeleport>(boss);
+        if (!alreadyKing)
+        {
+            RemoveWizardVisuals(boss);
+            RemoveComponents<EnemyAttackPattern>(boss);
+        }
         MeshRenderer placeholder = boss.GetComponent<MeshRenderer>();
         if (placeholder != null) UnityEngine.Object.DestroyImmediate(placeholder);
         MeshFilter placeholderMesh = boss.GetComponent<MeshFilter>();
         if (placeholderMesh != null) UnityEngine.Object.DestroyImmediate(placeholderMesh);
 
-        BossSpriteAnimator animator = CreateKingVisual(boss, out SpriteRenderer renderer);
+        BossSpriteAnimator animator;
+        SpriteRenderer renderer;
+        if (alreadyKing)
+        {
+            Transform visual = boss.transform.Find(VisualName);
+            animator = visual.GetComponent<BossSpriteAnimator>();
+            renderer = visual.GetComponent<SpriteRenderer>();
+            if (animator == null || renderer == null)
+                throw new MissingReferenceException("The saved KingVisual is missing its animator or renderer.");
+        }
+        else
+        {
+            animator = CreateKingVisual(boss, out renderer);
+        }
         BossStateMachine stateMachine = boss.GetComponent<BossStateMachine>() ?? boss.AddComponent<BossStateMachine>();
         SetObject(stateMachine, "animator", animator);
 
@@ -52,7 +70,9 @@ public static class KingBossBuilder
             throw new MissingReferenceException("The preserved arena boss is missing EnemyHealth.");
 
         ConfigureHitFlash(boss, renderer);
-        ConfigurePatterns(boss);
+        KingBladeWaveProjectile bladeWavePrefab = BuildBladeWavePrefab();
+        ConfigurePatterns(boss, bladeWavePrefab);
+        ConfigureAttackFeedback(boss, attacks);
         attacks.RefreshAttackPatterns();
 
         SerializedObject healthData = new SerializedObject(health);
@@ -71,7 +91,7 @@ public static class KingBossBuilder
             throw new InvalidOperationException("Failed to save " + Stage2Path);
         AssetDatabase.SaveAssets();
         Validate();
-        Debug.Log("KING_BOSS_BUILD_OK: stage2 now uses Medieval King, three melee patterns and node hopping only.");
+        Debug.Log("KING_BOSS_BUILD_OK: stage2 King has four attacks, twelve accelerating blade waves, audio slots and active-camera shake.");
     }
 
     [MenuItem("Tools/Boss/Validate Stage2 Medieval King")]
@@ -98,13 +118,30 @@ public static class KingBossBuilder
         KingHorizontalSlashPattern horizontal = boss.GetComponent<KingHorizontalSlashPattern>();
         KingUppercutArcPattern uppercut = boss.GetComponent<KingUppercutArcPattern>();
         KingGroundCleavePattern cleave = boss.GetComponent<KingGroundCleavePattern>();
-        if (patterns.Length != 3 || horizontal == null || uppercut == null || cleave == null)
-            throw new InvalidOperationException("The King must have exactly the three designed attacks.");
+        KingRadialBladeBurstPattern radial = boss.GetComponent<KingRadialBladeBurstPattern>();
+        if (patterns.Length != 4 || horizontal == null || uppercut == null || cleave == null || radial == null)
+            throw new InvalidOperationException("The King must have exactly the four designed attacks.");
         float arenaHalfWidth = (arena.ArenaMax.x - arena.ArenaMin.x) * 0.5f;
         if (horizontal.CastAnim != CastAnimation.Attack1 || uppercut.CastAnim != CastAnimation.Attack2 ||
-            cleave.CastAnim != CastAnimation.Attack3 || ReadFloat(cleave, "reachDistance") < arenaHalfWidth ||
-            ReadFloat(cleave, "cleaveHeight") < 30f)
+            cleave.CastAnim != CastAnimation.Attack3 || radial.CastAnim != CastAnimation.Attack2 ||
+            ReadFloat(cleave, "reachDistance") < arenaHalfWidth || ReadFloat(cleave, "cleaveHeight") < 30f ||
+            ReadInt(radial, "projectileCount") != 12 || ReadFloat(radial, "slashRadius") < 25f ||
+            ReferencedObject(radial, "bladeWavePrefab") == null)
             throw new InvalidOperationException("King attack animation mapping or authored half-arena size is invalid.");
+        KingAttackAudio audio = boss.GetComponent<KingAttackAudio>();
+        AudioSource audioSource = boss.GetComponent<AudioSource>();
+        if (audio == null || audioSource == null || audioSource.playOnAwake || audioSource.loop ||
+            ReferencedObject(boss.GetComponent<EnemyAttackController>(), "attackAudio") != audio)
+            throw new InvalidOperationException("King attack audio loader and its three animation slots are not saved on the boss.");
+        KingBladeWaveProjectile wavePrefab = AssetDatabase.LoadAssetAtPath<KingBladeWaveProjectile>(BladeWavePrefabPath);
+        Material waveMaterial = AssetDatabase.LoadAssetAtPath<Material>(BladeWaveMaterialPath);
+        if (wavePrefab == null || waveMaterial == null || wavePrefab.GetComponent<MeshRenderer>().sharedMaterial != waveMaterial ||
+            waveMaterial.color != Color.white)
+            throw new InvalidOperationException("The tapered blade-wave prefab must use the saved pure-white material.");
+        CameraShake2D[] cameraShakes = FindInScene<CameraShake2D>(stage2);
+        if (!cameraShakes.Any(shake => shake.name == "Main Camera") ||
+            !cameraShakes.Any(shake => shake.name == "Boss Arena Camera"))
+            throw new InvalidOperationException("Both stage2 gameplay cameras must own a saved CameraShake2D component.");
         BossTeleport relocation = boss.GetComponent<BossTeleport>();
         if (relocation == null || relocation.RelocationMode != BossRelocationMode.Jump ||
             relocation.AttacksPerRelocation != 3 || ReadFloat(relocation, "jumpSpeedMultiplier") <= 1f)
@@ -129,10 +166,11 @@ public static class KingBossBuilder
         EnemyHealth wizard = FindInScene<EnemyHealth>(stage1).SingleOrDefault();
         if (wizard == null || wizard.transform.Find("WizardVisual") == null ||
             wizard.GetComponents<EnemyAttackPattern>().Any(pattern => pattern is KingHorizontalSlashPattern ||
-                pattern is KingUppercutArcPattern || pattern is KingGroundCleavePattern))
+                pattern is KingUppercutArcPattern || pattern is KingGroundCleavePattern ||
+                pattern is KingRadialBladeBurstPattern))
             throw new InvalidOperationException("stage1 Evil Wizard was modified by the King build.");
 
-        Debug.Log("KING_BOSS_VALIDATE_OK: stage2 King frames, attacks, references and accelerated retreat hop verified; stage1 unchanged.");
+        Debug.Log("KING_BOSS_VALIDATE_OK: four attacks, radial blade prefab, audio slots, camera shake and retreat hop verified; stage1 unchanged.");
     }
 
     private static BossSpriteAnimator CreateKingVisual(GameObject boss, out SpriteRenderer renderer)
@@ -178,26 +216,111 @@ public static class KingBossBuilder
         return animator;
     }
 
-    private static void ConfigurePatterns(GameObject boss)
+    private static void ConfigurePatterns(GameObject boss, KingBladeWaveProjectile bladeWavePrefab)
     {
-        KingHorizontalSlashPattern horizontal = boss.AddComponent<KingHorizontalSlashPattern>();
-        SetPatternBase(horizontal, 10f, 58f, 1.15f, CastAnimation.Attack1);
-        SetFloat(horizontal, "warningDuration", 1.1f);
-        SetFloat(horizontal, "length", 42f);
-        SetFloat(horizontal, "height", 5f);
+        KingHorizontalSlashPattern horizontal = boss.GetComponent<KingHorizontalSlashPattern>();
+        if (horizontal == null)
+        {
+            horizontal = boss.AddComponent<KingHorizontalSlashPattern>();
+            SetPatternBase(horizontal, 10f, 58f, 1.15f, CastAnimation.Attack1);
+            SetFloat(horizontal, "warningDuration", 1.1f);
+            SetFloat(horizontal, "length", 42f);
+            SetFloat(horizontal, "height", 5f);
+        }
 
-        KingUppercutArcPattern uppercut = boss.AddComponent<KingUppercutArcPattern>();
-        SetPatternBase(uppercut, 0f, 23f, 1.35f, CastAnimation.Attack2);
-        SetFloat(uppercut, "warningDuration", 1f);
-        SetFloat(uppercut, "radius", 20f);
-        SetFloat(uppercut, "sectorAngle", 240f);
+        KingUppercutArcPattern uppercut = boss.GetComponent<KingUppercutArcPattern>();
+        if (uppercut == null)
+        {
+            uppercut = boss.AddComponent<KingUppercutArcPattern>();
+            SetPatternBase(uppercut, 0f, 23f, 1.35f, CastAnimation.Attack2);
+            SetFloat(uppercut, "warningDuration", 1f);
+            SetFloat(uppercut, "radius", 20f);
+            SetFloat(uppercut, "sectorAngle", 240f);
+        }
 
-        KingGroundCleavePattern cleave = boss.AddComponent<KingGroundCleavePattern>();
-        SetPatternBase(cleave, 8f, 250f, 1f, CastAnimation.Attack3);
-        SetFloat(cleave, "warningDuration", 1.25f);
-        SetFloat(cleave, "reachDistance", 245f);
-        SetFloat(cleave, "cleaveHeight", 32f);
-        SetInt(cleave, "groundMask", 1 << 6);
+        KingGroundCleavePattern cleave = boss.GetComponent<KingGroundCleavePattern>();
+        if (cleave == null)
+        {
+            cleave = boss.AddComponent<KingGroundCleavePattern>();
+            SetPatternBase(cleave, 8f, 250f, 1f, CastAnimation.Attack3);
+            SetFloat(cleave, "warningDuration", 1.25f);
+            SetFloat(cleave, "reachDistance", 245f);
+            SetFloat(cleave, "cleaveHeight", 32f);
+            SetInt(cleave, "groundMask", 1 << 6);
+        }
+
+        KingRadialBladeBurstPattern radial = boss.GetComponent<KingRadialBladeBurstPattern>();
+        if (radial == null)
+        {
+            radial = boss.AddComponent<KingRadialBladeBurstPattern>();
+            SetPatternBase(radial, 0f, 250f, 1.05f, CastAnimation.Attack2);
+            SetFloat(radial, "warningDuration", 1.15f);
+            SetFloat(radial, "slashRadius", 28f);
+            SetInt(radial, "projectileCount", 12);
+            SetFloat(radial, "projectileSpawnRadius", 4f);
+            SetFloat(radial, "projectileInitialSpeed", 10f);
+            SetFloat(radial, "projectileAcceleration", 18f);
+            SetFloat(radial, "projectileSpinSpeed", 300f);
+            SetFloat(radial, "projectileLifetime", 3f);
+        }
+        SetObject(radial, "bladeWavePrefab", bladeWavePrefab);
+    }
+
+    private static void ConfigureAttackFeedback(GameObject boss, EnemyAttackController attacks)
+    {
+        AudioSource source = boss.GetComponent<AudioSource>();
+        if (source == null)
+            source = boss.AddComponent<AudioSource>();
+        source.playOnAwake = false;
+        source.loop = false;
+        source.spatialBlend = 0f;
+        KingAttackAudio audio = boss.GetComponent<KingAttackAudio>();
+        if (audio == null)
+            audio = boss.AddComponent<KingAttackAudio>();
+        SetObject(attacks, "attackAudio", audio);
+        EditorUtility.SetDirty(source);
+        EditorUtility.SetDirty(audio);
+    }
+
+    private static KingBladeWaveProjectile BuildBladeWavePrefab()
+    {
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(BladeWaveMaterialPath);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Sprites/Default"))
+            {
+                name = "KingBladeWave_White",
+                color = Color.white
+            };
+            AssetDatabase.CreateAsset(material, BladeWaveMaterialPath);
+        }
+        else
+        {
+            material.color = Color.white;
+            EditorUtility.SetDirty(material);
+        }
+
+        GameObject root = new GameObject("KingBladeWave", typeof(MeshFilter), typeof(MeshRenderer),
+            typeof(PolygonCollider2D), typeof(Rigidbody2D), typeof(KingBladeWaveProjectile));
+        try
+        {
+            MeshRenderer renderer = root.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.sortingLayerName = SceneArt.EffectSortingLayer;
+            renderer.sortingOrder = 31;
+            PolygonCollider2D collider = root.GetComponent<PolygonCollider2D>();
+            collider.isTrigger = true;
+            Rigidbody2D body = root.GetComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Kinematic;
+            body.gravityScale = 0f;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, BladeWavePrefabPath);
+            return prefab.GetComponent<KingBladeWaveProjectile>();
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     private static void SetPatternBase(EnemyAttackPattern pattern, float min, float max, float weight,
@@ -283,6 +406,13 @@ public static class KingBossBuilder
         SerializedProperty field = new SerializedObject(target).FindProperty(property) ??
             throw new MissingFieldException(target.name, property);
         return field.floatValue;
+    }
+
+    private static int ReadInt(UnityEngine.Object target, string property)
+    {
+        SerializedProperty field = new SerializedObject(target).FindProperty(property) ??
+            throw new MissingFieldException(target.name, property);
+        return field.intValue;
     }
 
     private static void SetObject(UnityEngine.Object target, string property, UnityEngine.Object value)
