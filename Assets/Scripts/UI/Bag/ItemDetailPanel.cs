@@ -1,4 +1,3 @@
-using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -278,10 +277,9 @@ public sealed class ItemDetailPanel : MonoBehaviour
         if (item == null)
             return;
 
-        titleText.text = Localization.Translate(
-            string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName);
+        titleText.text = ItemDisplay.LocalizedName(item);
         typeText.text = Localization.Translate(TypeLabel(item.type));
-        statsText.text = Localization.Translate(BuildStats(item));
+        statsText.text = ItemDisplay.LocalizedStats(item);
         // Rewritten on every open, so translate here rather than through LocalizedText.
         descriptionText.text = Localization.Translate(
             string.IsNullOrWhiteSpace(item.description) ? "No description available." : item.description);
@@ -291,24 +289,6 @@ public sealed class ItemDetailPanel : MonoBehaviour
             : item.IsEquippable ? "[E] Equip    [Q] Cancel"
             : item.type == ItemType.Potion ? "[E] Use    [Q] Cancel" : "[Q] Close"
             : abilitySource != null ? "Click to inspect" : "Click for actions");
-    }
-
-    private static string BuildStats(ItemData item)
-    {
-        StringBuilder result = new StringBuilder();
-        if (item.attackBonus > 0f)
-            result.Append("ATK ").Append(item.attackBonus.ToString("0.#"));
-        if (item.defenseBonus > 0f)
-        {
-            if (result.Length > 0) result.Append("    ");
-            result.Append("DEF ").Append(item.defenseBonus.ToString("0.#"));
-        }
-        if (result.Length == 0)
-            result.Append(item.type == ItemType.Ability ? "Passive movement ability"
-                : item.type == ItemType.Potion ? "Restores HP to full"
-                : item.type == ItemType.Ammunition ? "Stackable ranged ammunition"
-                : item.IsEquippable ? "No stat bonus" : "Stackable item");
-        return result.ToString();
     }
 
     private bool TryUsePotion(ItemData item)

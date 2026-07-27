@@ -35,9 +35,11 @@ public sealed class PlayerProgression : MonoBehaviour
     public const float UnarmedAttack = 10f;
     public const float UnarmoredDefense = 2f;
     public float WeaponAttack =>
-        (RunEquipment.Weapon != null ? RunEquipment.Weapon.attackBonus : UnarmedAttack) + RunProgress.ForgeWeaponLevel * 10f;
+        (RunEquipment.Weapon != null ? RunEquipment.Weapon.attackBonus : UnarmedAttack) +
+        RunProgress.ForgeWeaponLevel * ItemDisplay.WeaponAttackPerLevel;
     public float ArmorDefense =>
-        (RunEquipment.Armor != null ? RunEquipment.Armor.defenseBonus : UnarmoredDefense) + RunProgress.ForgeArmorLevel * 2f;
+        (RunEquipment.Armor != null ? RunEquipment.Armor.defenseBonus : UnarmoredDefense) +
+        RunProgress.ForgeArmorLevel * ItemDisplay.ArmorDefensePerLevel;
     public float CurrentPlayerDamage => playerCombat != null ? playerCombat.Damage : 0f;
     public bool ResetsRunOnAwake => resetRunOnAwake;
 

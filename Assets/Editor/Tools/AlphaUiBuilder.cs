@@ -698,7 +698,7 @@ public static class AlphaUiBuilder
         SetDescriptionIfEmpty("Assets/Prefab/Armor_Plate.asset",
             "Sturdy plate armor that reduces the damage received from every enemy hit.");
         SetDescriptionIfEmpty("Assets/Prefab/Rune_Crimson.asset",
-            "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged.");
+            "A crimson rune that increases movement and jump speed by 10%, and dash speed by 30%. It cannot be forged.");
         SetDescriptionIfEmpty(EquipmentBuilder.GreenRuneItemPath,
             "Restores 2 HP per second while equipped. Each successful forge level adds another 2 HPS.");
         SetDescriptionIfEmpty("Assets/Prefab/DemoItem.asset",

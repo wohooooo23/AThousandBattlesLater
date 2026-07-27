@@ -33,12 +33,14 @@ public sealed class EquipmentSlotUI : MonoBehaviour, IDropHandler, IPointerEnter
     private void OnEnable()
     {
         RunEquipment.Changed += Render;
+        RunProgress.Changed += Render;
         Render();
     }
 
     private void OnDisable()
     {
         RunEquipment.Changed -= Render;
+        RunProgress.Changed -= Render;
         ItemDetailPanel.Instance?.InvalidateEquipmentSource(this);
     }
 

@@ -25,12 +25,13 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
     public IEnumerator HoverClickCancelAndKeyboardEquipUseTheAuthoredDetailPanel()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("stage1");
+        SceneManager.LoadScene("stage1_full");
         yield return null;
 
         Type itemType = FindRuntimeType("ItemData");
         Type inventoryType = FindRuntimeType("RunInventory");
         Type equipmentType = FindRuntimeType("RunEquipment");
+        Type progressType = FindRuntimeType("RunProgress");
         UnityEngine.Object coin = AssetDatabase.LoadAssetAtPath("Assets/Prefab/GoldCoin.asset", itemType);
         UnityEngine.Object weapon = AssetDatabase.LoadAssetAtPath("Assets/Prefab/Weapon_Claymore.asset", itemType);
         UnityEngine.Object potion = AssetDatabase.LoadAssetAtPath("Assets/Prefab/HealthPotion.asset", itemType);
@@ -95,6 +96,14 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
         Assert.That(ReadProperty<bool>(details, "IsEquipmentItem"), Is.True);
         Assert.That(ReadProperty<UnityEngine.Object>(details, "CurrentItem"), Is.EqualTo(weapon));
 
+        progressType.GetMethod("SetForgeLevels").Invoke(null, new object[] { 1, 0, 0 });
+        yield return null;
+        Text stats = (Text)ReadField(details, "statsText");
+        float forgedAttack = (float)itemType.GetField("attackBonus").GetValue(weapon) + 10f;
+        Assert.That(title.text, Is.EqualTo("Claymore Sword+1"));
+        Assert.That(stats.text, Is.EqualTo(forgedAttack.ToString("0.#") + " ATK"),
+            "Backpack/equipped details must show the same forged ATK used by combat.");
+
         PointerEventData equipmentClick = new PointerEventData(EventSystem.current)
         {
             button = PointerEventData.InputButton.Left,
@@ -144,6 +153,16 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
         Assert.That((int)inventoryType.GetMethod("Count").Invoke(null, new object[] { potion }), Is.Zero,
             "Using the potion must consume exactly one item.");
         Assert.That(ReadProperty<bool>(details, "IsVisible"), Is.False);
+        progressType.GetMethod("SetForgeLevels").Invoke(null, new object[] { 0, 0, 0 });
+    }
+
+    [Test]
+    public void CrimsonRuneUsesReducedMovementMultipliers()
+    {
+        Type role = FindRuntimeType("Role");
+        Assert.That((float)role.GetField("CrimsonMoveMultiplier").GetRawConstantValue(), Is.EqualTo(1.1f));
+        Assert.That((float)role.GetField("CrimsonJumpMultiplier").GetRawConstantValue(), Is.EqualTo(1.1f));
+        Assert.That((float)role.GetField("CrimsonDashMultiplier").GetRawConstantValue(), Is.EqualTo(1.3f));
     }
 
     private static MonoBehaviour FindSlotHolding(UnityEngine.Object item)

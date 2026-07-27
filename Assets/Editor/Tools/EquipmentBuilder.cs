@@ -52,7 +52,7 @@ public static class EquipmentBuilder
                        description = "A sturdy plate shield that reduces the damage received from every enemy hit." },
         new GearSpec { sceneObject = "rune_crimson_0",    assetName = "Rune_Crimson",    displayName = "Crimson Gem",
                        type = ItemType.Accessory, attack = 0f, defense = 0f,
-                       description = "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged." },
+                       description = "A crimson rune that increases movement and jump speed by 10%, and dash speed by 30%. It cannot be forged." },
     };
 
     [MenuItem("Tools/Inventory/Build Equipment And Wearable Slots")]

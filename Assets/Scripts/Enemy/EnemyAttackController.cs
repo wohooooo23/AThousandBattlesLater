@@ -168,9 +168,19 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     private void ResetAttackPose()
     {
-        transform.position = attackAnchor;
         transform.localScale = attackBaseScale;
-        if (body != null)
-            body.position = attackAnchor;
+        if (!animationDriven)
+        {
+            transform.position = attackAnchor;
+            if (body != null)
+                body.position = attackAnchor;
+        }
+        else
+        {
+            // Animation-driven bosses never receive the procedural root jitter/shrink. Their
+            // dynamic Rigidbody2D may fall while casting, so restoring the pre-cast anchor here
+            // would lift the King back into the air after every attack.
+            attackAnchor = transform.position;
+        }
     }
 }

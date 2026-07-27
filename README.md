@@ -317,3 +317,52 @@ StartMenu scene loads
   -> scene-authored Noto Sans SC renders bundled glyphs
   -> identical result in Editor, Windows Player and WebGL
 ```
+
+## WebGL 全流程本地化与漫画首帧管线
+
+WebGL Player 无法像 Windows 编辑器一样从操作系统借用中文字形，因此只修复开始菜单不足以覆盖 Help、剧情气泡、关卡提示、背包和锻造界面。本地化渲染现在统一经过以下管线：
+
+1. **Legacy Text**：`LocalizedText` 在处理每个 `UnityEngine.UI.Text` 时同时绑定随包的 `Resources/Fonts/NotoSansSC-Regular.ttf`。即使旧场景仍保存 `LegacyRuntime.ttf`，进入 WebGL 后也会在显示中文前切换到真实随包字体。
+2. **TextMeshPro**：中文模式下，`LocalizedText` 将 TMP 标签切到 `Resources/Fonts/NotoSansSC SDF.asset`；英文模式恢复该对象原本的 TMP 字体。动态 SDF 的源 TTF 位于 Resources，WebGL 构建不会裁剪字形来源。
+3. **Help 场景**：标题、正文和返回按钮的 Noto 字体引用直接保存在 `Help.unity`。Help 正文的英文源文本与 `LocalizationTable` 使用完全一致的折叠空白 key，因此整页可一次性翻译，返回按钮显示“返回”。
+4. **构筑与检查**：`Tools > Localization > Build Chinese Font Fallback` 会保存 Help 字体并注册 TMP fallback；`Validate Chinese Font Fallback` 在 WebGL 目标下检查 TTF 数据、动态 TMP 字体、Help 全部字体引用及长文本翻译命中；`Build WebGL Localization Smoke Player` 会使用 Build Settings 中的完整场景列表在 `Library/CodexWebGLLocalization` 生成 Development WebGL Player，防止仅在编辑器中验证成功。
+5. **漫画首帧**：`StoryComicPanel.ShowPanel` 会重新启用 `RawImage`、标记 Canvas 为 dirty 并强制刷新。剧情协程在每一格显示后等待一个 `WaitForEndOfFrame`，保证 WebGL 完成大纹理上传和至少一次绘制后才开始监听 Enter，避免第一格逻辑存在但视觉为空。
+
+```text
+Language changes to Chinese
+  -> LocalizedText selects bundled legacy/TMP font
+  -> LocalizationTable translates the stable English source
+  -> WebGL renders shipped CJK glyphs
+
+Comic panel 0 is assigned
+  -> RawImage enabled + Canvas dirtied
+  -> Canvas forced to update
+  -> one end-of-frame render completes
+  -> Enter may advance to panel 1
+```
+
+## 符文平衡、锻造显示与国王落地管线
+
+本轮把角色数值、成长数据显示和第二关 Boss 的物理位置统一到各自的唯一数据源，避免 Inspector、背包详情和战斗实际效果彼此不同步。
+
+1. **红色符文平衡**：`Role` 统一保存红色符文倍率，装备后移动速度与跳跃速度乘以 `1.1`，冲刺速度乘以 `1.3`。`Rune_Crimson.asset`、中英文详情文本以及相关构筑器同步描述为“移动/跳跃 +10%，冲刺 +30%”；编辑器验证器也使用同一组目标值，重复构筑不会恢复旧数值。
+2. **锻造等级作为唯一进度**：`RunProgress` 保存武器、盾牌和绿色符文的锻造等级。等级真正变化时触发 `Changed`，背包、已装备栏和锻造界面都订阅该事件并立即重绘，不要求玩家关闭后重新打开面板。
+3. **统一装备展示计算**：`ItemDisplay` 根据 `ItemData` 与 `RunProgress` 生成本地化名称和实际数值。未锻造时显示基础名称；锻造后自动显示 `+N`，例如基础 10 ATK 的巨剑锻造一次显示 `Claymore Sword+1` 与 `20 ATK`。武器每级增加 10 ATK、盾牌每级增加 2 DEF、绿色符文每级增加 2 HPS，详情面板、装备槽和锻造槽不再各自复制一套计算。
+4. **国王的两阶段刚体控制**：国王平时保持 `Dynamic Rigidbody2D`、连续碰撞、冻结旋转及可调的下落重力。节点跳跃期间暂时把重力设为零并由抛物线位移控制；到达目标节点后立刻恢复重力，并等待地面碰撞，使节点存在少量高度误差时也能自然落到平台。
+5. **攻击不再回写旧锚点**：动画驱动的国王在攻击结束时只清理动画状态，不再把根对象恢复到攻击开始前缓存的位置。这样攻击期间的重力落地结果和上一招后的节点换位都会保留，Idle 与 Attack 之间不会发生浮空、落地或瞬移跳变。
+6. **换位与攻击互斥**：每招后的显式节点跳跃会标记为独立换位流程。攻击控制器处于忙碌状态时，普通追逐跳跃会被取消，但显式换位不会被 `FixedUpdate` 提前恢复重力或打断；完成弧线后再交还给动态刚体与普通寻路。
+
+```text
+Forge completes
+  -> RunProgress level changes
+  -> Changed event
+  -> ItemDisplay recalculates localized name + effective stats
+  -> inventory / equipment / forge panels redraw
+
+King finishes an attack
+  -> explicit retreat hop (gravity temporarily 0)
+  -> reaches selected navigation node
+  -> Dynamic gravity restored
+  -> collider contacts Ground
+  -> Idle / next Attack keeps the landed transform
+```

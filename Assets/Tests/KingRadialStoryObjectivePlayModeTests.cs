@@ -154,6 +154,44 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         Assert.That(Property<bool>(objective, "IsComplete"), Is.True);
     }
 
+    [UnityTest]
+    public IEnumerator Stage2KingFallsWithGravityAndCastCleanupKeepsThePhysicsPosition()
+    {
+        SceneManager.LoadScene("stage2_full");
+        yield return null;
+
+        MonoBehaviour arena = FindBehaviour("BossArenaController");
+        GameObject boss = Property<GameObject>(arena, "BossRoot");
+        boss.SetActive(true);
+        yield return null;
+
+        Rigidbody2D body = boss.GetComponent<Rigidbody2D>();
+        Assert.That(body.bodyType, Is.EqualTo(RigidbodyType2D.Dynamic));
+        Assert.That(body.gravityScale, Is.GreaterThanOrEqualTo(6f));
+        Assert.That(body.freezeRotation, Is.True);
+
+        Behaviour navigator = boss.GetComponent("EnemyPlatformNavigator") as Behaviour;
+        MonoBehaviour attacks = boss.GetComponent("EnemyAttackController") as MonoBehaviour;
+        navigator.enabled = false;
+        attacks.enabled = false;
+        body.position += Vector2.up * 5f;
+        body.linearVelocity = Vector2.zero;
+        Physics2D.SyncTransforms();
+        float airborneY = body.position.y;
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        Assert.That(body.position.y, Is.LessThan(airborneY),
+            "The King must fall after a navigation hop instead of remaining suspended at its node.");
+
+        Vector3 physicsPosition = boss.transform.position;
+        SetField(attacks, "attackAnchor", physicsPosition + Vector3.up * 8f);
+        SetField(attacks, "attackBaseScale", boss.transform.localScale);
+        attacks.GetType().GetMethod("ResetAttackPose", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(attacks, null);
+        Assert.That(boss.transform.position, Is.EqualTo(physicsPosition),
+            "Idle/attack cleanup must not restore the King's obsolete airborne cast anchor.");
+    }
+
     private static MonoBehaviour FindBehaviour(string typeName) =>
         Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include)
             .Single(component => component != null && component.GetType().Name == typeName);

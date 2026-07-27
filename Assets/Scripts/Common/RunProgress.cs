@@ -70,9 +70,16 @@ public static class RunProgress
 
     public static void SetForgeLevels(int weaponLevel, int armorLevel, int greenRuneLevel)
     {
-        ForgeWeaponLevel = Mathf.Max(0, weaponLevel);
-        ForgeArmorLevel = Mathf.Max(0, armorLevel);
-        ForgeGreenRuneLevel = Mathf.Max(0, greenRuneLevel);
+        int nextWeapon = Mathf.Max(0, weaponLevel);
+        int nextArmor = Mathf.Max(0, armorLevel);
+        int nextGreenRune = Mathf.Max(0, greenRuneLevel);
+        if (ForgeWeaponLevel == nextWeapon && ForgeArmorLevel == nextArmor &&
+            ForgeGreenRuneLevel == nextGreenRune)
+            return;
+        ForgeWeaponLevel = nextWeapon;
+        ForgeArmorLevel = nextArmor;
+        ForgeGreenRuneLevel = nextGreenRune;
+        Changed?.Invoke();
     }
 
     public static void Reset()

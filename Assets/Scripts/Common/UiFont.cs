@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -11,8 +12,10 @@ using UnityEngine;
 public static class UiFont
 {
     private const string ResourcePath = "Fonts/NotoSansSC-Regular";
+    private const string TmpResourcePath = "Fonts/NotoSansSC SDF";
 
     private static Font cached;
+    private static TMP_FontAsset cachedTmp;
 
     /// <summary>The shared UI font; falls back to Unity's built-in font if the asset is missing.</summary>
     public static Font Regular
@@ -28,6 +31,23 @@ public static class UiFont
                 cached = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             }
             return cached;
+        }
+    }
+
+    /// <summary>
+    /// Bundled TMP face used while Chinese is active. Referencing it through Resources keeps the
+    /// source font and dynamic atlas in WebGL even when a scene only stores Liberation Sans.
+    /// </summary>
+    public static TMP_FontAsset TmpRegular
+    {
+        get
+        {
+            if (cachedTmp != null)
+                return cachedTmp;
+            cachedTmp = Resources.Load<TMP_FontAsset>(TmpResourcePath);
+            if (cachedTmp == null)
+                Debug.LogError("Missing " + TmpResourcePath + " - TMP Chinese text cannot render.");
+            return cachedTmp;
         }
     }
 }

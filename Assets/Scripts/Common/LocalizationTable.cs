@@ -198,8 +198,8 @@ public static class LocalizationTable
             "一面坚固的板甲盾，可减少每次受到的敌人伤害。"
         },
         {
-            "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged.",
-            "装备后移动与跳跃速度提高 30%，冲刺速度提高 50%。红色符文无法锻造。"
+            "A crimson rune that increases movement and jump speed by 10%, and dash speed by 30%. It cannot be forged.",
+            "装备后移动与跳跃速度提高 10%，冲刺速度提高 30%。红色符文无法锻造。"
         },
         {
             "Restores 2 HP per second while equipped. Each successful forge level adds another 2 HPS.",
@@ -296,7 +296,7 @@ public static class LocalizationTable
             "\n" +
             "FORGING\n" +
             "Select equipment on the left, then press the centre Forge button.\n" +
-            "Swords, shields and the Green Rune can be forged; the Red Rune cannot.\n" +
+            "Swords, shields and the Green Rune can be forged. The Red Rune cannot be forged.\n" +
             "A failed attempt lowers the equipment's upgrade level.",
 
             "A                        向左移动\n" +

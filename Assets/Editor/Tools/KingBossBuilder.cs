@@ -24,6 +24,7 @@ public static class KingBossBuilder
     private const float KingMinimumHopDuration = 0.26f;
     private const float KingAttackCooldown = 1.4f;
     private const float KingAttackDamage = 18f;
+    private const float KingGravityScale = 6f;
 
     [MenuItem("Tools/Boss/Replace Stage2 Boss With King")]
     public static void Build()
@@ -171,6 +172,11 @@ public static class KingBossBuilder
             ReadFloat(attackController, "attackDamage") < KingAttackDamage ||
             ReadFloat(stateMachine, "hurtDuration") > 0.18f)
             throw new InvalidOperationException("The King health, attack tempo or movement buff is not saved.");
+        Rigidbody2D kingBody = boss.GetComponent<Rigidbody2D>();
+        if (kingBody == null || kingBody.bodyType != RigidbodyType2D.Dynamic ||
+            kingBody.gravityScale < KingGravityScale || !kingBody.freezeRotation ||
+            ReadFloat(navigator, "fallGravityScale") < KingGravityScale)
+            throw new InvalidOperationException("The King must restore dynamic gravity after every hop and cast.");
         BossHealthBarController healthBar = ReferencedObject(arena, "bossHealthBar") as BossHealthBarController;
         if (healthBar == null || healthBar.BoundHealth != bossHealth)
             throw new InvalidOperationException("The arena Boss health bar no longer references the preserved EnemyHealth.");
@@ -380,6 +386,15 @@ public static class KingBossBuilder
         SetFloat(navigator, "navigationSpeed", KingNavigationSpeed);
         SetFloat(navigator, "jumpHeight", KingJumpHeight);
         SetFloat(navigator, "minimumHopDuration", KingMinimumHopDuration);
+        SetFloat(navigator, "fallGravityScale", KingGravityScale);
+        SetInt(navigator, "groundMask", 1 << 6);
+        Rigidbody2D body = boss.GetComponent<Rigidbody2D>() ?? boss.AddComponent<Rigidbody2D>();
+        body.bodyType = RigidbodyType2D.Dynamic;
+        body.gravityScale = KingGravityScale;
+        body.freezeRotation = true;
+        body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        body.interpolation = RigidbodyInterpolation2D.Interpolate;
+        EditorUtility.SetDirty(body);
         SetFloat(stateMachine, "hurtDuration", 0.18f);
         SetFloat(stateMachine, "repositionDistance", 10f);
         SetFloat(attacks, "chaseRange", 75f);

@@ -5,9 +5,9 @@ using UnityEngine.InputSystem;
 /// <summary>The only player controller: animated model, movement, combat and platform handling.</summary>
 public sealed class Role : Entity
 {
-    public const float CrimsonMoveMultiplier = 1.3f;
-    public const float CrimsonJumpMultiplier = 1.3f;
-    public const float CrimsonDashMultiplier = 1.5f;
+    public const float CrimsonMoveMultiplier = 1.1f;
+    public const float CrimsonJumpMultiplier = 1.1f;
+    public const float CrimsonDashMultiplier = 1.3f;
 
     public Hero_idleState idleState { get; private set; }
     public Hero_moveState moveState { get; private set; }

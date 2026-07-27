@@ -42,6 +42,9 @@ public sealed class StoryChapterPlayModeTests
         MethodInfo showPanel = panel.GetType().GetMethod("ShowPanel");
         showPanel.Invoke(panel, new object[] { prologue, 0 });
         Assert.That(Property<bool>(panel, "IsVisible"), Is.True);
+        Assert.That(Property(panel, "CurrentTexture"), Is.SameAs(prologue));
+        Assert.That(panel.GetComponentInChildren<UnityEngine.UI.RawImage>(true).enabled, Is.True,
+            "The first comic panel must submit its RawImage before Enter can advance it.");
         Assert.That((Rect)Property(panel, "CurrentUv"), Is.EqualTo(new Rect(0f, 0.5f, 0.5f, 0.5f)));
         showPanel.Invoke(panel, new object[] { prologue, 3 });
         Assert.That((Rect)Property(panel, "CurrentUv"), Is.EqualTo(new Rect(0.5f, 0f, 0.5f, 0.5f)));

@@ -20,11 +20,17 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     [SerializeField] private float maximumLinkDistance = 58f;
     [SerializeField] private float maximumVerticalLink = 28f;
     [SerializeField] private float repathInterval = 0.35f;
+    [Header("Landing Physics")]
+    [Tooltip("Gravity restored after a scripted hop so the boss settles onto the platform collider.")]
+    [SerializeField, Min(0.1f)] private float fallGravityScale = 6f;
+    [SerializeField] private LayerMask groundMask = 1 << 6;
+    [SerializeField, Min(0.1f)] private float landingTimeout = 2f;
 
     private readonly List<EnemyNavigationNode> nodes = new List<EnemyNavigationNode>();
     private readonly List<EnemyNavigationNode> path = new List<EnemyNavigationNode>();
     private Rigidbody2D body;
     private EnemyAttackController attackController;
+    private Collider2D ownerCollider;
     private Transform hero;
     private int pathIndex;
     private float repathRemaining;
@@ -33,6 +39,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     private Vector2 hopTarget;
     private float hopElapsed;
     private float hopDuration;
+    private bool explicitHopActive;
 
     public int NavigationNodeCount => nodes.Count;
     public bool IsHopping => hopping;
@@ -41,6 +48,8 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     {
         body = GetComponent<Rigidbody2D>();
         attackController = GetComponent<EnemyAttackController>();
+        ownerCollider = GetComponent<Collider2D>();
+        ConfigureFallingBody();
     }
 
     private void Start()
@@ -58,7 +67,11 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
 
         if (attackController.IsAttacking)
         {
-            CancelHop();
+            // A combo-triggered relocation deliberately runs while the attack
+            // controller owns the boss. Keep that scripted arc in control;
+            // ordinary pursuit hops are still cancelled during attacks.
+            if (!explicitHopActive)
+                CancelHop();
             return;
         }
 
@@ -81,6 +94,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         {
             hopping = false;
             pathIndex++;
+            RestoreGravity();
         }
     }
 
@@ -140,6 +154,8 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     private IEnumerator HopToNodeRoutine(Vector2 target, float speedMultiplier)
     {
         Vector2 start = body.position;
+        explicitHopActive = true;
+        BeginScriptedMotion();
         float multiplier = Mathf.Max(0.01f, speedMultiplier);
         float duration = GetHopDuration(start, target, multiplier);
         float elapsed = 0f;
@@ -154,7 +170,10 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
 
         transform.position = new Vector3(target.x, target.y, transform.position.z);
         body.position = target;
+        explicitHopActive = false;
+        RestoreGravity();
         Physics2D.SyncTransforms();
+        yield return WaitForLandingRoutine();
         ResetNavigation();
     }
 
@@ -277,6 +296,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
 
     private void BeginHop(Vector2 target)
     {
+        BeginScriptedMotion();
         hopStart = body.position;
         hopTarget = target;
         hopElapsed = 0f;
@@ -301,8 +321,51 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     private void CancelHop()
     {
         hopping = false;
+        explicitHopActive = false;
         path.Clear();
         pathIndex = 0;
         repathRemaining = 0f;
+        RestoreGravity();
     }
+
+    private void ConfigureFallingBody()
+    {
+        if (body == null)
+            return;
+        body.bodyType = RigidbodyType2D.Dynamic;
+        body.gravityScale = Mathf.Max(0.1f, fallGravityScale);
+        body.freezeRotation = true;
+        body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+    }
+
+    private void BeginScriptedMotion()
+    {
+        if (body == null)
+            return;
+        body.bodyType = RigidbodyType2D.Dynamic;
+        body.gravityScale = 0f;
+        body.linearVelocity = Vector2.zero;
+    }
+
+    private void RestoreGravity()
+    {
+        if (body == null)
+            return;
+        body.bodyType = RigidbodyType2D.Dynamic;
+        body.gravityScale = Mathf.Max(0.1f, fallGravityScale);
+    }
+
+    private IEnumerator WaitForLandingRoutine()
+    {
+        float remaining = landingTimeout;
+        while (remaining > 0f && !IsGrounded())
+        {
+            yield return new WaitForFixedUpdate();
+            remaining -= Time.fixedDeltaTime;
+        }
+        if (body != null)
+            body.linearVelocity = new Vector2(body.linearVelocity.x, Mathf.Min(0f, body.linearVelocity.y));
+    }
+
+    private bool IsGrounded() => ownerCollider != null && ownerCollider.IsTouchingLayers(groundMask);
 }

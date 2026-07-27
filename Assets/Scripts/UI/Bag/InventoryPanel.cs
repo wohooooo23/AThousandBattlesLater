@@ -46,6 +46,7 @@ public class InventoryPanel : MonoBehaviour
         }
 
         RunInventory.Changed += Render;
+        RunProgress.Changed += Render;
         Render();
     }
 
@@ -54,6 +55,7 @@ public class InventoryPanel : MonoBehaviour
         if (Instance == this)
             Instance = null;
         RunInventory.Changed -= Render;
+        RunProgress.Changed -= Render;
     }
 
     private void OnDisable()

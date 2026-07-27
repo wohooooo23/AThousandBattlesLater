@@ -42,9 +42,9 @@ public static class VerdantRuneBuilder
         ItemData crimson = AssetDatabase.LoadAssetAtPath<ItemData>("Assets/Prefab/Rune_Crimson.asset");
         if (crimson == null || crimson.type != ItemType.Accessory || !crimson.IsEquippable || crimson.IsForgeable)
             throw new InvalidOperationException("Crimson Rune must remain wearable but cannot be forged.");
-        if (!Mathf.Approximately(Role.CrimsonMoveMultiplier, 1.3f) ||
-            !Mathf.Approximately(Role.CrimsonJumpMultiplier, 1.3f) ||
-            !Mathf.Approximately(Role.CrimsonDashMultiplier, 1.5f))
+        if (!Mathf.Approximately(Role.CrimsonMoveMultiplier, 1.1f) ||
+            !Mathf.Approximately(Role.CrimsonJumpMultiplier, 1.1f) ||
+            !Mathf.Approximately(Role.CrimsonDashMultiplier, 1.3f))
             throw new InvalidOperationException("Crimson Rune movement multipliers are incorrect.");
         if (!Mathf.Approximately(HeroHealth.GetGreenRuneHps(0), 2f) ||
             !Mathf.Approximately(HeroHealth.GetGreenRuneHps(1), 4f) ||
@@ -104,7 +104,7 @@ public static class VerdantRuneBuilder
         if (crimson == null)
             throw new MissingReferenceException("Missing Crimson Rune ItemData.");
         crimson.description =
-            "A crimson rune that increases movement and jump speed by 30%, and dash speed by 50%. It cannot be forged.";
+            "A crimson rune that increases movement and jump speed by 10%, and dash speed by 30%. It cannot be forged.";
         EditorUtility.SetDirty(crimson);
     }
 

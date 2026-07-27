@@ -36,9 +36,12 @@ public sealed class StoryComicPanel : MonoBehaviour
 
         panelImage.texture = comic;
         panelImage.uvRect = PanelUvs[panelIndex];
+        panelImage.enabled = true;
+        panelImage.SetAllDirty();
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
+        Canvas.ForceUpdateCanvases();
     }
 
     public void Hide()

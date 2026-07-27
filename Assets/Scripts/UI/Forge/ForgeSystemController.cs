@@ -62,12 +62,14 @@ public class ForgeSystemController : MonoBehaviour
         RestoreForgeLevels();
         RefreshEquippedSlots();
         RunEquipment.Changed += RefreshEquippedSlots;
+        RunProgress.Changed += RefreshEquippedSlots;
         RefreshRightPanel();
     }
 
     void OnDisable()
     {
         RunEquipment.Changed -= RefreshEquippedSlots;
+        RunProgress.Changed -= RefreshEquippedSlots;
     }
 
     /// <summary>
@@ -93,7 +95,7 @@ public class ForgeSystemController : MonoBehaviour
         }
         if (label != null)
             label.text = item != null
-                ? Localization.Translate(item.itemName) + "+" + mEquipLevels[index]
+                ? ItemDisplay.LocalizedName(item)
                 : Localization.Translate("Empty");
     }
 
@@ -118,7 +120,7 @@ public class ForgeSystemController : MonoBehaviour
         int plus = baseName.LastIndexOf('+');
         if (plus > 0)
             baseName = baseName.Substring(0, plus).Trim();
-        label.text = baseName + "+" + level;
+        label.text = level > 0 ? baseName + "+" + level : baseName;
     }
 
     private void BindButtons()

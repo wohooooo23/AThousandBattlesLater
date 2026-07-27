@@ -41,3 +41,64 @@ public enum ItemType
     // Appended so existing serialized ItemType integer values stay unchanged.
     Ability
 }
+
+/// <summary>
+/// One presentation source for backpack, equipped slots and forge UI. ItemData stores immutable
+/// base values; the current run's forge levels are applied here so every panel displays the same
+/// values that PlayerProgression applies to combat.
+/// </summary>
+public static class ItemDisplay
+{
+    public const float WeaponAttackPerLevel = 10f;
+    public const float ArmorDefensePerLevel = 2f;
+
+    public static int ForgeLevel(ItemData item)
+    {
+        if (item == null)
+            return 0;
+        return item.type switch
+        {
+            ItemType.Weapon => RunProgress.ForgeWeaponLevel,
+            ItemType.Armor => RunProgress.ForgeArmorLevel,
+            ItemType.GreenRune => RunProgress.ForgeGreenRuneLevel,
+            _ => 0
+        };
+    }
+
+    public static string LocalizedName(ItemData item)
+    {
+        if (item == null)
+            return string.Empty;
+        string baseName = Localization.Translate(
+            string.IsNullOrWhiteSpace(item.itemName) ? item.name : item.itemName);
+        int level = ForgeLevel(item);
+        return level > 0 ? baseName + "+" + level : baseName;
+    }
+
+    public static string LocalizedStats(ItemData item)
+    {
+        if (item == null)
+            return string.Empty;
+        int level = ForgeLevel(item);
+        if (item.type == ItemType.Weapon)
+            return Format(item.attackBonus + level * WeaponAttackPerLevel) + " ATK";
+        if (item.type == ItemType.Armor)
+            return Format(item.defenseBonus + level * ArmorDefensePerLevel) + " DEF";
+        if (item.type == ItemType.GreenRune)
+            return Format(HeroHealth.GetGreenRuneHps(level)) + " HPS";
+
+        string result = string.Empty;
+        if (item.attackBonus > 0f)
+            result = Format(item.attackBonus) + " ATK";
+        if (item.defenseBonus > 0f)
+            result += (result.Length > 0 ? "    " : string.Empty) + Format(item.defenseBonus) + " DEF";
+        if (result.Length > 0)
+            return result;
+        return Localization.Translate(item.type == ItemType.Ability ? "Passive movement ability"
+            : item.type == ItemType.Potion ? "Restores HP to full"
+            : item.type == ItemType.Ammunition ? "Stackable ranged ammunition"
+            : item.IsEquippable ? "No stat bonus" : "Stackable item");
+    }
+
+    private static string Format(float value) => value.ToString("0.#");
+}
