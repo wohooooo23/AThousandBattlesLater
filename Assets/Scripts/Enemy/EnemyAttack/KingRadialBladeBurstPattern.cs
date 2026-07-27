@@ -9,11 +9,11 @@ public sealed class KingRadialBladeBurstPattern : EnemyAttackPattern
     [SerializeField, Min(1f)] private float slashRadius = 28f;
     [SerializeField, Range(1, 24)] private int projectileCount = 12;
     [SerializeField, Min(0f)] private float projectileSpawnRadius = 4f;
-    [SerializeField, Min(0f)] private float projectileInitialSpeed = 10f;
-    [SerializeField, Min(0f)] private float projectileAcceleration = 18f;
+    [SerializeField, Min(0f)] private float projectileInitialSpeed = 18f;
+    [SerializeField, Min(0f)] private float projectileAcceleration = 42f;
     [FormerlySerializedAs("projectileSpinSpeed")]
-    [SerializeField] private float projectileOrbitSpeed = 300f;
-    [SerializeField, Min(0.1f)] private float projectileLifetime = 3f;
+    [SerializeField] private float projectileOrbitSpeed = 360f;
+    [SerializeField, Min(0.1f)] private float projectileLifetime = 7f;
     [SerializeField, Min(0.05f)] private float strikeDuration = 0.34f;
     [SerializeField] private Color warningColor = new Color(1f, 1f, 1f, 0.28f);
     [SerializeField] private Color strikeColor = new Color(1f, 1f, 1f, 0.92f);

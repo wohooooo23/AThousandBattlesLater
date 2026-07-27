@@ -18,6 +18,12 @@ public static class KingBossBuilder
     private const string BladeWaveMaterialPath = "Assets/Material/KingBladeWave_White.mat";
     private const string BladeWavePrefabPath = "Assets/Resources/AttackHitboxes/KingBladeWave.prefab";
     private const float TargetWorldHeight = 10f;
+    private const float KingMaximumHealth = 3000f;
+    private const float KingNavigationSpeed = 60f;
+    private const float KingJumpHeight = 10f;
+    private const float KingMinimumHopDuration = 0.26f;
+    private const float KingAttackCooldown = 1.4f;
+    private const float KingAttackDamage = 18f;
 
     [MenuItem("Tools/Boss/Replace Stage2 Boss With King")]
     public static void Build()
@@ -68,6 +74,7 @@ public static class KingBossBuilder
         ConfigureJumpRelocation(boss);
         EnemyHealth health = boss.GetComponent<EnemyHealth>() ??
             throw new MissingReferenceException("The preserved arena boss is missing EnemyHealth.");
+        ConfigureKingBalance(boss, health, stateMachine, attacks);
 
         ConfigureHitFlash(boss, renderer);
         KingBladeWaveProjectile bladeWavePrefab = BuildBladeWavePrefab();
@@ -91,7 +98,7 @@ public static class KingBossBuilder
             throw new InvalidOperationException("Failed to save " + Stage2Path);
         AssetDatabase.SaveAssets();
         Validate();
-        Debug.Log("KING_BOSS_BUILD_OK: stage2 King has four attacks, twelve accelerating blade waves, audio slots and active-camera shake.");
+        Debug.Log("KING_BOSS_BUILD_OK: stage2 King is fully buffed, hops after every attack and fires long-lived wall-passing spiral waves.");
     }
 
     [MenuItem("Tools/Boss/Validate Stage2 Medieval King")]
@@ -126,7 +133,11 @@ public static class KingBossBuilder
             cleave.CastAnim != CastAnimation.Attack3 || radial.CastAnim != CastAnimation.Attack2 ||
             ReadFloat(cleave, "reachDistance") < arenaHalfWidth || ReadFloat(cleave, "cleaveHeight") < 30f ||
             ReadInt(radial, "projectileCount") != 12 || ReadFloat(radial, "slashRadius") < 25f ||
-            Mathf.Abs(ReadFloat(radial, "projectileOrbitSpeed")) < 1f ||
+            ReadFloat(radial, "projectileSpawnRadius") < 28f ||
+            ReadFloat(radial, "projectileInitialSpeed") < 18f ||
+            ReadFloat(radial, "projectileAcceleration") < 42f ||
+            Mathf.Abs(ReadFloat(radial, "projectileOrbitSpeed")) < 360f ||
+            ReadFloat(radial, "projectileLifetime") < 7f ||
             ReferencedObject(radial, "bladeWavePrefab") == null)
             throw new InvalidOperationException("King attack animation mapping or authored half-arena size is invalid.");
         KingAttackAudio audio = boss.GetComponent<KingAttackAudio>();
@@ -145,12 +156,21 @@ public static class KingBossBuilder
             throw new InvalidOperationException("Both stage2 gameplay cameras must own a saved CameraShake2D component.");
         BossTeleport relocation = boss.GetComponent<BossTeleport>();
         if (relocation == null || relocation.RelocationMode != BossRelocationMode.Jump ||
-            relocation.AttacksPerRelocation != 3 || ReadFloat(relocation, "jumpSpeedMultiplier") <= 1f)
-            throw new InvalidOperationException("The stage2 King requires an accelerated every-three-attacks pursuit hop.");
+            relocation.AttacksPerRelocation != 1 || ReadFloat(relocation, "jumpSpeedMultiplier") < 2.5f)
+            throw new InvalidOperationException("The stage2 King requires an accelerated retreat hop after every attack.");
         EnemyHealth bossHealth = boss.GetComponent<EnemyHealth>();
-        if (boss.GetComponent<EnemyPlatformNavigator>() == null || boss.GetComponent<EnemyAttackController>() == null ||
-            bossHealth == null)
-            throw new InvalidOperationException("The King must preserve health, controller and node navigation.");
+        EnemyPlatformNavigator navigator = boss.GetComponent<EnemyPlatformNavigator>();
+        EnemyAttackController attackController = boss.GetComponent<EnemyAttackController>();
+        BossStateMachine stateMachine = boss.GetComponent<BossStateMachine>();
+        if (navigator == null || attackController == null || stateMachine == null || bossHealth == null ||
+            ReadFloat(bossHealth, "maximumHealth") < KingMaximumHealth ||
+            ReadFloat(navigator, "navigationSpeed") < KingNavigationSpeed ||
+            ReadFloat(navigator, "jumpHeight") < KingJumpHeight ||
+            ReadFloat(navigator, "minimumHopDuration") > KingMinimumHopDuration ||
+            ReadFloat(attackController, "cooldown") > KingAttackCooldown ||
+            ReadFloat(attackController, "attackDamage") < KingAttackDamage ||
+            ReadFloat(stateMachine, "hurtDuration") > 0.18f)
+            throw new InvalidOperationException("The King health, attack tempo or movement buff is not saved.");
         BossHealthBarController healthBar = ReferencedObject(arena, "bossHealthBar") as BossHealthBarController;
         if (healthBar == null || healthBar.BoundHealth != bossHealth)
             throw new InvalidOperationException("The arena Boss health bar no longer references the preserved EnemyHealth.");
@@ -171,7 +191,7 @@ public static class KingBossBuilder
                 pattern is KingRadialBladeBurstPattern))
             throw new InvalidOperationException("stage1 Evil Wizard was modified by the King build.");
 
-        Debug.Log("KING_BOSS_VALIDATE_OK: four attacks, radial blade prefab, audio slots, camera shake and retreat hop verified; stage1 unchanged.");
+        Debug.Log("KING_BOSS_VALIDATE_OK: buffed health/combat, four attacks, long-lived wall-passing radial blades and every-attack retreat hop verified; stage1 unchanged.");
     }
 
     private static BossSpriteAnimator CreateKingVisual(GameObject boss, out SpriteRenderer renderer)
@@ -258,12 +278,13 @@ public static class KingBossBuilder
             SetFloat(radial, "warningDuration", 1.15f);
             SetFloat(radial, "slashRadius", 28f);
             SetInt(radial, "projectileCount", 12);
-            SetFloat(radial, "projectileSpawnRadius", 4f);
-            SetFloat(radial, "projectileInitialSpeed", 10f);
-            SetFloat(radial, "projectileAcceleration", 18f);
-            SetFloat(radial, "projectileOrbitSpeed", 300f);
-            SetFloat(radial, "projectileLifetime", 3f);
         }
+        // These combat values are authoritative even when an existing King is rebuilt.
+        SetFloat(radial, "projectileSpawnRadius", 28f);
+        SetFloat(radial, "projectileInitialSpeed", 18f);
+        SetFloat(radial, "projectileAcceleration", 42f);
+        SetFloat(radial, "projectileOrbitSpeed", 360f);
+        SetFloat(radial, "projectileLifetime", 7f);
         SetObject(radial, "bladeWavePrefab", bladeWavePrefab);
     }
 
@@ -345,9 +366,25 @@ public static class KingBossBuilder
     private static void ConfigureJumpRelocation(GameObject boss)
     {
         BossTeleport relocation = boss.GetComponent<BossTeleport>() ?? boss.AddComponent<BossTeleport>();
-        SetInt(relocation, "attacksPerRelocation", 3);
+        SetInt(relocation, "attacksPerRelocation", 1);
         SetInt(relocation, "relocationMode", (int)BossRelocationMode.Jump);
-        SetFloat(relocation, "jumpSpeedMultiplier", 1.75f);
+        SetFloat(relocation, "jumpSpeedMultiplier", 2.5f);
+    }
+
+    private static void ConfigureKingBalance(GameObject boss, EnemyHealth health,
+        BossStateMachine stateMachine, EnemyAttackController attacks)
+    {
+        EnemyPlatformNavigator navigator = boss.GetComponent<EnemyPlatformNavigator>() ??
+            boss.AddComponent<EnemyPlatformNavigator>();
+        SetFloat(health, "maximumHealth", KingMaximumHealth);
+        SetFloat(navigator, "navigationSpeed", KingNavigationSpeed);
+        SetFloat(navigator, "jumpHeight", KingJumpHeight);
+        SetFloat(navigator, "minimumHopDuration", KingMinimumHopDuration);
+        SetFloat(stateMachine, "hurtDuration", 0.18f);
+        SetFloat(stateMachine, "repositionDistance", 10f);
+        SetFloat(attacks, "chaseRange", 75f);
+        SetFloat(attacks, "cooldown", KingAttackCooldown);
+        SetFloat(attacks, "attackDamage", KingAttackDamage);
     }
 
     private static void RemoveWizardVisuals(GameObject boss)

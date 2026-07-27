@@ -18293,6 +18293,7 @@ MonoBehaviour:
   bossIntroductionComic: {fileID: 2800000, guid: 8c48df8e7e2a7064692f7941ae537a0f, type: 3}
   bossIntroductionComicAfterLine: 6
   openingProgressBeat: 8
+  bossIntroductionProgressBeat: 9
   keepLastVictoryLineVisible: 0
   openingLines:
   - speaker: 0
@@ -28854,7 +28855,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a1cf5ac96c32e9469ff82f1af9f121f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maximumHealth: 800
+  maximumHealth: 3000
   worldHealthBar: {fileID: 0}
   victoryOverlay: {fileID: 1687958375}
   victoryReturnSceneName: StartMenu
@@ -28875,9 +28876,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 156504f05b8ec0e4f82f962a7563df56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPlatformNavigator
-  navigationSpeed: 45
-  jumpHeight: 8
-  minimumHopDuration: 0.38
+  navigationSpeed: 60
+  jumpHeight: 10
+  minimumHopDuration: 0.26
   maximumLinkDistance: 58
   maximumVerticalLink: 28
   repathInterval: 0.35
@@ -28894,8 +28895,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossStateMachine
   animator: {fileID: 1391126122}
-  hurtDuration: 0.28
-  repositionDistance: 6
+  hurtDuration: 0.18
+  repositionDistance: 10
 --- !u!1 &4068017401519250528
 GameObject:
   m_ObjectHideFlags: 0
@@ -28989,9 +28990,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e205a26ea3448a2bbfd6d71b0158f4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
-  chaseRange: 55
-  cooldown: 2
-  attackDamage: 12
+  chaseRange: 75
+  cooldown: 1.4
+  attackDamage: 18
   attackAudio: {fileID: 8081266080304940358}
 --- !u!4 &7093356234712874282
 Transform:
@@ -29168,11 +29169,11 @@ MonoBehaviour:
   warningDuration: 1.15
   slashRadius: 28
   projectileCount: 12
-  projectileSpawnRadius: 4
-  projectileInitialSpeed: 10
-  projectileAcceleration: 18
-  projectileSpinSpeed: 300
-  projectileLifetime: 3
+  projectileSpawnRadius: 28
+  projectileInitialSpeed: 18
+  projectileAcceleration: 42
+  projectileOrbitSpeed: 360
+  projectileLifetime: 7
   strikeDuration: 0.34
   warningColor: {r: 1, g: 1, b: 1, a: 0.28}
   strikeColor: {r: 1, g: 1, b: 1, a: 0.92}
@@ -29259,12 +29260,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 908f36a510db90249a8cefbfa03cd115, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::BossTeleport
-  attacksPerRelocation: 3
+  attacksPerRelocation: 1
   relocationMode: 1
   flash: {fileID: 6118492944854572108}
   teleportDuration: 0.8
   relocateAt: 0.25
-  jumpSpeedMultiplier: 1.75
+  jumpSpeedMultiplier: 2.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -55,8 +55,10 @@ public static class StoryChapterBuilder
     {
         ValidateComicTexture(ProloguePath);
         ValidateComicTexture(BetrayalPath);
-        ValidateStage(Stage1Path, StoryBeat.Opening, 5, 3, 6, 7, true, false);
-        ValidateStage(Stage2Path, StoryBeat.Stage2Opening, 4, 0, 20, 3, false, true);
+        ValidateStage(Stage1Path, StoryBeat.Opening, StoryBeat.BossIntroduction,
+            5, 3, 6, 7, true, false);
+        ValidateStage(Stage2Path, StoryBeat.Stage2Opening, StoryBeat.Stage2BossIntroduction,
+            4, 0, 20, 3, false, true);
         ValidateTranslations();
         ValidateStage2BossCast();
         Debug.Log("STORY_CHAPTER_VALIDATE_OK: story text, comic insertion points and saved UI references are valid.");
@@ -74,6 +76,8 @@ public static class StoryChapterBuilder
         SetObject(data, "bossIntroductionComic", null);
         data.FindProperty("bossIntroductionComicAfterLine").intValue = -1;
         data.FindProperty("openingProgressBeat").enumValueIndex = (int)StoryBeat.Opening;
+        data.FindProperty("bossIntroductionProgressBeat").enumValueIndex =
+            (int)StoryBeat.BossIntroduction;
         data.FindProperty("keepLastVictoryLineVisible").boolValue = true;
         SetLines(data.FindProperty("openingLines"), Stage1Opening());
         SetLines(data.FindProperty("firstEncounterLines"), Stage1Encounter());
@@ -95,6 +99,8 @@ public static class StoryChapterBuilder
         SetObject(data, "bossIntroductionComic", AssetDatabase.LoadAssetAtPath<Texture2D>(BetrayalPath));
         data.FindProperty("bossIntroductionComicAfterLine").intValue = 6;
         data.FindProperty("openingProgressBeat").enumValueIndex = (int)StoryBeat.Stage2Opening;
+        data.FindProperty("bossIntroductionProgressBeat").enumValueIndex =
+            (int)StoryBeat.Stage2BossIntroduction;
         data.FindProperty("keepLastVictoryLineVisible").boolValue = false;
         SetLines(data.FindProperty("openingLines"), Stage2Opening());
         SetLines(data.FindProperty("firstEncounterLines"), Array.Empty<(StorySpeaker, string)>());
@@ -233,7 +239,11 @@ public static class StoryChapterBuilder
         if (existing.Length > 1)
             throw new InvalidOperationException(scene.path + " contains duplicate comic panels.");
         if (existing.Length == 1)
+        {
+            existing[0].gameObject.SetActive(true);
+            EditorUtility.SetDirty(existing[0].gameObject);
             return existing[0];
+        }
 
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ComicPrefabPath);
         if (prefab == null)
@@ -340,16 +350,17 @@ public static class StoryChapterBuilder
             throw new InvalidOperationException(path + " must be a crisp, uncompressed comic texture.");
     }
 
-    private static void ValidateStage(string path, StoryBeat openingBeat, int openingCount,
+    private static void ValidateStage(string path, StoryBeat openingBeat, StoryBeat bossIntroBeat, int openingCount,
         int encounterCount, int bossIntroCount, int victoryCount, bool hasOpeningComic, bool hasBossComic)
     {
         StoryDialogueController story = OpenStory(path, out Scene scene);
         if (!story.gameObject.activeSelf)
             throw new InvalidOperationException(path + " must save its Story System active.");
         StoryComicPanel[] panels = FindInScene<StoryComicPanel>(scene);
-        if (panels.Length != 1 || story.ComicPanel != panels[0])
-            throw new InvalidOperationException(path + " must save one referenced StoryComicPanel prefab instance.");
-        if (story.OpeningProgressBeat != openingBeat || story.OpeningLineCount != openingCount ||
+        if (panels.Length != 1 || story.ComicPanel != panels[0] || !panels[0].gameObject.activeSelf)
+            throw new InvalidOperationException(path + " must save one active, referenced StoryComicPanel prefab instance.");
+        if (story.OpeningProgressBeat != openingBeat ||
+            story.BossIntroductionProgressBeat != bossIntroBeat || story.OpeningLineCount != openingCount ||
             story.EncounterLineCount != encounterCount || story.BossIntroductionLineCount != bossIntroCount ||
             story.BossVictoryLineCount != victoryCount)
             throw new InvalidOperationException(path + " has incomplete chapter dialogue.");

@@ -18,6 +18,8 @@ public sealed class StoryChapterPlayModeTests
         MonoBehaviour stage1 = Find("StoryDialogueController");
         Assert.That(stage1.gameObject.activeSelf, Is.True);
         Assert.That(Property(stage1, "OpeningProgressBeat").ToString(), Is.EqualTo("Opening"));
+        Assert.That(Property(stage1, "BossIntroductionProgressBeat").ToString(),
+            Is.EqualTo("BossIntroduction"));
         Assert.That(Property<int>(stage1, "OpeningLineCount"), Is.EqualTo(5));
         Assert.That(Property<int>(stage1, "EncounterLineCount"), Is.EqualTo(3));
         Assert.That(Property<int>(stage1, "BossIntroductionLineCount"), Is.EqualTo(6));
@@ -52,6 +54,8 @@ public sealed class StoryChapterPlayModeTests
         MonoBehaviour stage2 = Find("StoryDialogueController");
         Assert.That(stage2.gameObject.activeSelf, Is.True);
         Assert.That(Property(stage2, "OpeningProgressBeat").ToString(), Is.EqualTo("Stage2Opening"));
+        Assert.That(Property(stage2, "BossIntroductionProgressBeat").ToString(),
+            Is.EqualTo("Stage2BossIntroduction"));
         Assert.That(Property<int>(stage2, "OpeningLineCount"), Is.EqualTo(4));
         Assert.That(Property<int>(stage2, "EncounterLineCount"), Is.Zero);
         Assert.That(Property<int>(stage2, "BossIntroductionLineCount"), Is.EqualTo(20));
@@ -59,6 +63,7 @@ public sealed class StoryChapterPlayModeTests
         Assert.That(Property(stage2, "OpeningComic"), Is.Null);
         Assert.That(Property(stage2, "BossIntroductionComic"), Is.Not.Null);
         Assert.That(Property<int>(stage2, "BossIntroductionComicAfterLine"), Is.EqualTo(6));
+        Assert.That(Property<MonoBehaviour>(stage2, "ComicPanel").gameObject.activeSelf, Is.True);
         Assert.That(Line(stage2, "bossIntroductionLines", 5),
             Is.EqualTo("First, see the truth for yourself."));
         Assert.That(Speaker(stage2, "bossIntroductionLines", 11), Is.EqualTo("King"));

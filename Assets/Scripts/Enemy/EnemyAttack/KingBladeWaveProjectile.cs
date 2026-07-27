@@ -16,8 +16,6 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
     [SerializeField, Min(0.05f)] private float thickness = 1.25f;
     [SerializeField, Min(0f)] private float arcDepth = 1.6f;
     [SerializeField, Range(8, 48)] private int segments = 20;
-    [SerializeField] private LayerMask blockingLayers = 1 << 6;
-
     private Vector2 orbitCenter;
     private float orbitAngleDegrees;
     private float orbitRadius;
@@ -95,11 +93,8 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
             return;
         }
 
-        if ((blockingLayers.value & (1 << other.gameObject.layer)) != 0)
-        {
-            consumed = true;
-            Destroy(gameObject);
-        }
+        // Arena geometry deliberately does not consume the wave. These are magical spiral blades:
+        // only hitting the Hero or reaching their authored lifetime removes them.
     }
 
     private void BuildTaperedArc()

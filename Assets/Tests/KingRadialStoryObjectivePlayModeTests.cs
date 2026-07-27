@@ -42,6 +42,16 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         Assert.That(Mathf.Abs(instance.transform.position.y - centre.y), Is.GreaterThan(0.1f),
             "The wave must orbit the Boss origin instead of moving on a straight ray.");
         Assert.That(Property<float>(wave, "OrbitAngleDegrees"), Is.GreaterThan(1f));
+
+        GameObject wall = new GameObject("Ground Wall", typeof(BoxCollider2D));
+        wall.layer = 6;
+        MethodInfo trigger = wave.GetType().GetMethod("OnTriggerEnter2D",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        trigger.Invoke(wave, new object[] { wall.GetComponent<BoxCollider2D>() });
+        Assert.That(Field<bool>(wave, "consumed"), Is.False,
+            "King blade waves must pass through arena walls.");
+        Assert.That(instance.activeInHierarchy, Is.True);
+        Object.Destroy(wall);
         Object.Destroy(instance);
     }
 
@@ -75,6 +85,11 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         yield return null;
 
         MonoBehaviour story = FindBehaviour("StoryDialogueController");
+        Assert.That(Property<object>(story, "BossIntroductionProgressBeat").ToString(),
+            Is.EqualTo("Stage2BossIntroduction"));
+        MonoBehaviour comicPanel = Property<MonoBehaviour>(story, "ComicPanel");
+        Assert.That(comicPanel.gameObject.activeSelf, Is.True,
+            "The saved stage2 comic Canvas must be active so CanvasGroup visibility can render it.");
         Component hero = Bubble(story, "Samurai");
         Component king = Bubble(story, "King");
         Component wizard = Bubble(story, "EvilWizard");
@@ -155,6 +170,9 @@ public sealed class KingRadialStoryObjectivePlayModeTests
 
     private static object Property(object target, string name) => target.GetType().GetProperty(name).GetValue(target);
     private static T Property<T>(object target, string name) => (T)Property(target, name);
+
+    private static T Field<T>(object target, string name) => (T)target.GetType()
+        .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(target);
 
     private static void SetLanguage(string language)
     {

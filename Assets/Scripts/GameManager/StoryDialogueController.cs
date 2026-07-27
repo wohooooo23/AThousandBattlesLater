@@ -61,6 +61,8 @@ public sealed class StoryDialogueController : MonoBehaviour
     [Tooltip("Show the Boss comic after this many introduction lines; -1 disables it.")]
     [SerializeField] private int bossIntroductionComicAfterLine = -1;
     [SerializeField] private StoryBeat openingProgressBeat = StoryBeat.Opening;
+    [Tooltip("Independent progress key for this scene's Boss introduction.")]
+    [SerializeField] private StoryBeat bossIntroductionProgressBeat = StoryBeat.BossIntroduction;
     [SerializeField] private bool keepLastVictoryLineVisible;
     [SerializeField] private StoryDialogueLine[] openingLines;
     [SerializeField] private StoryDialogueLine[] firstEncounterLines;
@@ -107,6 +109,7 @@ public sealed class StoryDialogueController : MonoBehaviour
     public Texture2D BossIntroductionComic => bossIntroductionComic;
     public int BossIntroductionComicAfterLine => bossIntroductionComicAfterLine;
     public StoryBeat OpeningProgressBeat => openingProgressBeat;
+    public StoryBeat BossIntroductionProgressBeat => bossIntroductionProgressBeat;
     public int AdditionalSpeakerBubbleCount => additionalSpeakerBubbles != null
         ? additionalSpeakerBubbles.Length
         : 0;
@@ -221,7 +224,7 @@ public sealed class StoryDialogueController : MonoBehaviour
     {
         if (bossIntroductionPlayed)
             return false;
-        if (StoryProgress.IsPassed(StoryBeat.BossIntroduction) || bossBubble == null ||
+        if (StoryProgress.IsPassed(bossIntroductionProgressBeat) || bossBubble == null ||
             bossIntroductionLines == null || bossIntroductionLines.Length == 0)
         {
             ApplyPostBossIntroductionActorState();
@@ -232,7 +235,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         if (Application.isBatchMode)
         {
             ApplyPostBossIntroductionActorState();
-            StoryProgress.MarkPassed(StoryBeat.BossIntroduction);
+            StoryProgress.MarkPassed(bossIntroductionProgressBeat);
             return false;
         }
         StartCoroutine(PlayBossIntroductionSequence());
@@ -313,7 +316,7 @@ public sealed class StoryDialogueController : MonoBehaviour
         ApplyPostBossIntroductionActorState();
         ReleasePause();
         isPlaying = false;
-        StoryProgress.MarkPassed(StoryBeat.BossIntroduction);
+        StoryProgress.MarkPassed(bossIntroductionProgressBeat);
     }
 
     private IEnumerator PlayBossVictorySequence(bool showFinalVictoryOverlay)

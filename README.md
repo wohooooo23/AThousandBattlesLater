@@ -213,11 +213,11 @@ Hero enters detection range
 3. **横斩**：`KingHorizontalSlashPattern` 使用 `heroY + Rigidbody2D.linearVelocity.y × warningDuration` 计算竖直预测位置。前摇的前 50% 持续读取玩家当前位置和速度、更新预测矩形；进入后 50% 时锁定最后一次预测结果，直到攻击结算都不再移动。
 4. **上捞**：`KingUppercutArcPattern` 以 King 为圆心生成 240° 白色优弧扇形。Boss 在进入 Cast 前锁定朝向，扇形主体朝面向侧、120° 缺口固定在背后，前摇期间不再跟随玩家；结算通过半径与夹角直接判断伤害。
 5. **下劈**：`KingGroundCleavePattern` 使用 Ground 层向下检测地面，将刚刚落地的位置提交为攻击后的新移动锚点，再生成面向侧 245×32 单位的白色巨型矩形。矩形的近侧边中点严格落在 King 中心，竖直范围以 King 的 Y 坐标向上、向下各覆盖一半，不再只偏向角色上方；水平长度对应第二关竞技场约一半宽度。
-6. **攻击计数换位**：`EnemyAttackController` 在每次完整攻击结算后通知保存于 Boss 根对象的 `BossTeleport`。该组件现已抽象为两种换位模式，但保留原类名和资源 GUID，避免破坏第一关已有引用；`attacksPerRelocation` 是 Inspector 可调计数，默认每完成 3 次攻击触发一次换位，攻击冷却仍在换位结束后完整计算。
+6. **逐招换位**：`EnemyAttackController` 在每次完整攻击结算后通知保存于 Boss 根对象的 `BossTeleport`。该组件现已抽象为两种换位模式，但保留原类名和资源 GUID，避免破坏第一关已有引用；第二关 King 把 `attacksPerRelocation` 保存为 1，因此每出完一招都会跳向远离 Hero 的节点，攻击冷却仍在换位结束后完整计算。
 7. **复用跳跃追逐**：Evil Wizard 继续使用 `Blink`，King 则在 `stage2_full` 中直接保存同一换位组件的 `Jump` 配置。Jump 不再自行复制曲线或随机挑选落点，而是调用 `EnemyPlatformNavigator.RetreatHopRoutine`，共享原追逐系统的节点收集、连边限制、A*、`navigationSpeed`、`minimumHopDuration`、`jumpHeight` 与 `Rigidbody2D.MovePosition` 抛物线实现。
-8. **远离 Hero 选点与加速**：国王以当前位置最近节点为 A* 起点，遍历所有可达节点并选择距 Hero 最远者，只执行该撤离路径的下一段，因此不会跳过墙体或跨越不相连的平台。`jumpSpeedMultiplier` 是相对 Navigator 原始跳跃速度的可调倍率，场景默认 1.75；持续时间和最短跳跃时间都会按倍率缩短，弧线高度仍使用 Navigator 保存的 8，从视觉和物理上保持与原跳跃追逐一致。落地后重建普通追逐路径，移动期间攻击状态阻止 `FixedUpdate` 与显式跳跃争抢刚体。
+8. **远离 Hero 选点与加速**：国王以当前位置最近节点为 A* 起点，遍历所有可达节点并选择距 Hero 最远者，只执行该撤离路径的下一段，因此不会跳过墙体或跨越不相连的平台。`jumpSpeedMultiplier` 保存为 2.5，Navigator 的 `navigationSpeed / jumpHeight / minimumHopDuration` 保存为 `60 / 10 / 0.26`；持续时间和最短跳跃时间都会按倍率缩短。落地后重建普通追逐路径，移动期间攻击状态阻止 `FixedUpdate` 与显式跳跃争抢刚体。
 9. **保存式组件**：国王的换位组件、Jump 模式、攻击计数、速度倍率和受击闪白引用都直接保存在场景中，不在运行时临时补挂；运行时只创建一次短生命周期的跳跃协程。旧 `WizardVisual`、旧巫师攻击和蓝色占位 Mesh 会被删除；`Entity_VFX.targetRenderer`、`BossStateMachine.animator`、`StoryDialogueController.bossVisualRoot` 都直接保存为 KingVisual 的对应组件。
-10. **可重复构筑与验证**：菜单 `Tools > Boss > Replace Stage2 Boss With King` 幂等重建第二关 King，并重新写入默认的 3 次攻击与 1.75 倍 Jump 配置；`Validate Stage2 Medieval King` 校验七套动画、三招、节点跳跃模式、加速倍率、移动/生命/剧情/受击引用，并额外确认第一关仍是 Evil Wizard 的 Blink 模式。`BossRelocationPlayModeTests` 还会实际执行三次计数和一次跳跃，设置朝 Hero 与背离 Hero 两个候选节点，断言国王中途明显抬升并最终落在远离 Hero 的节点。
+10. **国王强化与可重复构筑**：场景保存最大生命 3000、单次伤害 18、攻击间隔 1.4、索敌距离 75、受击硬直 0.18，并把重新寻路距离提高到 10。菜单 `Tools > Boss > Replace Stage2 Boss With King` 会幂等写回这些平衡值和逐招 2.5 倍 Jump；`Validate Stage2 Medieval King` 同时校验动画、四招、剑气、节点跳跃、移动/生命/攻击/剧情/受击引用，并确认第一关 Evil Wizard 的 Blink 不受影响。
 
 运行路径：
 
@@ -228,9 +228,8 @@ Hero enters stage2 arena
   -> BossStateMachine plays the pattern's fixed Attack1 / Attack2 / Attack3 clip
   -> white telegraph -> geometric hit check -> white strike fade
   -> completed attack counter +1
-  -> attacks 1/2: full cooldown
-  -> attack 3: find farthest reachable node from Hero -> take next A* step
-              -> 1.75x navigator parabolic hop -> reset pursuit A* -> full cooldown
+  -> every attack: find farthest reachable node from Hero -> take next A* step
+                   -> 2.5x navigator parabolic hop -> reset pursuit A* -> full cooldown
   -> King and companion Orc are both defeated
   -> BossEncounterObjective -> original story / victory / return flow
 ```
@@ -247,11 +246,11 @@ Hero enters stage2 arena
 
 第二关国王现在拥有第四种独立攻击模式：以自身为圆心的大范围圆斩，并向十二个等分方向发射旋转、持续加速的白色剑气。该招固定使用 `Attack2` 动作；音效按动画动作而不是技能数量分槽，因此圆斩剑气与原上捞共同使用 Attack2 音效槽。
 
-1. **招式选择与动作**：`KingRadialBladeBurstPattern` 与横斩、上捞、半场下劈一起作为保存于 `stage2_full` 国王根对象上的第四个 `EnemyAttackPattern`。有效距离为 0–250、默认权重 1.05，`castAnimation` 固定为 `Attack2`，会继续参与现有的距离过滤、加权随机、避免连续重复以及三次攻击后跳跃换位流程。
+1. **招式选择与动作**：`KingRadialBladeBurstPattern` 与横斩、上捞、半场下劈一起作为保存于 `stage2_full` 国王根对象上的第四个 `EnemyAttackPattern`。有效距离为 0–250、默认权重 1.05，`castAnimation` 固定为 `Attack2`，会继续参与现有的距离过滤、加权随机、避免连续重复以及每次攻击后的跳跃换位流程。
 2. **圆斩预警与伤害**：前摇持续 1.15 秒，白色圆形填充从中心扩张至 28 单位半径；结算时按 Hero 与国王中心的距离进行一次范围伤害，并生成内外两道白色圆环作为短暂斩击残影。预警会在国王前摇期间保持以攻击锚点为中心，不追踪 Hero。
-3. **十二向螺旋散射**：结算帧把 360° 等分为十二个初始角度，每枚剑气以攻击释放点为固定圆心、以 4 为初始半径生成。径向初速 10、径向加速度 18、绕圆心角速度 300°/s、寿命 3 秒，参数均保存在攻击组件中可由 Inspector 调节。每帧同时增大半径与极角，从而形成整体绕国王向外扩张的螺旋；剑气图形只对齐螺旋路径的瞬时速度，不再围绕自身自转，也不会追踪移动后的国王或玩家。
+3. **十二向高速螺旋散射**：结算帧把 360° 等分为十二个初始角度，每枚剑气以攻击释放点为固定圆心、以圆斩边缘 28 为初始半径生成。径向初速 18、径向加速度 42、绕圆心角速度 360°/s、寿命 7 秒，参数直接保存在攻击组件中并可由 Inspector 调节。每帧同时增大半径与极角，从而形成更快且覆盖更远的外扩螺旋；剑气图形只对齐螺旋路径的瞬时速度，不围绕自身自转，也不会追踪移动后的国王或玩家。
 4. **纯白尖锐弧形**：`KingBladeWave_White.mat` 是独立保存的纯白 `Sprites/Default` 材质。`KingBladeWaveProjectile` 在实例初始化时生成一条弯曲带状网格：中心线使用抛物弧，宽度使用 `sin(πt)` 从中央向两端收缩到零，形成“一段白色圆环、两端尖锐”的轮廓；端点直接写入零宽度，内部采样先 `Clamp01` 再做非整数幂，避免浮点负零产生 NaN 和 `abnormal mesh bounds`。相同有限轮廓同时写入 `PolygonCollider2D`，因此画面和命中形状一致。
-5. **剑气碰撞**：剑气 prefab 直接保存 `MeshFilter`、`MeshRenderer`、触发式 `PolygonCollider2D`、Kinematic `Rigidbody2D` 和 `KingBladeWaveProjectile`，运行时只实例化这类短生命周期攻击实体。命中 Player 后通过当前 `EnemyAttackContext.HitHero` 走国王统一伤害计算并销毁；碰到 Ground 层墙体或寿命结束也会销毁。
+5. **剑气碰撞与穿墙**：剑气 prefab 直接保存 `MeshFilter`、`MeshRenderer`、触发式 `PolygonCollider2D`、Kinematic `Rigidbody2D` 和 `KingBladeWaveProjectile`。命中 Player 后通过 `EnemyAttackContext.HitHero` 走国王统一伤害计算并销毁；墙体、Tilemap Collider 和其他场景几何不会消耗剑气，只有命中 Hero 或 7 秒寿命结束才会销毁。
 6. **三动作音效加载器**：国王根对象直接保存 `KingAttackAudio` 与 `AudioSource`，三个 Inspector 槽依次对应 Attack1、Attack2、Attack3。当前三个 AudioClip 刻意保持为空，后续只需把音频拖入槽位；所有国王技能在实际结算帧统一调用 `FireFeedback`，由当前技能的 `CastAnim` 选择并 `PlayOneShot`，不会因第四个技能再增加重复音频槽。
 7. **屏幕抖动**：探索相机与 Boss Arena Camera 都继续使用场景中已保存的 `CameraShake2D`。攻击结算不再只使用国王启动时缓存的探索相机，而是在每次出手时从当前 `Camera.main` 获取抖动组件；因此进入 Boss 房切换相机后，横斩、上捞、下劈和圆斩剑气都会抖动实际正在显示的镜头。
 8. **可重复构筑与验证**：菜单 `Tools > Boss > Replace Stage2 Boss With King` 会生成/更新白色材质与剑气 prefab，重建四个攻击组件，保留将来已经填入的三个音效 Clip，并把音频加载器引用保存给 `EnemyAttackController`。`Validate Stage2 Medieval King` 会检查四招及动作映射、十二发数量、圆斩尺寸、剑气 prefab/白材质、两个相机的抖动组件、音频加载器和原有跳跃换位，同时确认第一关 Evil Wizard 未被改动。
@@ -266,9 +265,9 @@ EnemyAttackController selects King Radial Blade Burst
   -> 12 saved KingBladeWave prefab instances
        -> tapered white arc mesh + matching polygon collider
        -> angular orbit around release origin + outward radial acceleration
-       -> hit Hero / Ground / lifetime -> destroy
+       -> ignore walls; hit Hero / lifetime -> destroy
   -> active MainCamera shake + Attack2 audio slot
-  -> normal cooldown / every-third-attack retreat hop
+  -> every-attack retreat hop / normal cooldown
 ```
 
 ## 第二关多演员剧情与联合胜利管线
@@ -284,6 +283,7 @@ EnemyAttackController selects King Radial Blade Burst
 7. **中英存储**：两关英文台词仍由 `StoryChapterBuilder` 写入场景，简体中文逐句写在 `LocalizationTable`；`ValidateTranslations` 会枚举两章全部 48 句，拒绝缺失、空白或仍与英文相同的翻译。
 8. **幂等构筑**：菜单 `Tools > Narrative & Audio > Build Stage2 Boss Cast and Localization` 会删除旧 `Boss Introduction Cast` 后重建演员、气泡、cue 和目标引用，但保留场景里当前 Hero、King、地图和宝箱位置。随后验证 Idle_0、完整 Orc、四气泡、三个 cue、双目标与 48 句本地化。
 9. **自动测试**：`KingRadialStoryObjectivePlayModeTests` 验证剑气网格全部顶点与 Bounds 有限、剑气确实向外加速并旋转、半场攻击上下对称、四名说话者路由正确、中文翻译生效，以及两种击杀顺序都只在 King 与 Orc 全灭后结束战斗。
+10. **第二关漫画显示**：`Story Comic Panel` 作为 active 的 Screen Space Overlay Canvas 保存于场景，隐藏只通过 `CanvasGroup.alpha` 完成，避免 inactive Canvas 无法重新渲染。第一关与第二关 Boss 入场分别使用 `BossIntroduction`、`Stage2BossIntroduction` 两个 `StoryBeat`；第一关的历史进度不再跳过第二关背叛漫画，完整流程进入第二关时会清理第二关入场标记，而第二关死亡重试仍不会重复播放已经看过的剧情。
 
 运行路径：
 

@@ -16,7 +16,9 @@ public enum StoryBeat
     /// <summary>Backpack and forge keys, folded into whichever ability prompt fires first.</summary>
     EquipmentTutorial,
     /// <summary>The time-travel arrival shown only when the campaign reaches the second chapter.</summary>
-    Stage2Opening
+    Stage2Opening,
+    /// <summary>The King's betrayal reveal; independent from the stage1 Wizard introduction.</summary>
+    Stage2BossIntroduction
 }
 
 /// <summary>
@@ -66,8 +68,10 @@ public static class StoryProgress
     /// </summary>
     public static void PrepareForNextStage()
     {
-        passed.Remove(StoryBeat.BossIntroduction);
-        PlayerPrefs.DeleteKey(KeyPrefix + StoryBeat.BossIntroduction);
+        // A new campaign reaching chapter two must see the King's reveal even if an older run
+        // previously reached it. Stage1's Wizard introduction remains independently recorded.
+        passed.Remove(StoryBeat.Stage2BossIntroduction);
+        PlayerPrefs.DeleteKey(KeyPrefix + StoryBeat.Stage2BossIntroduction);
         PlayerPrefs.Save();
     }
 
