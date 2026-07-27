@@ -299,3 +299,21 @@ Hero enters the stage2 boss arena
   -> BossEncounterObjective completes once
   -> bilingual boss-victory dialogue -> final Victory screen
 ```
+
+## WebGL 开始菜单中文字体管线
+
+开始菜单的 Legacy UI 不再依赖 Unity 内置 `LegacyRuntime.ttf`。该字体在 Windows 编辑器中可能借用操作系统的中文字体回退，但 WebGL 浏览器构建无法访问相同的系统字形，因此 `START`、`HELP` 翻译为中文后曾显示为空白。
+
+1. **随包字体**：所有开始菜单 `UnityEngine.UI.Text` 直接引用 `Assets/Resources/Fonts/NotoSansSC-Regular.ttf`；字体数据的 `includeFontData` 保持启用，因此 WebGL Player 会把需要的字形数据包含在构建中。
+2. **保存式场景配置**：`Start Label`、`Help Label`、标题、开发者名称及设置/制作名单面板文本的字体引用直接保存在 `StartMenu.unity`，不会在运行时临时创建或替换组件。
+3. **语言切换**：`LocalizedText` 仍只负责把英文 key 变换成 `LocalizationTable` 中的中文；实际字形由场景保存的 Noto Sans SC 渲染。`START -> 开始游戏`、`HELP -> 帮助` 与已有的 `SETTING / CREDIT` 走同一条路径。
+4. **幂等构筑**：`Tools > Start Menu > Build Settings And Credits` 会扫描开始菜单根对象下所有 active/inactive Legacy Text，并统一写入随包字体；以后重建或新增按钮也不会重新引入依赖系统字体的引用。
+5. **验证**：`Validate Start Menu` 会检查字体资源存在、字体数据会进入构建、所有菜单 Text 都引用该资源，并确认“开始游戏帮助设置制作名单”所需字形齐全；PlayMode 测试额外检查 Start/Help 的实际字体引用。
+
+```text
+StartMenu scene loads
+  -> LocalizedText reads English key
+  -> LocalizationTable returns Chinese text
+  -> scene-authored Noto Sans SC renders bundled glyphs
+  -> identical result in Editor, Windows Player and WebGL
+```

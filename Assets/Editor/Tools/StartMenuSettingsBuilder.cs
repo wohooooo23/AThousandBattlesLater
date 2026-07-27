@@ -20,6 +20,7 @@ using UnityEngine.UI;
 public static class StartMenuSettingsBuilder
 {
     private const string ScenePath = "Assets/Scenes/StartMenu.unity";
+    private const string ChineseFontPath = "Assets/Resources/Fonts/NotoSansSC-Regular.ttf";
     private static readonly Vector2 MenuButtonSize = new Vector2(410f, 100f);
 
     // A second centred row under START/HELP (which sit at (±400, -115)): SETTING left, CREDIT right.
@@ -96,6 +97,11 @@ public static class StartMenuSettingsBuilder
         data.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(controller);
 
+        // LegacyRuntime.ttf can borrow installed OS glyphs in the Windows Editor, but WebGL has no
+        // system-font fallback. Persist the bundled Noto font on every menu Text so translated
+        // labels such as START and HELP keep their Chinese glyphs in a browser build.
+        ApplyBundledFont(menuRoot);
+
         panel.SetActive(false);
         credits.SetActive(false);
         difficulty.SetActive(false);
@@ -144,7 +150,34 @@ public static class StartMenuSettingsBuilder
         if (controller.DifficultyPanel.transform.Find("Difficulty Back Button") == null)
             throw new InvalidOperationException("The difficulty panel needs Normal, Hard and Back buttons.");
 
-        Debug.Log("START_MENU_VALIDATE_OK.");
+        Font bundledFont = AssetDatabase.LoadAssetAtPath<Font>(ChineseFontPath);
+        if (bundledFont == null)
+            throw new InvalidOperationException("Missing bundled WebGL Chinese font at " + ChineseFontPath + ".");
+        TrueTypeFontImporter importer = AssetImporter.GetAtPath(ChineseFontPath) as TrueTypeFontImporter;
+        if (importer == null || !importer.includeFontData)
+            throw new InvalidOperationException("The Noto Sans SC font data must be included in WebGL builds.");
+        foreach (Text label in controller.GetComponentsInChildren<Text>(true))
+            if (label.font != bundledFont)
+                throw new InvalidOperationException(label.name + " still uses an OS-dependent legacy font.");
+        const string requiredMenuGlyphs = "开始游戏帮助设置制作名单";
+        foreach (char glyph in requiredMenuGlyphs)
+            if (!bundledFont.HasCharacter(glyph))
+                throw new InvalidOperationException("The bundled menu font is missing Chinese glyph: " + glyph);
+
+        Debug.Log("START_MENU_VALIDATE_OK: all legacy labels use bundled Noto Sans SC with WebGL font data.");
+    }
+
+    private static void ApplyBundledFont(Transform menuRoot)
+    {
+        Font bundledFont = AssetDatabase.LoadAssetAtPath<Font>(ChineseFontPath) ??
+            throw new InvalidOperationException("Missing bundled font at " + ChineseFontPath + ".");
+        foreach (Text label in menuRoot.GetComponentsInChildren<Text>(true))
+        {
+            if (label.font == bundledFont)
+                continue;
+            label.font = bundledFont;
+            EditorUtility.SetDirty(label);
+        }
     }
 
     /// <summary>

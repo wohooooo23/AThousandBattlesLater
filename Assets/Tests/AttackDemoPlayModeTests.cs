@@ -10,6 +10,15 @@ using UnityEngine.UI;
 
 public class AttackDemoPlayModeTests : InputTestFixture
 {
+    private static void SetRuntimeLanguage(string language)
+    {
+        System.Type localization = System.Type.GetType("Localization, Assembly-CSharp");
+        Assert.That(localization, Is.Not.Null, "The runtime localization service must be available.");
+        MethodInfo method = localization.GetMethod("SetLanguage", BindingFlags.Public | BindingFlags.Static);
+        object enumValue = System.Enum.Parse(method.GetParameters()[0].ParameterType, language);
+        method.Invoke(null, new[] { enumValue });
+    }
+
     private static MonoBehaviour FindBehaviour(string typeName, bool includeInactive = true)
     {
         FindObjectsInactive inactive = includeInactive ? FindObjectsInactive.Include : FindObjectsInactive.Exclude;
@@ -676,6 +685,10 @@ public class AttackDemoPlayModeTests : InputTestFixture
     [UnityTest]
     public IEnumerator StartMenuEnterLoadsTheOrcMap()
     {
+        // PlayerPrefs persists the language selected by manual play sessions. Pin this test to
+        // English before the scene is loaded, then explicitly exercise the Chinese WebGL path.
+        string savedLanguage = PlayerPrefs.GetInt("language", 0) == 1 ? "Chinese" : "English";
+        SetRuntimeLanguage("English");
         SceneManager.LoadScene("StartMenu");
         yield return null;
         yield return new WaitForFixedUpdate();
@@ -690,6 +703,8 @@ public class AttackDemoPlayModeTests : InputTestFixture
         UnityEngine.UI.Text title = GameObject.Find("Game Title").GetComponent<UnityEngine.UI.Text>();
         UnityEngine.UI.Text developer = GameObject.Find("Developer Name").GetComponent<UnityEngine.UI.Text>();
         UnityEngine.UI.Text startLabel = GameObject.Find("Start Label").GetComponent<UnityEngine.UI.Text>();
+        UnityEngine.UI.Text helpLabel = GameObject.Find("Help Label").GetComponent<UnityEngine.UI.Text>();
+        Font bundledChineseFont = Resources.Load<Font>("Fonts/NotoSansSC-Regular");
         Assert.That(startButton.GetComponent<UnityEngine.UI.Button>(), Is.Not.Null);
         Assert.That(title.text, Is.EqualTo("A THOUSAND BATTLES LATER"));
         Assert.That(title.text, Does.Not.Contain("\n"));
@@ -700,6 +715,17 @@ public class AttackDemoPlayModeTests : InputTestFixture
             "The developer credit must be filled in on the start menu.");
         Assert.That(startButton.GetComponent<UnityEngine.UI.Image>().color, Is.EqualTo(Color.white));
         Assert.That(startLabel.color, Is.EqualTo(Color.black));
+        Assert.That(bundledChineseFont, Is.Not.Null);
+        Assert.That(startLabel.font, Is.SameAs(bundledChineseFont));
+        Assert.That(helpLabel.font, Is.SameAs(bundledChineseFont));
+        Assert.That(bundledChineseFont.HasCharacter('\u5f00'), Is.True);
+        Assert.That(bundledChineseFont.HasCharacter('\u5e2e'), Is.True);
+        SetRuntimeLanguage("Chinese");
+        yield return null;
+        Assert.That(startLabel.text, Is.EqualTo("\u5f00\u59cb\u6e38\u620f"));
+        Assert.That(helpLabel.text, Is.EqualTo("\u5e2e\u52a9"));
+        SetRuntimeLanguage("English");
+        yield return null;
         Assert.That(GameObject.Find("Subtitle"), Is.Null);
         Assert.That(GameObject.Find("Start Hint"), Is.Null);
         Assert.That(GameObject.Find("Gold Block"), Is.Null);
@@ -712,6 +738,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         yield return null;
 
         Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("stage1_full"));
+        SetRuntimeLanguage(savedLanguage);
         // InputTestFixture removes the synthetic keyboard during teardown.
     }
 
