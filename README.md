@@ -163,9 +163,10 @@ Hero enters detection range
 4. **上捞**：`KingUppercutArcPattern` 以 King 为圆心生成 240° 白色优弧扇形。Boss 在进入 Cast 前锁定朝向，扇形主体朝面向侧、120° 缺口固定在背后，前摇期间不再跟随玩家；结算通过半径与夹角直接判断伤害。
 5. **下劈**：`KingGroundCleavePattern` 使用 Ground 层向下检测地面，将刚刚落地的位置提交为攻击后的新移动锚点，再生成面向侧 245×32 单位的白色巨型矩形，水平长度对应第二关竞技场约一半宽度；这样通用攻击收尾不会把 King 拉回空中位置。
 6. **攻击计数换位**：`EnemyAttackController` 在每次完整攻击结算后通知保存于 Boss 根对象的 `BossTeleport`。该组件现已抽象为两种换位模式，但保留原类名和资源 GUID，避免破坏第一关已有引用；`attacksPerRelocation` 是 Inspector 可调计数，默认每完成 3 次攻击触发一次换位，攻击冷却仍在换位结束后完整计算。
-7. **国王节点跳跃**：Evil Wizard 继续使用 `Blink`，King 则在 `stage2_full` 中直接保存同一组件的 `Jump` 配置。组件复用法师“排除当前位置最近节点、从其余 `EnemyNavigationNode` 随机选点”的逻辑，但不瞬间改坐标；它以 `Rigidbody2D.MovePosition` 沿正弦高度构成的抛物线运动到目标节点。`jumpDuration`（默认 0.8 秒）和 `jumpHeight`（默认 12）均可调，移动期间攻击状态持续锁定普通寻路，落点后再刷新 A* 路径，避免两个移动器争抢刚体。
-8. **保存式组件**：国王的换位组件、模式、计数、跳跃时长、高度和受击闪白引用都直接保存在场景中，不在运行时临时补挂；运行时只创建一次短生命周期的跳跃协程。旧 `WizardVisual`、旧巫师攻击和蓝色占位 Mesh 会被删除；`Entity_VFX.targetRenderer`、`BossStateMachine.animator`、`StoryDialogueController.bossVisualRoot` 都直接保存为 KingVisual 的对应组件。
-9. **可重复构筑与验证**：菜单 `Tools > Boss > Replace Stage2 Boss With King` 幂等重建第二关 King，并重新写入默认的 3 次攻击、0.8 秒、12 高度 Jump 配置；`Validate Stage2 Medieval King` 校验七套动画、三招、节点跳跃模式、可调数值、移动/生命/剧情/受击引用，并额外确认第一关仍是 Evil Wizard 的 Blink 模式。`BossRelocationPlayModeTests` 还会实际执行三次计数和一次跳跃，断言中途高度明显上升且最终准确落在目标节点。
+7. **复用跳跃追逐**：Evil Wizard 继续使用 `Blink`，King 则在 `stage2_full` 中直接保存同一换位组件的 `Jump` 配置。Jump 不再自行复制曲线或随机挑选落点，而是调用 `EnemyPlatformNavigator.RetreatHopRoutine`，共享原追逐系统的节点收集、连边限制、A*、`navigationSpeed`、`minimumHopDuration`、`jumpHeight` 与 `Rigidbody2D.MovePosition` 抛物线实现。
+8. **远离 Hero 选点与加速**：国王以当前位置最近节点为 A* 起点，遍历所有可达节点并选择距 Hero 最远者，只执行该撤离路径的下一段，因此不会跳过墙体或跨越不相连的平台。`jumpSpeedMultiplier` 是相对 Navigator 原始跳跃速度的可调倍率，场景默认 1.75；持续时间和最短跳跃时间都会按倍率缩短，弧线高度仍使用 Navigator 保存的 8，从视觉和物理上保持与原跳跃追逐一致。落地后重建普通追逐路径，移动期间攻击状态阻止 `FixedUpdate` 与显式跳跃争抢刚体。
+9. **保存式组件**：国王的换位组件、Jump 模式、攻击计数、速度倍率和受击闪白引用都直接保存在场景中，不在运行时临时补挂；运行时只创建一次短生命周期的跳跃协程。旧 `WizardVisual`、旧巫师攻击和蓝色占位 Mesh 会被删除；`Entity_VFX.targetRenderer`、`BossStateMachine.animator`、`StoryDialogueController.bossVisualRoot` 都直接保存为 KingVisual 的对应组件。
+10. **可重复构筑与验证**：菜单 `Tools > Boss > Replace Stage2 Boss With King` 幂等重建第二关 King，并重新写入默认的 3 次攻击与 1.75 倍 Jump 配置；`Validate Stage2 Medieval King` 校验七套动画、三招、节点跳跃模式、加速倍率、移动/生命/剧情/受击引用，并额外确认第一关仍是 Evil Wizard 的 Blink 模式。`BossRelocationPlayModeTests` 还会实际执行三次计数和一次跳跃，设置朝 Hero 与背离 Hero 两个候选节点，断言国王中途明显抬升并最终落在远离 Hero 的节点。
 
 运行路径：
 
@@ -177,7 +178,8 @@ Hero enters stage2 arena
   -> white telegraph -> geometric hit check -> white strike fade
   -> completed attack counter +1
   -> attacks 1/2: full cooldown
-  -> attack 3: pick another navigation node -> visible parabolic jump -> reset A* -> full cooldown
+  -> attack 3: find farthest reachable node from Hero -> take next A* step
+              -> 1.75x navigator parabolic hop -> reset pursuit A* -> full cooldown
   -> EnemyHealth death -> original story / victory / return flow
 ```
 

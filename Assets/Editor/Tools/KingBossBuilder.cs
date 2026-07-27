@@ -107,9 +107,8 @@ public static class KingBossBuilder
             throw new InvalidOperationException("King attack animation mapping or authored half-arena size is invalid.");
         BossTeleport relocation = boss.GetComponent<BossTeleport>();
         if (relocation == null || relocation.RelocationMode != BossRelocationMode.Jump ||
-            relocation.AttacksPerRelocation != 3 || ReadFloat(relocation, "jumpDuration") <= 0f ||
-            ReadFloat(relocation, "jumpHeight") <= 0f)
-            throw new InvalidOperationException("The stage2 King requires an every-three-attacks node jump.");
+            relocation.AttacksPerRelocation != 3 || ReadFloat(relocation, "jumpSpeedMultiplier") <= 1f)
+            throw new InvalidOperationException("The stage2 King requires an accelerated every-three-attacks pursuit hop.");
         EnemyHealth bossHealth = boss.GetComponent<EnemyHealth>();
         if (boss.GetComponent<EnemyPlatformNavigator>() == null || boss.GetComponent<EnemyAttackController>() == null ||
             bossHealth == null)
@@ -133,7 +132,7 @@ public static class KingBossBuilder
                 pattern is KingUppercutArcPattern || pattern is KingGroundCleavePattern))
             throw new InvalidOperationException("stage1 Evil Wizard was modified by the King build.");
 
-        Debug.Log("KING_BOSS_VALIDATE_OK: stage2 King frames, attacks, references and every-three-attacks node jump verified; stage1 unchanged.");
+        Debug.Log("KING_BOSS_VALIDATE_OK: stage2 King frames, attacks, references and accelerated retreat hop verified; stage1 unchanged.");
     }
 
     private static BossSpriteAnimator CreateKingVisual(GameObject boss, out SpriteRenderer renderer)
@@ -224,8 +223,7 @@ public static class KingBossBuilder
         BossTeleport relocation = boss.GetComponent<BossTeleport>() ?? boss.AddComponent<BossTeleport>();
         SetInt(relocation, "attacksPerRelocation", 3);
         SetInt(relocation, "relocationMode", (int)BossRelocationMode.Jump);
-        SetFloat(relocation, "jumpDuration", 0.8f);
-        SetFloat(relocation, "jumpHeight", 12f);
+        SetFloat(relocation, "jumpSpeedMultiplier", 1.75f);
     }
 
     private static void RemoveWizardVisuals(GameObject boss)

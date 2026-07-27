@@ -28377,8 +28377,7 @@ MonoBehaviour:
   flash: {fileID: 6118492944854572108}
   teleportDuration: 0.8
   relocateAt: 0.25
-  jumpDuration: 0.8
-  jumpHeight: 12
+  jumpSpeedMultiplier: 1.75
 --- !u!4 &7093356234712874282
 Transform:
   m_ObjectHideFlags: 0

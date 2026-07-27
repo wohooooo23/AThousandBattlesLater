@@ -18,21 +18,28 @@ public sealed class BossRelocationPlayModeTests
 
         GameObject startNode = new GameObject("Jump Test Start Node");
         GameObject destinationNode = new GameObject("Jump Test Destination Node");
+        GameObject distractorNode = new GameObject("Jump Test Distractor Node");
         startNode.AddComponent(nodeType);
         destinationNode.AddComponent(nodeType);
+        distractorNode.AddComponent(nodeType);
         startNode.transform.position = Vector3.zero;
         destinationNode.transform.position = new Vector3(10f, 0f, 0f);
+        distractorNode.transform.position = new Vector3(-10f, 0f, 0f);
+
+        GameObject pursuitTarget = new GameObject("Jump Test Hero Target");
+        pursuitTarget.transform.position = destinationNode.transform.position;
 
         GameObject boss = new GameObject("Jump Test King", typeof(Rigidbody2D));
-        boss.AddComponent(navigatorType);
+        MonoBehaviour navigator = boss.AddComponent(navigatorType) as MonoBehaviour;
+        Assert.That(navigator, Is.Not.Null);
+        SetField(navigator, "hero", pursuitTarget.transform);
         MonoBehaviour relocation = boss.AddComponent(relocationType) as MonoBehaviour;
         Assert.That(relocation, Is.Not.Null);
         Rigidbody2D body = boss.GetComponent<Rigidbody2D>();
         body.bodyType = RigidbodyType2D.Kinematic;
         SetField(relocation, "attacksPerRelocation", 3);
         SetField(relocation, "relocationMode", Enum.Parse(relocationModeType, "Jump"));
-        SetField(relocation, "jumpDuration", 0.2f);
-        SetField(relocation, "jumpHeight", 4f);
+        SetField(relocation, "jumpSpeedMultiplier", 2f);
 
         MethodInfo shouldRelocate = relocationType.GetMethod("ShouldRelocate");
         MethodInfo relocationRoutine = relocationType.GetMethod("RelocationRoutine");
@@ -48,12 +55,15 @@ public sealed class BossRelocationPlayModeTests
             "Jump mode must visibly rise instead of snapping to the destination node.");
 
         yield return new WaitForSeconds(0.16f);
-        Assert.That(boss.transform.position.x, Is.EqualTo(10f).Within(0.01f));
+        Assert.That(boss.transform.position.x, Is.EqualTo(-10f).Within(0.01f),
+            "The selected path step must move away from the Hero rather than toward it.");
         Assert.That(boss.transform.position.y, Is.EqualTo(0f).Within(0.01f));
 
         UnityEngine.Object.Destroy(boss);
         UnityEngine.Object.Destroy(startNode);
         UnityEngine.Object.Destroy(destinationNode);
+        UnityEngine.Object.Destroy(distractorNode);
+        UnityEngine.Object.Destroy(pursuitTarget);
     }
 
     private static void SetField(object target, string fieldName, object value)

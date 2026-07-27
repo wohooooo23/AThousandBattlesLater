@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -74,9 +75,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
 
         hopElapsed += Time.fixedDeltaTime;
         float progress = Mathf.Clamp01(hopElapsed / hopDuration);
-        Vector2 position = Vector2.Lerp(hopStart, hopTarget, progress);
-        position.y += Mathf.Sin(progress * Mathf.PI) * jumpHeight;
-        body.MovePosition(position);
+        body.MovePosition(EvaluateHopPosition(hopStart, hopTarget, progress));
 
         if (progress >= 1f)
         {
@@ -98,6 +97,65 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
             body.position = transform.position;
         RefreshNodes();
         RebuildPath();
+    }
+
+    /// <summary>
+    /// Uses the same navigation graph and hop motion as pursuit, but routes toward the reachable node
+    /// farthest from the Hero and performs only the first A* step. Used by the King after its attack
+    /// counter fires so relocation creates breathing room without crossing walls or skipping nodes.
+    /// </summary>
+    public IEnumerator RetreatHopRoutine(float speedMultiplier)
+    {
+        if (!PrepareExplicitHop())
+            yield break;
+
+        EnemyNavigationNode start = FindClosestNode(body.position);
+        if (start == null)
+            yield break;
+
+        List<EnemyNavigationNode> retreatPath = BuildRetreatPath(start, hero.position);
+        if (retreatPath.Count < 2)
+            yield break;
+
+        yield return HopToNodeRoutine(retreatPath[1].Position, speedMultiplier);
+    }
+
+    private bool PrepareExplicitHop()
+    {
+        if (body == null)
+            return false;
+        if (hero == null)
+        {
+            CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
+            hero = player != null ? player.transform : null;
+        }
+        if (hero == null)
+            return false;
+
+        CancelHop();
+        RefreshNodes();
+        return nodes.Count > 1;
+    }
+
+    private IEnumerator HopToNodeRoutine(Vector2 target, float speedMultiplier)
+    {
+        Vector2 start = body.position;
+        float multiplier = Mathf.Max(0.01f, speedMultiplier);
+        float duration = GetHopDuration(start, target, multiplier);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            yield return new WaitForFixedUpdate();
+            elapsed += Time.fixedDeltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            body.MovePosition(EvaluateHopPosition(start, target, progress));
+        }
+
+        transform.position = new Vector3(target.x, target.y, transform.position.z);
+        body.position = target;
+        Physics2D.SyncTransforms();
+        ResetNavigation();
     }
 
     private void RebuildPath()
@@ -193,13 +251,51 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         return closest;
     }
 
+    private List<EnemyNavigationNode> BuildRetreatPath(EnemyNavigationNode start, Vector2 threatPosition)
+    {
+        List<EnemyNavigationNode> bestPath = new List<EnemyNavigationNode>();
+        float farthestDistance = float.NegativeInfinity;
+        foreach (EnemyNavigationNode candidate in nodes)
+        {
+            if (candidate == start)
+                continue;
+
+            List<EnemyNavigationNode> candidatePath = new List<EnemyNavigationNode>();
+            FindPathAStar(start, candidate, candidatePath);
+            if (candidatePath.Count < 2)
+                continue;
+
+            float distance = (candidate.Position - threatPosition).sqrMagnitude;
+            if (distance > farthestDistance)
+            {
+                farthestDistance = distance;
+                bestPath = candidatePath;
+            }
+        }
+        return bestPath;
+    }
+
     private void BeginHop(Vector2 target)
     {
         hopStart = body.position;
         hopTarget = target;
         hopElapsed = 0f;
-        hopDuration = Mathf.Max(minimumHopDuration, Vector2.Distance(hopStart, hopTarget) / navigationSpeed);
+        hopDuration = GetHopDuration(hopStart, hopTarget, 1f);
         hopping = true;
+    }
+
+    private float GetHopDuration(Vector2 start, Vector2 target, float speedMultiplier)
+    {
+        float multiplier = Mathf.Max(0.01f, speedMultiplier);
+        return Mathf.Max(minimumHopDuration / multiplier,
+            Vector2.Distance(start, target) / (Mathf.Max(0.01f, navigationSpeed) * multiplier));
+    }
+
+    private Vector2 EvaluateHopPosition(Vector2 start, Vector2 target, float progress)
+    {
+        Vector2 position = Vector2.Lerp(start, target, progress);
+        position.y += Mathf.Sin(progress * Mathf.PI) * jumpHeight;
+        return position;
     }
 
     private void CancelHop()
