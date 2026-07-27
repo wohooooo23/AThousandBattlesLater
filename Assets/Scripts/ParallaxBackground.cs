@@ -37,6 +37,7 @@ public sealed class ParallaxBackground : MonoBehaviour
         Vector2 cameraPosition = mainCamera.transform.position;
         Vector2 displacement = cameraPosition - lastCameraPosition;
         lastCameraPosition = cameraPosition;
+        float cameraHalfHeight = mainCamera.orthographicSize;
         float cameraHalfWidth = mainCamera.orthographicSize * mainCamera.aspect;
 
         if (backgroundLayers == null)
@@ -47,6 +48,7 @@ public sealed class ParallaxBackground : MonoBehaviour
                 continue;
             layer.Move(displacement.x, displacement.y);
             layer.LoopBackground(cameraPosition.x - cameraHalfWidth, cameraPosition.x + cameraHalfWidth);
+            layer.KeepVerticalCoverage(cameraPosition.y - cameraHalfHeight, cameraPosition.y + cameraHalfHeight);
         }
     }
 }

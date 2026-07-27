@@ -27,7 +27,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 8, y: 8, z: 8}
+  m_LocalScale: {x: 12, y: 12, z: 12}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 605481625061844048}
@@ -121,7 +121,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 8, y: 8, z: 8}
+  m_LocalScale: {x: 12, y: 12, z: 12}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6279613684452156700}
@@ -399,7 +399,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 8, y: 8, z: 8}
+  m_LocalScale: {x: 12, y: 12, z: 12}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7180976780685830602}
@@ -702,14 +702,17 @@ MonoBehaviour:
     parallaxMultiplier: 1
     verticalMultiplier: 1
     imageWidthOffset: 1
+    keepVerticalCoverage: 1
   - background: {fileID: 4659152583155253186}
     parallaxMultiplier: 0.92
     verticalMultiplier: 0.98
     imageWidthOffset: 1
+    keepVerticalCoverage: 1
   - background: {fileID: 8102542467581699948}
     parallaxMultiplier: 0.78
     verticalMultiplier: 0.95
     imageWidthOffset: 1
+    keepVerticalCoverage: 1
 --- !u!1 &6994569199607006065
 GameObject:
   m_ObjectHideFlags: 0

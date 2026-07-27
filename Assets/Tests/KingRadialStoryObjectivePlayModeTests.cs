@@ -41,6 +41,9 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         Assert.That(sky, Is.Not.Null);
         Assert.That(middle, Is.Not.Null);
         Assert.That(foreground, Is.Not.Null);
+        Assert.That(sky.localScale.x, Is.EqualTo(12f).Within(0.01f));
+        Assert.That(middle.localScale.x, Is.EqualTo(12f).Within(0.01f));
+        Assert.That(foreground.localScale.x, Is.EqualTo(12f).Within(0.01f));
 
         Camera explorationCamera = Camera.main;
         Assert.That(explorationCamera, Is.Not.Null);
@@ -75,6 +78,19 @@ public sealed class KingRadialStoryObjectivePlayModeTests
             Is.EqualTo(displacement.x + switchDisplacement.x).Within(0.01f));
         Assert.That(sky.position.y - skyStart.y,
             Is.EqualTo(displacement.y + switchDisplacement.y).Within(0.01f));
+
+        Transform[] parallaxLayers = { sky, middle, foreground };
+        AssertBackgroundCoversCamera(bossCamera, parallaxLayers);
+        foreach (Vector3 edgeProbe in new[]
+        {
+            explorationPosition + new Vector3(1200f, 500f, 0f),
+            explorationPosition + new Vector3(-1200f, -500f, 0f)
+        })
+        {
+            bossCamera.transform.position = edgeProbe;
+            lateUpdate.Invoke(background, null);
+            AssertBackgroundCoversCamera(bossCamera, parallaxLayers);
+        }
     }
 
     [UnityTest]
@@ -381,6 +397,22 @@ public sealed class KingRadialStoryObjectivePlayModeTests
     private static MonoBehaviour FindBehaviour(string typeName) =>
         Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include)
             .Single(component => component != null && component.GetType().Name == typeName);
+
+    private static void AssertBackgroundCoversCamera(Camera camera, IEnumerable<Transform> layers)
+    {
+        float halfWidth = camera.orthographicSize * camera.aspect;
+        float halfHeight = camera.orthographicSize;
+        foreach (Transform layer in layers)
+        {
+            Bounds coverage = layer.GetComponent<SpriteRenderer>().bounds;
+            foreach (SpriteRenderer renderer in layer.GetComponentsInChildren<SpriteRenderer>())
+                coverage.Encapsulate(renderer.bounds);
+            Assert.That(coverage.min.x, Is.LessThanOrEqualTo(camera.transform.position.x - halfWidth));
+            Assert.That(coverage.max.x, Is.GreaterThanOrEqualTo(camera.transform.position.x + halfWidth));
+            Assert.That(coverage.min.y, Is.LessThanOrEqualTo(camera.transform.position.y - halfHeight));
+            Assert.That(coverage.max.y, Is.GreaterThanOrEqualTo(camera.transform.position.y + halfHeight));
+        }
+    }
 
     private static System.Type FindType(string typeName) => System.AppDomain.CurrentDomain.GetAssemblies()
         .Select(assembly => assembly.GetType(typeName, false)).First(type => type != null);

@@ -16,7 +16,9 @@ public static class BackgroundBuilder
     private const string SceneObjectName = "Parallax Background";
     private const int BackgroundLayer = 8;
     private const float Stage2PixelsPerUnit = 32f;
-    private const float Stage2LayerScale = 8f;
+    // Stage 2 has a taller boss camera than stage 1. This preserves the source aspect ratio
+    // while leaving enough vertical overscan for the complete exploration route.
+    private const float Stage2LayerScale = 12f;
     private static readonly string[] Stage2TexturePaths =
     {
         "Assets/Textures/background 2/1.png",
@@ -74,8 +76,30 @@ public static class BackgroundBuilder
         Debug.Log("STAGE2_PARALLAX_BACKGROUND_OK: three authored layers follow the active gameplay camera.");
     }
 
+    [MenuItem("Tools/Background/Rebuild Stage2 Parallax Prefab Only")]
+    public static void BuildStage2PrefabOnly()
+    {
+        ConfigureStage2TextureImports();
+        BuildStage2Prefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        ValidateStage2Prefab();
+        Debug.Log("STAGE2_PARALLAX_PREFAB_OK: rebuilt the seamless prefab without rewriting the scene.");
+    }
+
     [MenuItem("Tools/Background/Validate Stage2 Parallax Background")]
     public static void ValidateStage2Background()
+    {
+        GameObject prefab = ValidateStage2Prefab();
+
+        Scene scene = EditorSceneManager.OpenScene(Stage2ScenePath, OpenSceneMode.Single);
+        ParallaxBackground[] instances = FindInScene<ParallaxBackground>(scene);
+        if (instances.Length != 1 || instances[0].name != SceneObjectName ||
+            PrefabUtility.GetCorrespondingObjectFromSource(instances[0].gameObject) != prefab)
+            throw new InvalidOperationException("stage2_full must contain one Stage2Background prefab instance.");
+    }
+
+    private static GameObject ValidateStage2Prefab()
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Stage2PrefabPath);
         ParallaxBackground parallax = prefab != null ? prefab.GetComponent<ParallaxBackground>() : null;
@@ -92,12 +116,10 @@ public static class BackgroundBuilder
         if (renderers.Any(renderer => renderer.gameObject.layer != BackgroundLayer ||
                                      renderer.sortingLayerName != "Default"))
             throw new InvalidOperationException("Stage2 background renderers use an invalid layer or sorting layer.");
-
-        Scene scene = EditorSceneManager.OpenScene(Stage2ScenePath, OpenSceneMode.Single);
-        ParallaxBackground[] instances = FindInScene<ParallaxBackground>(scene);
-        if (instances.Length != 1 || instances[0].name != SceneObjectName ||
-            PrefabUtility.GetCorrespondingObjectFromSource(instances[0].gameObject) != prefab)
-            throw new InvalidOperationException("stage2_full must contain one Stage2Background prefab instance.");
+        if (renderers.Where(renderer => renderer.transform.parent == prefab.transform)
+            .Any(renderer => !Mathf.Approximately(renderer.transform.localScale.x, Stage2LayerScale)))
+            throw new InvalidOperationException("Stage2 background layers do not have enough camera overscan.");
+        return prefab;
     }
 
     [MenuItem("Tools/Background/Validate Parallax Background")]
@@ -204,9 +226,9 @@ public static class BackgroundBuilder
             SerializedObject data = new SerializedObject(root.GetComponent<ParallaxBackground>());
             SerializedProperty layers = data.FindProperty("backgroundLayers");
             layers.arraySize = 3;
-            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(0), sky, 1f, 1f);
-            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(1), middle, 0.92f, 0.98f);
-            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(2), foreground, 0.78f, 0.95f);
+            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(0), sky, 1f, 1f, true);
+            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(1), middle, 0.92f, 0.98f, true);
+            ConfigureParallaxEntry(layers.GetArrayElementAtIndex(2), foreground, 0.78f, 0.95f, true);
             data.ApplyModifiedPropertiesWithoutUndo();
 
             PrefabUtility.SaveAsPrefabAsset(root, Stage2PrefabPath);
@@ -253,12 +275,13 @@ public static class BackgroundBuilder
     }
 
     private static void ConfigureParallaxEntry(SerializedProperty entry, Transform target,
-        float horizontal, float vertical)
+        float horizontal, float vertical, bool keepVerticalCoverage = false)
     {
         entry.FindPropertyRelative("background").objectReferenceValue = target;
         entry.FindPropertyRelative("parallaxMultiplier").floatValue = horizontal;
         entry.FindPropertyRelative("verticalMultiplier").floatValue = vertical;
         entry.FindPropertyRelative("imageWidthOffset").floatValue = 1f;
+        entry.FindPropertyRelative("keepVerticalCoverage").boolValue = keepVerticalCoverage;
     }
 
     private static void ConfigureLayer(Transform layer, Vector3 position, Vector3 scale, int order)
