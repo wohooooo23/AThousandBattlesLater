@@ -14,7 +14,9 @@ public enum StoryBeat
     ChestHintDoubleJump,
     ChestHintDash,
     /// <summary>Backpack and forge keys, folded into whichever ability prompt fires first.</summary>
-    EquipmentTutorial
+    EquipmentTutorial,
+    /// <summary>The time-travel arrival shown only when the campaign reaches the second chapter.</summary>
+    Stage2Opening
 }
 
 /// <summary>

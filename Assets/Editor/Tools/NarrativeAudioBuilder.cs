@@ -40,6 +40,9 @@ public static class NarrativeAudioBuilder
         }
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+        // Full campaign chapters own newer, scene-specific dialogue and illustrated cutscenes.
+        // Re-apply them after the legacy dialogue/BGM repair so this tool cannot restore old text.
+        StoryChapterBuilder.Build();
         ValidateAll();
         Debug.Log("NARRATIVE_AUDIO_REPAIR_OK: world dialogue and scene-authored BGM players saved in gameplay scenes.");
     }
@@ -77,15 +80,21 @@ public static class NarrativeAudioBuilder
 
             StoryDialogueController story = FindInScene<StoryDialogueController>(scene).SingleOrDefault();
             bool isBossScene = boss != null && boss.GetComponent<EnemyHealth>() != null;
-            if (story == null || story.OpeningLineCount != (isBossScene ? 0 : 5) ||
-                story.EncounterLineCount != (isBossScene ? 0 : 3) ||
-                story.BossIntroductionLineCount != (isBossScene ? 6 : 0) ||
-                story.BossVictoryLineCount != (isBossScene ? 6 : 0))
+            bool fullChapter = scene.name == "stage1_full";
+            int openingCount = fullChapter || !isBossScene ? 5 : 0;
+            int encounterCount = fullChapter || !isBossScene ? 3 : 0;
+            int introductionCount = isBossScene ? 6 : 0;
+            int victoryCount = fullChapter ? 7 : isBossScene ? 6 : 0;
+            if (story == null || story.OpeningLineCount != openingCount ||
+                story.EncounterLineCount != encounterCount ||
+                story.BossIntroductionLineCount != introductionCount ||
+                story.BossVictoryLineCount != victoryCount)
                 throw new InvalidOperationException(scenePath + " is missing its complete translated story sequence.");
             if (!isBossScene && FindInScene<StoryEncounterTrigger2D>(scene).Length != 1)
                 throw new InvalidOperationException(scenePath + " needs one saved first-encounter story trigger.");
         }
-        Debug.Log("NARRATIVE_AUDIO_VALIDATE_OK: translated story, triggers, dialogue visuals and BGM components are valid.");
+        StoryChapterBuilder.Validate();
+        Debug.Log("NARRATIVE_AUDIO_VALIDATE_OK: translated story, comics, triggers, dialogue visuals and BGM components are valid.");
     }
 
     private static void EnsurePrefabs()

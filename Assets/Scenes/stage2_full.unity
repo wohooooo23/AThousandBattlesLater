@@ -3865,6 +3865,114 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!1001 &510808012
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 768411103319174919, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_Name
+      value: Story Comic Panel
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+--- !u!114 &510808013 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2663190564896593318, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+  m_PrefabInstance: {fileID: 510808012}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 061650977898fd943aac487090343b97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StoryComicPanel
 --- !u!1 &528464120
 GameObject:
   m_ObjectHideFlags: 0
@@ -18241,51 +18349,72 @@ MonoBehaviour:
   bossVisualRoot: {fileID: 769482755}
   fadeOverlay: {fileID: 1388268344}
   victoryOverlay: {fileID: 1687958375}
+  comicPanel: {fileID: 510808013}
+  openingComic: {fileID: 0}
+  bossIntroductionComic: {fileID: 2800000, guid: 8c48df8e7e2a7064692f7941ae537a0f, type: 3}
+  bossIntroductionComicAfterLine: 6
+  openingProgressBeat: 8
+  keepLastVictoryLineVisible: 0
   openingLines:
   - speaker: 0
-    text: Decades have passed... and now I have returned.
+    text: "This rune... it brought me back to\u2014"
   - speaker: 0
-    text: Since that day, I have lost count of the battles I have fought.
+    text: The wizard's castle, on the very day my lord died.
   - speaker: 0
-    text: Even on the quietest nights, I have never known a moment's rest.
+    text: Then I can finally see it with my own eyes...
   - speaker: 0
-    text: Today, I have finally made my choice.
-  - speaker: 0
-    text: I will put the past to rest.
-  firstEncounterLines:
-  - speaker: 0
-    text: These monsters again? How familiar.
-  - speaker: 0
-    text: "Time has rusted my blade\u2014and weathered its wielder."
-  - speaker: 0
-    text: I should find equipment worthy of the road ahead.
+    text: Whoever killed my lord will repay that blood a hundredfold.
+  firstEncounterLines: []
   bossIntroductionLines:
-  - speaker: 1
-    text: You...?
   - speaker: 0
-    text: Me. I have come to settle an old debt.
-  - speaker: 1
-    text: So you finally came. You never could let go of what happened.
-  - speaker: 1
-    text: Your lord met a truly wretched end.
+    text: My lord!
   - speaker: 0
-    text: Do not dare speak of him!
+    text: I was fighting elsewhere that day. I could not save you.
+  - speaker: 0
+    text: This time, I will keep my oath. I will defend you with my life!
   - speaker: 1
-    text: Ha! Whether I have the right is yours to prove in battle!
+    text: He is unworthy of your oath.
+  - speaker: 0
+    text: "What? Why are you here\u2014alive?"
+  - speaker: 1
+    text: First, see the truth for yourself.
+  - speaker: 0
+    text: What... my lord was behind it all?
+  - speaker: 0
+    text: But why should I believe you?
+  - speaker: 1
+    text: You will, once you see your lord with your own eyes.
+  - speaker: 1
+    text: I forged the crimson and verdant runes. The green rune can return you to
+      the future.
+  - speaker: 1
+    text: My part is finished. How amusing...
+  - speaker: 2
+    text: On your next raid, take this village. I will leave enough 'food' for you.
+  - speaker: 3
+    text: Graaagh!
+  - speaker: 2
+    text: In return, you will bring me the gold we agreed upon.
+  - speaker: 2
+    text: Wait. Who is there?
+  - speaker: 0
+    text: What is this? Why is my lord bargaining with the enemy?
+  - speaker: 0
+    text: Was the man I followed nothing but a hypocrite?
+  - speaker: 0
+    text: What have I done...?
+  - speaker: 0
+    text: "But it is not too late. I will still honor my oath\u2014"
+  - speaker: 0
+    text: I will defend justice!
   bossVictoryLines:
-  - speaker: 1
-    text: You have grown stronger. All those years of battle...
   - speaker: 0
-    text: You did not kill my lord! Who are you?
-  - speaker: 1
-    text: ...and wiser, too. Your eyes have sharpened.
-  - speaker: 1
-    text: You are right. It was not me. Take the crimson rune you found and seek
-      the truth.
+    text: To think I killed my own lord to keep the very oath I made to him...
   - speaker: 0
-    text: ...
+    text: At last, everything I came here to do is done.
   - speaker: 0
-    text: Then today, at last, the truth will be revealed.
+    text: 'I will return to the future with one vow intact: justice, no matter the
+      cost.'
   movementPrompt: "WASD / Arrow Keys \u2014 Move"
   combatPrompt: Press J to attack. Press I to throw a kunai.
   chestPrompt: Press F to open treasure chests.
@@ -28526,3 +28655,4 @@ SceneRoots:
   - {fileID: 1046162213}
   - {fileID: 1597042222}
   - {fileID: 528464121}
+  - {fileID: 510808012}

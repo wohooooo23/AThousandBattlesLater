@@ -3843,6 +3843,114 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!1001 &510808012
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 768411103319174919, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_Name
+      value: Story Comic Panel
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111638901088319142, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+--- !u!114 &510808013 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2663190564896593318, guid: 0b489e5153101df48ae4707a302d2815, type: 3}
+  m_PrefabInstance: {fileID: 510808012}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 061650977898fd943aac487090343b97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StoryComicPanel
 --- !u!1 &528464120
 GameObject:
   m_ObjectHideFlags: 0
@@ -18552,20 +18660,26 @@ MonoBehaviour:
   bossVisualRoot: {fileID: 120025746}
   fadeOverlay: {fileID: 1388268344}
   victoryOverlay: {fileID: 1687958375}
+  comicPanel: {fileID: 510808013}
+  openingComic: {fileID: 2800000, guid: a4447a15b15d67a4689cb42add5acb89, type: 3}
+  bossIntroductionComic: {fileID: 0}
+  bossIntroductionComicAfterLine: -1
+  openingProgressBeat: 0
+  keepLastVictoryLineVisible: 1
   openingLines:
   - speaker: 0
     text: Decades have passed... and now I have returned.
   - speaker: 0
     text: Since that day, I have lost count of the battles I have fought.
   - speaker: 0
-    text: Even on the quietest nights, I have never known a moment's rest.
+    text: Even on the quietest nights, my heart has never known a moment's rest.
   - speaker: 0
-    text: Today, I have finally made my choice.
+    text: "Today, I have finally made my choice\u2014"
   - speaker: 0
-    text: I will put the past to rest.
+    text: I swear to defend justice and demand the truth for my lord!
   firstEncounterLines:
   - speaker: 0
-    text: These monsters again? How familiar.
+    text: These monsters again... It feels all too familiar.
   - speaker: 0
     text: "Time has rusted my blade\u2014and weathered its wielder."
   - speaker: 0
@@ -18574,29 +18688,32 @@ MonoBehaviour:
   - speaker: 1
     text: You...?
   - speaker: 0
-    text: Me. I have come to settle an old debt.
+    text: Yes. I have come to demand the truth.
   - speaker: 1
-    text: So you finally came. You never could let go of what happened.
+    text: So you finally came. You never could let go of that day.
   - speaker: 1
-    text: Your lord met a truly wretched end.
+    text: Your precious lord met a truly wretched end.
   - speaker: 0
     text: Do not dare speak of him!
   - speaker: 1
-    text: Ha! Whether I have the right is yours to prove in battle!
+    text: Ha! If you would silence me, prove your right in battle!
   bossVictoryLines:
   - speaker: 1
-    text: You have grown stronger. All those years of battle...
+    text: You have grown stronger through all those years of battle...
   - speaker: 0
-    text: You did not kill my lord! Who are you?
+    text: That technique... You were not the one who killed my lord! What happened
+      that day?
   - speaker: 1
-    text: ...and wiser, too. Your eyes have sharpened.
+    text: And wiser, too. Age has sharpened your eyes.
   - speaker: 1
-    text: You are right. It was not me. Take the crimson rune you found and seek
-      the truth.
+    text: "You are right. It was not me. Take the crimson rune you found\u2014and
+      seek the truth yourself."
   - speaker: 0
     text: ...
   - speaker: 0
     text: Then today, at last, the truth will be revealed.
+  - speaker: 0
+    text: Wait... why is the crimson rune glowing?
   movementPrompt: "WASD / Arrow Keys \u2014 Move"
   combatPrompt: Press J to attack. Press I to throw a kunai.
   chestPrompt: Press F to open treasure chests.
@@ -28991,3 +29108,4 @@ SceneRoots:
   - {fileID: 1046162213}
   - {fileID: 1597042222}
   - {fileID: 528464121}
+  - {fileID: 510808012}

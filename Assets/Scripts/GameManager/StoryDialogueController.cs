@@ -12,7 +12,9 @@ public enum StorySceneMode
 public enum StorySpeaker
 {
     Samurai,
-    EvilWizard
+    EvilWizard,
+    King,
+    Monster
 }
 
 [Serializable]
@@ -35,6 +37,14 @@ public sealed class StoryDialogueController : MonoBehaviour
     [SerializeField] private Transform bossVisualRoot;
     [SerializeField] private CanvasGroup fadeOverlay;
     [SerializeField] private GameObject victoryOverlay;
+    [Header("Illustrated story")]
+    [SerializeField] private StoryComicPanel comicPanel;
+    [SerializeField] private Texture2D openingComic;
+    [SerializeField] private Texture2D bossIntroductionComic;
+    [Tooltip("Show the Boss comic after this many introduction lines; -1 disables it.")]
+    [SerializeField] private int bossIntroductionComicAfterLine = -1;
+    [SerializeField] private StoryBeat openingProgressBeat = StoryBeat.Opening;
+    [SerializeField] private bool keepLastVictoryLineVisible;
     [SerializeField] private StoryDialogueLine[] openingLines;
     [SerializeField] private StoryDialogueLine[] firstEncounterLines;
     [SerializeField] private StoryDialogueLine[] bossIntroductionLines;
@@ -71,6 +81,11 @@ public sealed class StoryDialogueController : MonoBehaviour
     public int BossVictoryLineCount => bossVictoryLines != null ? bossVictoryLines.Length : 0;
     public bool IsPlaying => isPlaying;
     public CanvasGroup FadeOverlay => fadeOverlay;
+    public StoryComicPanel ComicPanel => comicPanel;
+    public Texture2D OpeningComic => openingComic;
+    public Texture2D BossIntroductionComic => bossIntroductionComic;
+    public int BossIntroductionComicAfterLine => bossIntroductionComicAfterLine;
+    public StoryBeat OpeningProgressBeat => openingProgressBeat;
 
     /// <summary>
     /// True while a time-stopping dialogue holds the game paused. UIManager reads it to refuse
@@ -94,6 +109,7 @@ public sealed class StoryDialogueController : MonoBehaviour
 
         heroBubble.Hide();
         bossBubble?.Hide();
+        comicPanel?.Hide();
         if (fadeOverlay != null)
         {
             fadeOverlay.blocksRaycasts = false;
@@ -124,7 +140,8 @@ public sealed class StoryDialogueController : MonoBehaviour
     public bool PlayFirstEncounter()
     {
         if (sceneMode != StorySceneMode.Exploration || encounterPlayed ||
-            StoryProgress.IsPassed(StoryBeat.FirstEncounter))
+            StoryProgress.IsPassed(StoryBeat.FirstEncounter) || firstEncounterLines == null ||
+            firstEncounterLines.Length == 0)
             return false;
         encounterPlayed = true;
         StartCoroutine(PlayEncounterSequence());
@@ -205,17 +222,24 @@ public sealed class StoryDialogueController : MonoBehaviour
         // Awake starts Exploration fully blacked out and this sequence is the only thing that lifts
         // the overlay. Later stages skip the repeated opening dialogue but still fade in from the
         // black frame carried across the scene load.
-        bool openingWasAlreadyPlayed = StoryProgress.IsPassed(StoryBeat.Opening);
+        bool openingWasAlreadyPlayed = StoryProgress.IsPassed(openingProgressBeat);
         isPlaying = true;
         AcquirePause();
-        yield return FadeFromBlack(1.35f);
         if (!openingWasAlreadyPlayed)
+        {
+            yield return PlayComic(openingComic);
+            yield return FadeFromBlack(1.35f);
             yield return PlayLines(openingLines);
+        }
+        else
+        {
+            yield return FadeFromBlack(1.35f);
+        }
         ReleasePause();
         isPlaying = false;
         if (openingWasAlreadyPlayed)
             yield break;
-        StoryProgress.MarkPassed(StoryBeat.Opening);
+        StoryProgress.MarkPassed(openingProgressBeat);
         heroBubble.Show(movementPrompt, 4.5f);
     }
 
@@ -238,7 +262,13 @@ public sealed class StoryDialogueController : MonoBehaviour
             yield return null;
         isPlaying = true;
         AcquirePause();
-        yield return PlayLines(bossIntroductionLines);
+        for (int i = 0; i < bossIntroductionLines.Length; i++)
+        {
+            ShowLine(bossIntroductionLines[i]);
+            yield return WaitForAdvance();
+            if (i + 1 == bossIntroductionComicAfterLine)
+                yield return PlayComic(bossIntroductionComic);
+        }
         heroBubble.Hide();
         bossBubble.Hide();
         ReleasePause();
@@ -258,8 +288,11 @@ public sealed class StoryDialogueController : MonoBehaviour
             ShowLine(bossVictoryLines[i]);
             yield return WaitForAdvance();
         }
-        heroBubble.Hide();
-        bossBubble.Hide();
+        if (showFinalVictoryOverlay || !keepLastVictoryLineVisible)
+        {
+            heroBubble.Hide();
+            bossBubble.Hide();
+        }
         victoryOverlay.SetActive(showFinalVictoryOverlay);
         isPlaying = false;
         // Keep the final screen paused. EnemyHealth either fades to the next stage with unscaled
@@ -277,9 +310,24 @@ public sealed class StoryDialogueController : MonoBehaviour
         }
     }
 
+    private IEnumerator PlayComic(Texture2D comic)
+    {
+        if (comic == null || comicPanel == null)
+            yield break;
+
+        heroBubble.Hide();
+        bossBubble?.Hide();
+        for (int panel = 0; panel < 4; panel++)
+        {
+            comicPanel.ShowPanel(comic, panel);
+            yield return WaitForAdvance();
+        }
+        comicPanel.Hide();
+    }
+
     private void ShowLine(StoryDialogueLine line)
     {
-        if (line.speaker == StorySpeaker.EvilWizard && bossBubble != null)
+        if (line.speaker != StorySpeaker.Samurai && bossBubble != null)
         {
             heroBubble.Hide();
             bossBubble.Show(line.text, 0f, true);
