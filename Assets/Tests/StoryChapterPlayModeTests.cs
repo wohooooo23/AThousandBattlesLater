@@ -34,6 +34,9 @@ public sealed class StoryChapterPlayModeTests
         Assert.That(panel, Is.Not.Null);
         Assert.That(panel.GetComponent<Canvas>().renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
         Assert.That(panel.GetComponent<Canvas>().sortingOrder, Is.EqualTo(1100));
+        RectTransform comicRect = panel.GetComponentInChildren<UnityEngine.UI.RawImage>(true).rectTransform;
+        Assert.That(comicRect.sizeDelta, Is.EqualTo(new Vector2(900f, 900f)),
+            "Square source panels must not be stretched by the comic UI.");
         MethodInfo showPanel = panel.GetType().GetMethod("ShowPanel");
         showPanel.Invoke(panel, new object[] { prologue, 0 });
         Assert.That(Property<bool>(panel, "IsVisible"), Is.True);

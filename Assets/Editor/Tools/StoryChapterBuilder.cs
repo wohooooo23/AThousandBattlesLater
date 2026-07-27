@@ -138,7 +138,9 @@ public static class StoryChapterBuilder
             GameObject frame = Child(root.transform, "Comic Panel", typeof(RawImage), typeof(Outline));
             RectTransform frameRect = (RectTransform)frame.transform;
             frameRect.anchorMin = frameRect.anchorMax = frameRect.pivot = new Vector2(0.5f, 0.5f);
-            frameRect.sizeDelta = new Vector2(1600f, 900f);
+            // Each source sheet is a square 2x2 grid, so every cropped quadrant is square too.
+            // Keep the authored UI square to avoid stretching the coarse pixels horizontally.
+            frameRect.sizeDelta = new Vector2(900f, 900f);
             frameRect.anchoredPosition = Vector2.zero;
             RawImage rawImage = frame.GetComponent<RawImage>();
             rawImage.color = Color.white;
@@ -227,7 +229,8 @@ public static class StoryChapterBuilder
         RawImage raw = panels[0].GetComponentInChildren<RawImage>(true);
         TMP_Text hint = panels[0].GetComponentInChildren<TMP_Text>(true);
         if (canvas == null || canvas.renderMode != RenderMode.ScreenSpaceOverlay || canvas.sortingOrder != 1100 ||
-            raw == null || hint == null || hint.text != "Press Enter to continue")
+            raw == null || ((RectTransform)raw.transform).sizeDelta != new Vector2(900f, 900f) ||
+            hint == null || hint.text != "Press Enter to continue")
             throw new InvalidOperationException(path + " comic presentation prefab is incomplete.");
     }
 

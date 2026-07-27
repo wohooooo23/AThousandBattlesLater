@@ -4,9 +4,9 @@
 
 正式流程现在用两张带英文人物对白框的像素风四格漫画和两组独立的章节台词，完整交代武士对国王的敬仰、国王牺牲村落牟利的真相，以及“未来武士刺杀国王—原时间线武士因此复仇”的时间闭环。中文大纲只作为创作源，游戏内正文全部采用润色后的英文。
 
-1. **序章漫画**：`Assets/Resources/Story/Comic_Prologue.png` 复用 Hero、Medieval King、Evil Wizard 和 Orc 的轮廓与配色。四格依次表现国王以保护平民为号召、武士宣誓效忠、战场上传来国王遇刺消息、老年武士来到巫师城堡复仇；每格带一条简短英文对白，建立武士眼中的“正义国王”。
-2. **真相漫画**：`Assets/Resources/Story/Comic_Betrayal.png` 表现国王以村落和人命换取怪物金币、村落遭到牺牲、穿越而来的武士斩杀国王、原时间线武士在远方获知噩耗并立誓复仇。巫师只在暗处见证交易，不被画成国王的同谋。
-3. **逐格播放**：两张素材都是 2×2 的 16:9 漫画纹理。场景保存的 `StoryComicPanel` 使用 `RawImage.uvRect` 按“左上—右上—左下—右下”依次裁出四格；每按一次 Enter 才进入下一格。单格会放大到 1600×900，不会把完整四格压缩到难以阅读。
+1. **序章漫画**：`Assets/Resources/Story/Comic_Prologue.png` 复用 Hero、Medieval King、Evil Wizard 和 Orc 的轮廓与配色，并改为参考图所示的大颗粒、低内部像素分辨率画风。四个严格正方形分格依次表现国王在重伤武士与平民前迎战怪物、武士宣誓效忠、尸横遍野的战场上传来国王遇刺消息、老年武士来到巫师城堡坚守誓言；每格带一条简短英文对白。
+2. **真相漫画**：`Assets/Resources/Story/Comic_Betrayal.png` 的四个正方形分格表现国王把领地划给巫师与怪物、国王守着金币而远处村民受难、未来武士亲手斩杀国王、原时间线武士跪在国王身旁而未来武士携绿色符文光藏在阴影里。具体分镜以仓库根目录的 `comic.txt` 为创作来源。
+3. **逐格播放**：两张素材都是正方形的 2×2 漫画纹理，每个象限也是严格正方形。场景保存的 `StoryComicPanel` 使用 `RawImage.uvRect` 按“左上—右上—左下—右下”依次裁出四格；每按一次 Enter 才进入下一格。单格以 900×900 原比例显示，不会被横向拉伸或压缩到难以阅读。
 4. **保存式 UI**：`Assets/Prefab/StoryComicPanel.prefab` 保存 Screen Space Overlay Canvas、黑色遮罩、漫画 RawImage、白色描边和 `Press Enter to continue` 提示。两关各保存一个 prefab 实例，并由 `StoryDialogueController.comicPanel` 直接引用；运行时不临时创建任何核心 Canvas 或 Component。
 5. **第一关插入点**：首次进入 `stage1_full` 时，序章漫画显示在黑幕之上；四格播放完成后才淡入地图，再播放五句武士独白。遭遇怪物、进入巫师 Boss 房和击败巫师后的台词均按新大纲重写。最后一句 `Wait... why is the crimson rune glowing?` 在第一关切换黑幕开始时保持可见，直到第二关加载。
 6. **第二关插入点**：`StoryBeat.Stage2Opening` 与第一关 `Opening` 分开记录，因此转场后会播放四句穿越独白，死亡重载时又不会重复。进入国王房后，先播放武士与巫师的六句对话；巫师说完 `First, see the truth for yourself.` 后逐格播放真相漫画，再继续国王、怪物和武士的十四句现场对话并进入战斗。
