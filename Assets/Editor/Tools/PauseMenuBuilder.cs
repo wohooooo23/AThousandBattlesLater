@@ -39,7 +39,7 @@ public static class PauseMenuBuilder
         "\n" +
         "FORGING\n" +
         "Select equipment on the left, then press the centre Forge button.\n" +
-        "Swords, shields and the Green Rune can be forged; the Red Rune cannot.\n" +
+        "Swords, shields and the Green Rune can be forged. The Red Rune cannot be forged.\n" +
         "A failed attempt lowers the equipment's upgrade level.";
 
     [MenuItem("Tools/Pause Menu/Build Pause Menu")]
@@ -63,6 +63,9 @@ public static class PauseMenuBuilder
             data.FindProperty("returnToMenuButton").objectReferenceValue = mainMenu;
             data.FindProperty("pauseHelpBackButton").objectReferenceValue = helpBack;
             data.ApplyModifiedPropertiesWithoutUndo();
+
+            // Save the shared art and all four interaction states directly into Canvas.prefab.
+            MenuButtonSkin.ApplyTo(pause.transform);
 
             pause.SetActive(false);
             helpPanel.SetActive(false);
@@ -93,6 +96,8 @@ public static class PauseMenuBuilder
                 throw new InvalidOperationException("The pause menu needs Resume, Help and Main Menu buttons.");
             if (!LocalizationTable.TryGetChinese(HelpBody, out _))
                 throw new InvalidOperationException("LocalizationTable has no Chinese entry for the help body.");
+            MenuButtonSkin.ValidateSpriteAssets();
+            MenuButtonSkin.ValidateAll(pause);
             Debug.Log("PAUSE_MENU_VALIDATE_OK.");
         }
         finally

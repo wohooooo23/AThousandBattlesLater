@@ -352,6 +352,11 @@ public static class DemoSceneBuilder
             typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
         eventSystem.transform.SetParent(null);
 
+        // Convert the temporary Text title into the authored bilingual logo and apply the shared
+        // four-state button skin before the rebuilt scene is saved.
+        StartMenuTitleBuilder.ApplyTo(canvasObject.transform);
+        MenuButtonSkin.ApplyTo(canvasObject.transform);
+
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, StartMenuScenePath))
             throw new InvalidOperationException("Failed to save " + StartMenuScenePath);
@@ -368,16 +373,18 @@ public static class DemoSceneBuilder
         if (controller.TargetSceneName != Path.GetFileNameWithoutExtension(FullMapStageScenePath))
             throw new InvalidOperationException("Start menu must load the full map stage.");
         GameObject button = GameObject.Find("Start Button");
-        Text title = GameObject.Find("Game Title")?.GetComponent<Text>();
+        Image title = GameObject.Find("Game Title")?.GetComponent<Image>();
         Text developer = GameObject.Find("Developer Name")?.GetComponent<Text>();
         Text startLabel = GameObject.Find("Start Label")?.GetComponent<Text>();
         if (!button || !button.GetComponent<Button>() || title == null || developer == null || startLabel == null ||
-            title.text != "A THOUSAND BATTLES LATER" || title.text.Contains("\n") ||
+            GameObject.Find("Game Title").GetComponent<Text>() != null ||
             string.IsNullOrWhiteSpace(developer.text) || developer.text.Contains("YOUR NAME") ||
-            button.GetComponent<Image>().color != Color.white ||
-            startLabel.color != Color.black || GameObject.Find("Subtitle") != null || GameObject.Find("Start Hint") != null ||
+            title.sprite != AssetDatabase.LoadAssetAtPath<Sprite>(StartMenuTitleBuilder.SpritePath) ||
+            GameObject.Find("Subtitle") != null || GameObject.Find("Start Hint") != null ||
             GameObject.Find("Gold Block") != null || GameObject.Find("Red Block") != null || GameObject.Find("Green Block") != null)
-            throw new InvalidOperationException("Start menu must contain a one-line title, a filled-in developer credit and a white/black start button.");
+            throw new InvalidOperationException("Start menu must contain the bilingual title image, developer credit and skinned start button.");
+        StartMenuTitleBuilder.Validate(GameObject.Find("Start Menu UI").transform);
+        MenuButtonSkin.ValidateAll(GameObject.Find("Start Menu UI").transform);
 
         // Credits + Exit entries (the credits panel is authored inactive, so look it up on the canvas).
         Transform menuRoot = GameObject.Find("Start Menu UI").transform;
@@ -388,7 +395,7 @@ public static class DemoSceneBuilder
             throw new InvalidOperationException("Start menu needs a Credits Panel that starts hidden and can be closed.");
         if (EditorBuildSettings.scenes.Length == 0 || EditorBuildSettings.scenes[0].path != StartMenuScenePath)
             throw new InvalidOperationException("StartMenu must be the first enabled build scene.");
-        Debug.Log("START_MENU_VALIDATE_OK: minimal title, developer line, white start button and transition are valid.");
+        Debug.Log("START_MENU_VALIDATE_OK: bilingual title, developer line, skinned buttons and transition are valid.");
     }
 
     /// <summary>White menu button with a black bold label, matching the authored Start button.</summary>

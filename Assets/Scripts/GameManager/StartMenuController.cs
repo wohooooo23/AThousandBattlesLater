@@ -29,6 +29,7 @@ public sealed class StartMenuController : MonoBehaviour
     [SerializeField] private Button hardButton;
     [SerializeField] private Button difficultyBackButton;
     private static readonly Color ClearProgressArmedColor = new Color(0.86f, 0.40f, 0.40f, 1f);   // light red
+    private static readonly Color SkinnedButtonLabelColor = new Color32(226, 231, 238, 255);
     [SerializeField] private string targetSceneName = "stage1_full";
     [SerializeField] private string helpSceneName = "Help";
     private bool isLoading;
@@ -87,7 +88,14 @@ public sealed class StartMenuController : MonoBehaviour
         {
             hardButton.onClick.AddListener(ChooseHard);
             if (hardButton.targetGraphic is Image hardImage)
-                hardImage.color = ClearProgressArmedColor;   // red reads as "the harder choice"
+            {
+                // The old menu signalled HARD by tinting a white rectangle red. Keep that fallback
+                // for legacy scenes, but do not tint the authored slate sprite itself.
+                hardImage.color = hardImage.sprite == null ? ClearProgressArmedColor : Color.white;
+            }
+            Text hardLabel = hardButton.GetComponentInChildren<Text>(true);
+            if (hardLabel != null)
+                hardLabel.color = ClearProgressArmedColor;
         }
         if (difficultyBackButton != null)
             difficultyBackButton.onClick.AddListener(CloseDifficulty);
@@ -251,11 +259,16 @@ public sealed class StartMenuController : MonoBehaviour
             return;
 
         bool hasProgress = GameProgress.HasAny;
-        if (clearProgressButton.targetGraphic is Image background)
-            background.color = hasProgress ? ClearProgressArmedColor : Color.white;
+        Image background = clearProgressButton.targetGraphic as Image;
+        bool usesSlateSkin = background != null && background.sprite != null;
+        if (background != null)
+            background.color = usesSlateSkin ? Color.white :
+                (hasProgress ? ClearProgressArmedColor : Color.white);
         Text label = clearProgressButton.GetComponentInChildren<Text>(true);
         if (label != null)
-            label.color = hasProgress ? Color.white : Color.black;
+            label.color = usesSlateSkin
+                ? (hasProgress ? ClearProgressArmedColor : SkinnedButtonLabelColor)
+                : (hasProgress ? Color.white : Color.black);
     }
 
     public void CloseSettings()

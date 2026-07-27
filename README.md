@@ -445,3 +445,40 @@ Boss arena camera becomes Camera.main
   -> tracker changes camera reference
   -> same displacement pipeline continues
 ```
+
+## 黑蓝石板菜单按钮管线
+
+开始菜单、帮助页返回按钮与游戏内暂停菜单现在共用一套日式武士 / 西方暗黑奇幻风格的黑蓝石板按钮。按钮外框使用锻铁转角与铆钉，石板表面保留刀痕；文字仍由原有本地化系统独立渲染，因此更换按钮美术不会破坏中英文切换。
+
+1. **四态素材**：`Assets/Textures/UI/MenuButtons` 保存 `Normal / Hover / Pressed / Disabled` 四张 410×100 透明 Sprite；悬停状态点亮冷蓝刀痕，按下状态使用内陷阴影，禁用状态降低对比度。所有素材均使用 Point Filter、关闭 Mipmap 并启用透明边缘。
+2. **保存式交互**：每个 `Button` 的 `Transition` 保存为 `SpriteSwap`，普通图写入目标 `Image`，另外三态写入 `SpriteState`。所有引用都直接保存在 `StartMenu.unity`、`Help.unity` 与 `Canvas.prefab`，运行时不创建按钮或补挂组件。
+3. **开始菜单覆盖范围**：`Start / Help / Setting / Credit` 四个入口、难度选择、设置和制作名单页面中的语言、清档及全部返回按钮统一套用石板皮肤。难度中的困难选项与可执行的清档操作只把文字染成浅红，不再给整张石板染色。
+4. **帮助与暂停菜单**：`Help.unity` 的返回按钮使用相同四态皮肤；共享 `Canvas.prefab` 中的 `Resume / How To Play / Main Menu / Help Back` 同样保存完整 SpriteSwap 引用，所以两关使用同一个暂停菜单外观。
+5. **本地化兼容**：按钮图不烘焙文字。Legacy `Text` 继续使用随包的 Noto Sans SC，并由 `LocalizedText` 更新内容；皮肤构筑只统一字体颜色和粗体，不修改翻译 key 或点击事件。
+6. **可重复构筑**：菜单 `Tools > UI > Apply Dark Slate Button Skin` 会幂等地刷新两个场景和共享 Canvas；`StartMenuSettingsBuilder` 与 `PauseMenuBuilder` 也会在各自重建末尾重新套用皮肤，避免后续构筑恢复白色占位按钮。
+7. **验证**：`Tools > UI > Validate Dark Slate Button Skin` 检查四张 Sprite 的导入设置，以及每个目标按钮的 Normal、Hover、Pressed、Selected、Disabled 引用。开始菜单与暂停菜单原有验证器也会执行同一检查。
+
+```text
+Button sprites imported
+  -> MenuButtonSkin writes Image + SpriteState into saved UI
+  -> EventSystem changes Selectable state
+  -> SpriteSwap selects Normal / Hover / Pressed / Disabled
+  -> separate localized Text renders English or Chinese above the sprite
+```
+
+## 双语像素标题管线
+
+开始界面的标准字体标题已替换为一张直接保存于场景的双语像素 Logo。英文主标题分成 `A THOUSAND` 与 `BATTLES LATER` 两行，使用略微前倾、带弧线和刀锋收笔的银灰锻铁字；较小的中文副标题“武者之誓”位于下方，并由弯曲刀锋承托。整体继续沿用按钮的黑蓝石板、冷色金属与刀痕语言。
+
+1. **透明标题素材**：`Assets/Textures/UI/Title/Title_AThousandBattlesLater.png` 为 1200×380 RGBA 图，使用 Point Filter、关闭 Mipmap、Clamp 与无压缩 Sprite 导入设置；标题外部保持透明，不遮挡月夜城堡背景。
+2. **场景保存式组件**：`StartMenu.unity` 中原 `Game Title` 对象保留，但标准 `Text` 被替换为 `Image`，Sprite、1200×380 尺寸与 `(0, 250)` 位置全部直接保存在场景中。运行时不创建标题，也不依赖系统字体或 WebGL 字形回退。
+3. **重建安全**：`Tools > Start Menu > Apply Bilingual Pixel Title` 可幂等地重新导入并部署标题；完整的 `DemoSceneBuilder.BuildStartMenuScene` 在保存新场景前也会执行同一转换，后续重建不会恢复旧字体标题。
+4. **验证**：`Validate Bilingual Pixel Title` 检查场景中只存在标题 `Image`、没有旧 `Text`，并验证 Sprite 引用、透明导入设置、尺寸和位置；完整开始菜单验证器也复用该检查。
+
+```text
+Generated bilingual RGBA title
+  -> Point-filter Sprite import
+  -> StartMenuTitleBuilder replaces saved Text with saved Image
+  -> CanvasScaler positions 1200x380 logo at (0, 250)
+  -> Editor / Windows / WebGL render the same baked title artwork
+```

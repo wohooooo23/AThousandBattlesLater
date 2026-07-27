@@ -101,6 +101,10 @@ public static class StartMenuSettingsBuilder
         // system-font fallback. Persist the bundled Noto font on every menu Text so translated
         // labels such as START and HELP keep their Chinese glyphs in a browser build.
         ApplyBundledFont(menuRoot);
+        // Persist the shared SpriteSwap skin on every active/inactive menu button. This also covers
+        // the hand-authored START/HELP pair and prevents a future additive rebuild from restoring
+        // white placeholder rectangles.
+        MenuButtonSkin.ApplyTo(menuRoot);
 
         panel.SetActive(false);
         credits.SetActive(false);
@@ -159,6 +163,8 @@ public static class StartMenuSettingsBuilder
         foreach (Text label in controller.GetComponentsInChildren<Text>(true))
             if (label.font != bundledFont)
                 throw new InvalidOperationException(label.name + " still uses an OS-dependent legacy font.");
+        MenuButtonSkin.ValidateSpriteAssets();
+        MenuButtonSkin.ValidateAll(controller.transform);
         const string requiredMenuGlyphs = "开始游戏帮助设置制作名单";
         foreach (char glyph in requiredMenuGlyphs)
             if (!bundledFont.HasCharacter(glyph))
