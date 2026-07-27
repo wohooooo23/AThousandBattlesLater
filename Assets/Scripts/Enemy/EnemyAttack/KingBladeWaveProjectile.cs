@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// A prefab-authored accelerating King sword wave. Its runtime mesh is a white arc strip whose
-/// thickness tapers to zero at both ends, giving a sharp crescent silhouette without a texture.
+/// A prefab-authored King sword wave that accelerates away from a fixed attack origin while
+/// orbiting that origin. The combined radial and angular motion forms a spiral; the mesh aligns
+/// with its path velocity and never performs an unrelated self-spin.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(PolygonCollider2D))]
@@ -17,10 +18,12 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
     [SerializeField, Range(8, 48)] private int segments = 20;
     [SerializeField] private LayerMask blockingLayers = 1 << 6;
 
-    private Vector2 travelDirection;
-    private float speed;
-    private float acceleration;
-    private float spinDegreesPerSecond;
+    private Vector2 orbitCenter;
+    private float orbitAngleDegrees;
+    private float orbitRadius;
+    private float radialSpeed;
+    private float radialAcceleration;
+    private float orbitDegreesPerSecond;
     private float remainingLifetime;
     private Action<Vector2> hitHero;
     private Mesh generatedMesh;
@@ -28,29 +31,54 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
 
     public float Length => length;
     public float Thickness => thickness;
+    public Vector2 OrbitCenter => orbitCenter;
+    public float OrbitAngleDegrees => orbitAngleDegrees;
+    public float OrbitRadius => orbitRadius;
 
-    public void Launch(Vector2 direction, float initialSpeed, float speedAcceleration, float spinSpeed,
+    public void Launch(Vector2 center, float initialAngleDegrees, float spawnRadius,
+        float initialRadialSpeed, float speedAcceleration, float angularSpeedDegrees,
         float lifetime, Action<Vector2> onHitHero)
     {
-        travelDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
-        speed = Mathf.Max(0f, initialSpeed);
-        acceleration = Mathf.Max(0f, speedAcceleration);
-        spinDegreesPerSecond = spinSpeed;
+        orbitCenter = IsFinite(center.x) && IsFinite(center.y) ? center : (Vector2)transform.position;
+        orbitAngleDegrees = IsFinite(initialAngleDegrees) ? initialAngleDegrees : 0f;
+        orbitRadius = IsFinite(spawnRadius) ? Mathf.Max(0f, spawnRadius) : 0f;
+        radialSpeed = IsFinite(initialRadialSpeed) ? Mathf.Max(0f, initialRadialSpeed) : 0f;
+        radialAcceleration = IsFinite(speedAcceleration) ? Mathf.Max(0f, speedAcceleration) : 0f;
+        orbitDegreesPerSecond = IsFinite(angularSpeedDegrees) ? angularSpeedDegrees : 0f;
         remainingLifetime = Mathf.Max(0.05f, lifetime);
         hitHero = onHitHero;
-        transform.right = travelDirection;
+        transform.position = PositionOnSpiral();
+        AlignWithSpiralVelocity();
         BuildTaperedArc();
     }
 
     private void Update()
     {
         float delta = Time.deltaTime;
-        speed += acceleration * delta;
-        transform.position += (Vector3)(travelDirection * speed * delta);
-        transform.Rotate(0f, 0f, spinDegreesPerSecond * delta);
+        radialSpeed += radialAcceleration * delta;
+        orbitRadius += radialSpeed * delta;
+        orbitAngleDegrees = Mathf.Repeat(orbitAngleDegrees + orbitDegreesPerSecond * delta, 360f);
+        transform.position = PositionOnSpiral();
+        AlignWithSpiralVelocity();
         remainingLifetime -= delta;
         if (remainingLifetime <= 0f)
             Destroy(gameObject);
+    }
+
+    private Vector2 PositionOnSpiral()
+    {
+        float radians = orbitAngleDegrees * Mathf.Deg2Rad;
+        return orbitCenter + new Vector2(Mathf.Cos(radians), Mathf.Sin(radians)) * orbitRadius;
+    }
+
+    private void AlignWithSpiralVelocity()
+    {
+        float radians = orbitAngleDegrees * Mathf.Deg2Rad;
+        Vector2 radial = new Vector2(Mathf.Cos(radians), Mathf.Sin(radians));
+        Vector2 tangent = new Vector2(-radial.y, radial.x) * Mathf.Sign(orbitDegreesPerSecond);
+        float tangentialSpeed = Mathf.Abs(orbitDegreesPerSecond) * Mathf.Deg2Rad * orbitRadius;
+        Vector2 pathVelocity = radial * radialSpeed + tangent * tangentialSpeed;
+        transform.right = pathVelocity.sqrMagnitude > 0.0001f ? pathVelocity.normalized : radial;
     }
 
     private void OnTriggerEnter2D(Collider2D other)

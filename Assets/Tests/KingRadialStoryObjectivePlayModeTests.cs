@@ -18,9 +18,10 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         GameObject instance = Object.Instantiate(prefab, new Vector3(10000f, 10000f), Quaternion.identity);
         MonoBehaviour wave = instance.GetComponent("KingBladeWaveProjectile") as MonoBehaviour;
         Assert.That(wave, Is.Not.Null);
+        Vector2 centre = new Vector2(10000f, 10000f);
         wave.GetType().GetMethod("Launch").Invoke(wave, new object[]
         {
-            Vector2.right, 0f, 50f, 300f, 2f, new System.Action<Vector2>(_ => { })
+            centre, 0f, 4f, 10f, 50f, 180f, 2f, new System.Action<Vector2>(_ => { })
         });
 
         Mesh mesh = instance.GetComponent<MeshFilter>().sharedMesh;
@@ -34,10 +35,13 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         Assert.That(float.IsNaN(mesh.bounds.min.x) || float.IsInfinity(mesh.bounds.min.x), Is.False);
         Assert.That(instance.GetComponent<PolygonCollider2D>().points.Length, Is.GreaterThan(8));
 
-        float startX = instance.transform.position.x;
+        float startRadius = Vector2.Distance(instance.transform.position, centre);
         yield return new WaitForSeconds(0.15f);
-        Assert.That(instance.transform.position.x, Is.GreaterThan(startX));
-        Assert.That(Mathf.Abs(instance.transform.eulerAngles.z), Is.GreaterThan(1f));
+        float endRadius = Vector2.Distance(instance.transform.position, centre);
+        Assert.That(endRadius, Is.GreaterThan(startRadius));
+        Assert.That(Mathf.Abs(instance.transform.position.y - centre.y), Is.GreaterThan(0.1f),
+            "The wave must orbit the Boss origin instead of moving on a straight ray.");
+        Assert.That(Property<float>(wave, "OrbitAngleDegrees"), Is.GreaterThan(1f));
         Object.Destroy(instance);
     }
 
@@ -126,6 +130,10 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         ApplyFatalDamage(orcHealth);
         Assert.That(MatchIsOver(), Is.False,
             "Orc death must wait while the King survives.");
+        Object.Destroy(orcHealth.gameObject);
+        yield return null;
+        Assert.That(orcHealth == null, Is.True,
+            "The test must reproduce the real Orc cleanup before the King dies.");
         ApplyFatalDamage(bossHealth);
         Assert.That(MatchIsOver(), Is.True);
         Assert.That(Property<bool>(objective, "IsComplete"), Is.True);

@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>A large circular slash followed by twelve rotating, accelerating radial sword waves.</summary>
 public sealed class KingRadialBladeBurstPattern : EnemyAttackPattern
@@ -10,7 +11,8 @@ public sealed class KingRadialBladeBurstPattern : EnemyAttackPattern
     [SerializeField, Min(0f)] private float projectileSpawnRadius = 4f;
     [SerializeField, Min(0f)] private float projectileInitialSpeed = 10f;
     [SerializeField, Min(0f)] private float projectileAcceleration = 18f;
-    [SerializeField] private float projectileSpinSpeed = 300f;
+    [FormerlySerializedAs("projectileSpinSpeed")]
+    [SerializeField] private float projectileOrbitSpeed = 300f;
     [SerializeField, Min(0.1f)] private float projectileLifetime = 3f;
     [SerializeField, Min(0.05f)] private float strikeDuration = 0.34f;
     [SerializeField] private Color warningColor = new Color(1f, 1f, 1f, 0.28f);
@@ -66,14 +68,11 @@ public sealed class KingRadialBladeBurstPattern : EnemyAttackPattern
         for (int i = 0; i < count; i++)
         {
             float angle = 360f * i / count;
-            Vector2 direction = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad),
-                Mathf.Sin(angle * Mathf.Deg2Rad));
             KingBladeWaveProjectile wave = Instantiate(bladeWavePrefab,
-                origin + direction * projectileSpawnRadius, Quaternion.identity);
+                origin, Quaternion.identity);
             wave.name = "King Blade Wave " + (i + 1);
-            float spin = projectileSpinSpeed * (i % 2 == 0 ? 1f : -1f);
-            wave.Launch(direction, projectileInitialSpeed, projectileAcceleration, spin,
-                projectileLifetime, context.HitHero);
+            wave.Launch(origin, angle, projectileSpawnRadius, projectileInitialSpeed,
+                projectileAcceleration, projectileOrbitSpeed, projectileLifetime, context.HitHero);
         }
     }
 }

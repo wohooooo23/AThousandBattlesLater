@@ -126,6 +126,7 @@ public static class KingBossBuilder
             cleave.CastAnim != CastAnimation.Attack3 || radial.CastAnim != CastAnimation.Attack2 ||
             ReadFloat(cleave, "reachDistance") < arenaHalfWidth || ReadFloat(cleave, "cleaveHeight") < 30f ||
             ReadInt(radial, "projectileCount") != 12 || ReadFloat(radial, "slashRadius") < 25f ||
+            Mathf.Abs(ReadFloat(radial, "projectileOrbitSpeed")) < 1f ||
             ReferencedObject(radial, "bladeWavePrefab") == null)
             throw new InvalidOperationException("King attack animation mapping or authored half-arena size is invalid.");
         KingAttackAudio audio = boss.GetComponent<KingAttackAudio>();
@@ -260,7 +261,7 @@ public static class KingBossBuilder
             SetFloat(radial, "projectileSpawnRadius", 4f);
             SetFloat(radial, "projectileInitialSpeed", 10f);
             SetFloat(radial, "projectileAcceleration", 18f);
-            SetFloat(radial, "projectileSpinSpeed", 300f);
+            SetFloat(radial, "projectileOrbitSpeed", 300f);
             SetFloat(radial, "projectileLifetime", 3f);
         }
         SetObject(radial, "bladeWavePrefab", bladeWavePrefab);

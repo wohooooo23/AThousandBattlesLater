@@ -249,7 +249,7 @@ Hero enters stage2 arena
 
 1. **招式选择与动作**：`KingRadialBladeBurstPattern` 与横斩、上捞、半场下劈一起作为保存于 `stage2_full` 国王根对象上的第四个 `EnemyAttackPattern`。有效距离为 0–250、默认权重 1.05，`castAnimation` 固定为 `Attack2`，会继续参与现有的距离过滤、加权随机、避免连续重复以及三次攻击后跳跃换位流程。
 2. **圆斩预警与伤害**：前摇持续 1.15 秒，白色圆形填充从中心扩张至 28 单位半径；结算时按 Hero 与国王中心的距离进行一次范围伤害，并生成内外两道白色圆环作为短暂斩击残影。预警会在国王前摇期间保持以攻击锚点为中心，不追踪 Hero。
-3. **十二向散射**：结算帧把 360° 等分为十二个方向，每个方向从国王外侧 4 单位处实例化一个 `KingBladeWave.prefab`。剑气初速 10、线性加速度 18、寿命 3 秒，参数均保存在攻击组件中可由 Inspector 调节；相邻剑气分别顺、逆时针以 300°/s 自转，但平移始终沿生成时锁定的放射方向，不会追踪玩家。
+3. **十二向螺旋散射**：结算帧把 360° 等分为十二个初始角度，每枚剑气以攻击释放点为固定圆心、以 4 为初始半径生成。径向初速 10、径向加速度 18、绕圆心角速度 300°/s、寿命 3 秒，参数均保存在攻击组件中可由 Inspector 调节。每帧同时增大半径与极角，从而形成整体绕国王向外扩张的螺旋；剑气图形只对齐螺旋路径的瞬时速度，不再围绕自身自转，也不会追踪移动后的国王或玩家。
 4. **纯白尖锐弧形**：`KingBladeWave_White.mat` 是独立保存的纯白 `Sprites/Default` 材质。`KingBladeWaveProjectile` 在实例初始化时生成一条弯曲带状网格：中心线使用抛物弧，宽度使用 `sin(πt)` 从中央向两端收缩到零，形成“一段白色圆环、两端尖锐”的轮廓；端点直接写入零宽度，内部采样先 `Clamp01` 再做非整数幂，避免浮点负零产生 NaN 和 `abnormal mesh bounds`。相同有限轮廓同时写入 `PolygonCollider2D`，因此画面和命中形状一致。
 5. **剑气碰撞**：剑气 prefab 直接保存 `MeshFilter`、`MeshRenderer`、触发式 `PolygonCollider2D`、Kinematic `Rigidbody2D` 和 `KingBladeWaveProjectile`，运行时只实例化这类短生命周期攻击实体。命中 Player 后通过当前 `EnemyAttackContext.HitHero` 走国王统一伤害计算并销毁；碰到 Ground 层墙体或寿命结束也会销毁。
 6. **三动作音效加载器**：国王根对象直接保存 `KingAttackAudio` 与 `AudioSource`，三个 Inspector 槽依次对应 Attack1、Attack2、Attack3。当前三个 AudioClip 刻意保持为空，后续只需把音频拖入槽位；所有国王技能在实际结算帧统一调用 `FireFeedback`，由当前技能的 `CastAnim` 选择并 `PlayOneShot`，不会因第四个技能再增加重复音频槽。
@@ -265,7 +265,7 @@ EnemyAttackController selects King Radial Blade Burst
   -> radius-28 melee hit + white double-ring slash
   -> 12 saved KingBladeWave prefab instances
        -> tapered white arc mesh + matching polygon collider
-       -> alternating spin + outward linear acceleration
+       -> angular orbit around release origin + outward radial acceleration
        -> hit Hero / Ground / lifetime -> destroy
   -> active MainCamera shake + Attack2 audio slot
   -> normal cooldown / every-third-attack retreat hop
@@ -280,7 +280,7 @@ EnemyAttackController selects King Radial Blade Burst
 3. **Orc 进入战斗**：第 12 句开始前隐藏巫师并激活 `Boss Companion Orc`。该对象保留 `Enemy_Orc`、`Enemy_Health`、状态机状态、Animator、Collider、Rigidbody、攻击与世界血条；剧情结束后不销毁，直接按普通 Orc 逻辑索敌和攻击。
 4. **逐句演员提示**：`bossIntroductionActorCues` 在显示指定行之前执行。当前 cue 为第 4 句显示巫师、第 12 句隐藏巫师并显示 Orc；若玩家进度已经跳过入场剧情，`ApplyBossIntroductionPostState` 会直接保存正确战斗状态：巫师隐藏、Orc 激活。
 5. **独立气泡**：`Wizard Story Dialogue` 与 `Orc Story Dialogue` 都是保存于 `Dialogue Bubbles` 下的 `WorldDialogueBubble.prefab` 实例，分别跟随各自演员。Samurai、King、EvilWizard、Monster 四类 speaker 均解析到不同气泡，剧情结束时统一隐藏。
-6. **联合目标**：`CombatHealth.Defeated` 提供统一死亡事件；`BossEncounterObjective.requiredEnemies` 在场景中明确引用 King 的 `EnemyHealth` 和 Orc 的 `Enemy_Health`。国王先死时只停止国王战斗，不立刻触发结算；Orc 先死时也不会胜利。两者都进入 `IsDead` 后，目标只调用一次 `EnemyHealth.CompleteVictoryFromObjective`，再进入原有最终剧情与 Victory 流程。
+6. **联合目标**：`CombatHealth.Defeated` 提供统一死亡事件；`BossEncounterObjective.requiredEnemies` 在场景中明确引用 King 的 `EnemyHealth` 和 Orc 的 `Enemy_Health`。目标在事件到达时把对应槽位锁存为已死亡，而不是在结算时重新访问尸体引用；因此 Orc 的死亡动画结束并销毁 GameObject 后，死亡记录仍然存在。无论先杀国王还是先杀 Orc，都只会在两个锁存槽位全部完成后调用一次 `EnemyHealth.CompleteVictoryFromObjective`。
 7. **中英存储**：两关英文台词仍由 `StoryChapterBuilder` 写入场景，简体中文逐句写在 `LocalizationTable`；`ValidateTranslations` 会枚举两章全部 48 句，拒绝缺失、空白或仍与英文相同的翻译。
 8. **幂等构筑**：菜单 `Tools > Narrative & Audio > Build Stage2 Boss Cast and Localization` 会删除旧 `Boss Introduction Cast` 后重建演员、气泡、cue 和目标引用，但保留场景里当前 Hero、King、地图和宝箱位置。随后验证 Idle_0、完整 Orc、四气泡、三个 cue、双目标与 48 句本地化。
 9. **自动测试**：`KingRadialStoryObjectivePlayModeTests` 验证剑气网格全部顶点与 Bounds 有限、剑气确实向外加速并旋转、半场攻击上下对称、四名说话者路由正确、中文翻译生效，以及两种击杀顺序都只在 King 与 Orc 全灭后结束战斗。

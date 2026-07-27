@@ -14,19 +14,25 @@ public sealed class BossEncounterObjective : MonoBehaviour
     [SerializeField] private CombatHealth[] requiredEnemies;
 
     private bool completed;
+    private bool[] defeatedStates;
 
     public EnemyHealth Boss => boss;
     public IReadOnlyList<CombatHealth> RequiredEnemies => requiredEnemies;
     public int RequiredEnemyCount => requiredEnemies != null ? requiredEnemies.Length : 0;
     public bool IsComplete => completed;
-    public bool AllRequiredEnemiesDefeated => requiredEnemies != null && requiredEnemies.Length > 0 &&
-                                               requiredEnemies.All(enemy => enemy != null && enemy.IsDead);
+    public bool AllRequiredEnemiesDefeated => defeatedStates != null && defeatedStates.Length > 0 &&
+                                               defeatedStates.All(defeated => defeated);
 
     private void Awake()
     {
         ValidateConfiguration();
-        foreach (CombatHealth enemy in requiredEnemies)
+        defeatedStates = new bool[requiredEnemies.Length];
+        for (int i = 0; i < requiredEnemies.Length; i++)
+        {
+            CombatHealth enemy = requiredEnemies[i];
+            defeatedStates[i] = enemy.IsDead;
             enemy.Defeated += OnRequiredEnemyDefeated;
+        }
     }
 
     private void OnDestroy()
@@ -40,6 +46,9 @@ public sealed class BossEncounterObjective : MonoBehaviour
 
     private void OnRequiredEnemyDefeated(CombatHealth defeated)
     {
+        for (int i = 0; i < requiredEnemies.Length; i++)
+            if (ReferenceEquals(requiredEnemies[i], defeated))
+                defeatedStates[i] = true;
         if (completed || !AllRequiredEnemiesDefeated)
             return;
         completed = true;
