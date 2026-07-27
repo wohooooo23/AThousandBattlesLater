@@ -26,6 +26,8 @@ public sealed class KingRadialStoryObjectivePlayModeTests
 
         SpriteRenderer[] renderers = background.GetComponentsInChildren<SpriteRenderer>(true);
         Assert.That(renderers.Length, Is.EqualTo(9));
+        Assert.That(renderers.All(renderer => renderer.sortingLayerName == "background"), Is.True,
+            "Every centre and side copy must share the background sorting layer or the opaque sky hides distant copies.");
         string[] spritePaths = renderers.Select(renderer => AssetDatabase.GetAssetPath(renderer.sprite))
             .Distinct().OrderBy(path => path).ToArray();
         Assert.That(spritePaths, Is.EqualTo(new[]
@@ -41,6 +43,12 @@ public sealed class KingRadialStoryObjectivePlayModeTests
         Assert.That(sky, Is.Not.Null);
         Assert.That(middle, Is.Not.Null);
         Assert.That(foreground, Is.Not.Null);
+        foreach (Transform layer in new[] { sky, middle, foreground })
+        {
+            Assert.That(layer.GetComponent<SpriteRenderer>().flipX, Is.False);
+            Assert.That(layer.Cast<Transform>().All(side => side.GetComponent<SpriteRenderer>().flipX), Is.True,
+                layer.name + " side copies must mirror their shared edges.");
+        }
         Assert.That(sky.localScale.x, Is.EqualTo(12f).Within(0.01f));
         Assert.That(middle.localScale.x, Is.EqualTo(12f).Within(0.01f));
         Assert.That(foreground.localScale.x, Is.EqualTo(12f).Within(0.01f));

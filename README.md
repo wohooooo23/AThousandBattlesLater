@@ -419,9 +419,9 @@ Dialogue line begins
 第二关使用独立的 `Stage2Background.prefab`，直接保存于 `stage2_full` 场景中。它复用第一关的摄像机位移驱动方式，但按新素材的三张分层图建立真正的远、中、近景视差。
 
 1. **素材导入**：`Assets/Textures/background 2/1.png`、`2.png`、`3.png` 分别作为天空、远山云层和近景云层。构筑器把它们统一导入为 32 PPU、Point Filter、Full Rect、无 Mipmap 的单张 Sprite，透明中前景不会产生黑边。
-2. **保存式预制体**：每个图层由中心、左侧、右侧三个 `SpriteRenderer` 构成，全部保存在 `Stage2Background.prefab` 内，不在运行时临时创建。三层缩放均为 12，在保持原图宽高比的同时，为探索镜头的纵向移动和更高的 Boss 镜头预留足够 overscan；排序值依次为 `-120 / -110 / -100`。
+2. **保存式预制体**：每个图层由中心、左侧、右侧三个 `SpriteRenderer` 构成，全部保存在 `Stage2Background.prefab` 内，不在运行时临时创建。三层缩放均为 12，在保持原图宽高比的同时，为探索镜头的纵向移动和更高的 Boss 镜头预留足够 overscan；排序值依次为 `-120 / -110 / -100`。九个 Renderer 全部固定在 `background` Sorting Layer，避免中心天空遮住远离原点时应当出现的左右副本。
 3. **跟随与景深**：天空使用水平/垂直 `1.0 / 1.0`，始终铺满镜头；中景使用 `0.92 / 0.98`，前景使用 `0.78 / 0.95`，角色移动时产生克制的横向视差，同时纵向不会轻易露出空白。
-4. **无限横向覆盖**：`ParallaxLayer` 根据 Sprite 的世界宽度循环移动三联画根节点。循环判断以摄像机中心越过“中心图块边界”为时机，而不是等中心图完全离开视口后才补图，因此即使 Boss 镜头比单张背景更宽，也不会在三联画末端短暂露出空白；循环使用 `while` 校正，传送跨越多个图宽同样有效。
+4. **无限横向覆盖**：`ParallaxLayer` 根据 Sprite 的世界宽度循环移动三联画根节点。循环判断以摄像机中心越过“中心图块边界”为时机，而不是等中心图完全离开视口后才补图，因此即使 Boss 镜头比单张背景更宽，也不会在三联画末端短暂露出空白；循环使用 `while` 校正，传送跨越多个图宽同样有效。左右副本在预制体中水平镜像，使并非为平铺设计的山云素材以相同边缘相接，消除硬接缝。
 5. **纵向防穿帮**：各层照常按独立纵向倍率制造景深；一旦摄像机上沿或下沿将越过图层，`KeepVerticalCoverage` 只补偿会露边的部分。这样保留绝大多数视差行程，又不会在地图最高点、最低点或切入 Boss 房时看到背景边界。
 6. **镜头切换**：`ParallaxBackground` 每帧重新识别当前 `Camera.main`。普通探索镜头切换到 `Boss Arena Camera` 后，位移计算、横向循环和纵向覆盖检查一起交给 Boss 镜头。
 7. **构筑与验证**：菜单 `Tools > Background > Build Stage2 Parallax Background` 负责导入素材、重建预制体并只替换 `stage2_full` 的背景；`Rebuild Stage2 Parallax Prefab Only` 可在保留场景手工修改的情况下只刷新 prefab。对应 PlayMode 测试验证三张素材、九个 Renderer、三组视差倍率、Boss 镜头切换及完整视口覆盖。

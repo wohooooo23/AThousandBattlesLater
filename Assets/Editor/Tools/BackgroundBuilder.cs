@@ -15,6 +15,7 @@ public static class BackgroundBuilder
     private const string Stage2ScenePath = "Assets/Scenes/stage2_full.unity";
     private const string SceneObjectName = "Parallax Background";
     private const int BackgroundLayer = 8;
+    private const string BackgroundSortingLayer = "background";
     private const float Stage2PixelsPerUnit = 32f;
     // Stage 2 has a taller boss camera than stage 1. This preserves the source aspect ratio
     // while leaving enough vertical overscan for the complete exploration route.
@@ -114,8 +115,11 @@ public static class BackgroundBuilder
         if (!usedSprites.SequenceEqual(Stage2TexturePaths.OrderBy(path => path)))
             throw new InvalidOperationException("Stage2 background must use background 2 layers 1, 2 and 3.");
         if (renderers.Any(renderer => renderer.gameObject.layer != BackgroundLayer ||
-                                     renderer.sortingLayerName != "Default"))
+                                     renderer.sortingLayerName != BackgroundSortingLayer))
             throw new InvalidOperationException("Stage2 background renderers use an invalid layer or sorting layer.");
+        if (renderers.Where(renderer => renderer.transform.parent != prefab.transform)
+            .Any(renderer => !renderer.flipX))
+            throw new InvalidOperationException("Stage2 side copies must be mirrored to hide non-tileable image seams.");
         if (renderers.Where(renderer => renderer.transform.parent == prefab.transform)
             .Any(renderer => !Mathf.Approximately(renderer.transform.localScale.x, Stage2LayerScale)))
             throw new InvalidOperationException("Stage2 background layers do not have enough camera overscan.");
@@ -263,14 +267,16 @@ public static class BackgroundBuilder
         side.layer = BackgroundLayer;
         side.transform.SetParent(parent, false);
         side.transform.localPosition = new Vector3(localX, 0f, 0f);
-        ConfigureStage2Renderer(side.GetComponent<SpriteRenderer>(), sprite, order);
+        SpriteRenderer renderer = side.GetComponent<SpriteRenderer>();
+        ConfigureStage2Renderer(renderer, sprite, order);
+        renderer.flipX = true;
     }
 
     private static void ConfigureStage2Renderer(SpriteRenderer renderer, Sprite sprite, int order)
     {
         renderer.sprite = sprite;
         renderer.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
-        renderer.sortingLayerName = "Default";
+        renderer.sortingLayerName = BackgroundSortingLayer;
         renderer.sortingOrder = order;
     }
 
