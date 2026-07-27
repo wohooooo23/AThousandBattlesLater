@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// <summary>Authors reusable dialogue/BGM prefabs and saves their instances into gameplay scenes.</summary>
 public static class NarrativeAudioBuilder
 {
-    private const float DialogueWorldScale = 0.041f;
+    private const float DialogueOverlayScale = 0.58f;
     private const string DialoguePrefabPath = "Assets/Prefab/WorldDialogueBubble.prefab";
     private const string BgmPrefabPath = "Assets/Prefab/BgmPlayer.prefab";
     private const string BossBgmPath = "Assets/Audio/SFX/monume-tension-tension-music-547908.mp3";
@@ -103,6 +103,14 @@ public static class NarrativeAudioBuilder
         BuildBgmPrefab();
     }
 
+    [MenuItem("Tools/Narrative & Audio/Rebuild Dialogue Prefab Only")]
+    public static void RebuildDialoguePrefabOnly()
+    {
+        BuildDialoguePrefab();
+        AssetDatabase.SaveAssets();
+        Debug.Log("DIALOGUE_PREFAB_REBUILT_OK");
+    }
+
     private static void BuildDialoguePrefab()
     {
         GameObject root = new GameObject("World Dialogue Bubble", typeof(RectTransform), typeof(Canvas),
@@ -110,22 +118,23 @@ public static class NarrativeAudioBuilder
         try
         {
             RectTransform rootRect = (RectTransform)root.transform;
-            rootRect.sizeDelta = new Vector2(960f, 320f);
-            rootRect.localScale = Vector3.one * DialogueWorldScale;
 
             Canvas canvas = root.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.overrideSorting = true;
-            // A world-space canvas is sorted against the scene, and sortingOrder only ranks within a
-            // layer. Left on "Default" (the parallax backdrop layer) the bubble drew behind the
-            // castle walls no matter how high the order. Dialogue must cover everything.
-            canvas.sortingLayerName = "Hero";
-            canvas.sortingOrder = 120;
+            canvas.sortingOrder = WorldDialogueBubble.HighestDialogueSortingOrder;
             root.GetComponent<CanvasScaler>().dynamicPixelsPerUnit = 128f;
+
+            GameObject bubbleRoot = new GameObject("Bubble Root", typeof(RectTransform));
+            bubbleRoot.transform.SetParent(root.transform, false);
+            RectTransform bubbleRect = (RectTransform)bubbleRoot.transform;
+            bubbleRect.anchorMin = bubbleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            bubbleRect.sizeDelta = new Vector2(960f, 320f);
+            bubbleRect.localScale = Vector3.one * DialogueOverlayScale;
 
             GameObject background = new GameObject("White Background", typeof(RectTransform),
                 typeof(CanvasRenderer), typeof(Image), typeof(Outline));
-            background.transform.SetParent(root.transform, false);
+            background.transform.SetParent(bubbleRoot.transform, false);
             RectTransform backgroundRect = (RectTransform)background.transform;
             backgroundRect.anchorMin = new Vector2(0f, 0.22f);
             backgroundRect.anchorMax = Vector2.one;
@@ -157,7 +166,7 @@ public static class NarrativeAudioBuilder
 
             GameObject hint = new GameObject("Enter Skip Hint", typeof(RectTransform),
                 typeof(CanvasRenderer), typeof(Image), typeof(Outline));
-            hint.transform.SetParent(root.transform, false);
+            hint.transform.SetParent(bubbleRoot.transform, false);
             RectTransform hintRect = (RectTransform)hint.transform;
             hintRect.anchorMin = new Vector2(1f, 0f);
             hintRect.anchorMax = new Vector2(1f, 0f);
@@ -185,6 +194,7 @@ public static class NarrativeAudioBuilder
             hint.SetActive(false);
 
             SerializedObject bubbleData = new SerializedObject(root.GetComponent<WorldDialogueBubble>());
+            bubbleData.FindProperty("bubbleRoot").objectReferenceValue = bubbleRect;
             bubbleData.FindProperty("canvasGroup").objectReferenceValue = root.GetComponent<CanvasGroup>();
             bubbleData.FindProperty("dialogueText").objectReferenceValue = text;
             bubbleData.FindProperty("skipHintRoot").objectReferenceValue = hint;
@@ -286,7 +296,6 @@ public static class NarrativeAudioBuilder
         data.FindProperty("initialText").stringValue = "...";
         data.FindProperty("visibleOnAwake").boolValue = false;
         data.ApplyModifiedPropertiesWithoutUndo();
-        instance.transform.position = target.position + offset;
         return instance.GetComponent<WorldDialogueBubble>();
     }
 
@@ -444,21 +453,18 @@ public static class NarrativeAudioBuilder
     {
         WorldDialogueBubble bubble = FindInScene<WorldDialogueBubble>(target.gameObject.scene)
             .FirstOrDefault(candidate => candidate.FollowTarget == target);
-        if (bubble == null || bubble.GetComponent<Canvas>() == null ||
-            bubble.GetComponent<Canvas>().renderMode != RenderMode.WorldSpace)
-            throw new InvalidOperationException(scenePath + " needs a world-space dialogue bubble for " + target.name + ".");
-        // "Default" is the parallax backdrop layer, so a bubble left there hides behind the map.
-        if (bubble.GetComponent<Canvas>().sortingLayerName != "Hero")
-            throw new InvalidOperationException(
-                scenePath + " dialogue bubble must draw on the topmost 'Hero' sorting layer, found '" +
-                bubble.GetComponent<Canvas>().sortingLayerName + "'.");
-        Image background = bubble.transform.Find("White Background")?.GetComponent<Image>();
-        TMP_Text text = bubble.transform.Find("White Background/Dialogue Text")?.GetComponent<TMP_Text>();
-        TMP_Text hint = bubble.transform.Find("Enter Skip Hint/Hint Text")?.GetComponent<TMP_Text>();
-        RectTransform rect = bubble.GetComponent<RectTransform>();
+        Canvas canvas = bubble != null ? bubble.GetComponent<Canvas>() : null;
+        if (canvas == null || canvas.renderMode != RenderMode.ScreenSpaceOverlay ||
+            canvas.sortingOrder != WorldDialogueBubble.HighestDialogueSortingOrder)
+            throw new InvalidOperationException(scenePath + " needs a highest-order overlay dialogue bubble for " + target.name + ".");
+        RectTransform layout = bubble.transform.Find("Bubble Root") as RectTransform;
+        Image background = layout?.Find("White Background")?.GetComponent<Image>();
+        TMP_Text text = layout?.Find("White Background/Dialogue Text")?.GetComponent<TMP_Text>();
+        TMP_Text hint = layout?.Find("Enter Skip Hint/Hint Text")?.GetComponent<TMP_Text>();
         if (background == null || background.color != Color.white || text == null || text.color != Color.black ||
             text.font == null || !text.font.name.Contains("LiberationSans") || text.fontSize < 52f ||
-            rect.sizeDelta.x < 960f || Mathf.Abs(rect.localScale.x - DialogueWorldScale) > 0.0001f ||
+            layout == null || layout.sizeDelta.x < 960f ||
+            Mathf.Abs(layout.localScale.x - DialogueOverlayScale) > 0.0001f ||
             hint == null || hint.text != "Press Enter to skip" ||
             bubble.GetComponent<CanvasScaler>().dynamicPixelsPerUnit < 128f)
             throw new InvalidOperationException(scenePath + " dialogue must use a white background and black text.");

@@ -29054,9 +29054,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f7ab1ab1b911b84f995205812b49e68, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::KingAttackAudio
-  attack1Clip: {fileID: 0}
-  attack2Clip: {fileID: 0}
-  attack3Clip: {fileID: 0}
+  attack1Clip: {fileID: 8300000, guid: 9852ffd831a7944488c38536abc9148b, type: 3}
+  attack2Clip: {fileID: 8300000, guid: 3288728104473c14094f6ad0fb5543f7, type: 3}
+  attack3Clip: {fileID: 8300000, guid: ff1481c7742a01e489b947ee3ba5a158, type: 3}
   volume: 0.9
 --- !u!82 &8081266080304940359
 AudioSource:

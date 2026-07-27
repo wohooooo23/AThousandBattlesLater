@@ -11,6 +11,71 @@ using UnityEngine.TestTools;
 public sealed class KingRadialStoryObjectivePlayModeTests
 {
     [UnityTest]
+    public IEnumerator Stage2KingAttackAudioPreloadsAndPlaysAllThreeActions()
+    {
+        SceneManager.LoadScene("stage2_full");
+        yield return null;
+
+        MonoBehaviour arena = FindBehaviour("BossArenaController");
+        GameObject boss = Property<GameObject>(arena, "BossRoot");
+        boss.SetActive(true);
+        yield return null;
+
+        MonoBehaviour attackAudio = boss.GetComponent("KingAttackAudio") as MonoBehaviour;
+        Assert.That(attackAudio, Is.Not.Null);
+        AudioSource source = attackAudio.GetComponent<AudioSource>();
+        Assert.That(source.playOnAwake, Is.False);
+        Assert.That(source.loop, Is.False);
+        Assert.That(source.mute, Is.False);
+        Assert.That(source.spatialBlend, Is.Zero);
+        Assert.That(source.ignoreListenerPause, Is.True);
+
+        System.Type castAnimation = FindType("CastAnimation");
+        MethodInfo play = attackAudio.GetType().GetMethod("Play");
+        foreach (string action in new[] { "Attack1", "Attack2", "Attack3" })
+        {
+            AudioClip expected = Property<AudioClip>(attackAudio, action + "Clip");
+            Assert.That(expected, Is.Not.Null, action + " must have an authored clip in stage2_full.");
+            float timeout = Time.realtimeSinceStartup + 3.5f;
+            while (expected.loadState != AudioDataLoadState.Loaded && Time.realtimeSinceStartup < timeout)
+                yield return null;
+            Assert.That(expected.loadState, Is.EqualTo(AudioDataLoadState.Loaded));
+
+            play.Invoke(attackAudio, new[] { System.Enum.Parse(castAnimation, action) });
+            yield return null;
+            Assert.That(Property<AudioClip>(attackAudio, "LastPlayedClip"), Is.SameAs(expected),
+                action + " must reach the scene-authored AudioSource.");
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator CharacterDialogueUsesTheTopmostScreenOverlayCanvas()
+    {
+        SceneManager.LoadScene("stage2_full");
+        yield return null;
+
+        Canvas[] canvases = Object.FindObjectsByType<Canvas>(
+            FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Canvas[] dialogueCanvases = canvases
+            .Where(canvas => canvas.GetComponent("WorldDialogueBubble") != null)
+            .ToArray();
+        Assert.That(dialogueCanvases.Length, Is.GreaterThanOrEqualTo(4));
+        foreach (Canvas dialogueCanvas in dialogueCanvases)
+        {
+            Assert.That(dialogueCanvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
+            Assert.That(dialogueCanvas.sortingOrder, Is.EqualTo(short.MaxValue));
+        }
+
+        int highestOtherUi = canvases
+            .Where(canvas => canvas.GetComponent("WorldDialogueBubble") == null)
+            .Select(canvas => canvas.sortingOrder)
+            .DefaultIfEmpty(int.MinValue)
+            .Max();
+        Assert.That(highestOtherUi, Is.LessThan(short.MaxValue),
+            "Character dialogue must render above every non-dialogue UI Canvas.");
+    }
+
+    [UnityTest]
     public IEnumerator TaperedBladeMeshIsFiniteAndAcceleratesOutward()
     {
         GameObject prefab = Resources.Load<GameObject>("AttackHitboxes/KingBladeWave");

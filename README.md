@@ -389,3 +389,27 @@ Boss navigation / death
   -> saved navigation topology -> raycast platform -> collider-correct landing Y
   -> pattern spawns tracked effect -> Boss death -> clear effects -> stop attacks -> victory flow
 ```
+
+## 国王攻击音效与最高层角色对话框管线
+
+本轮把音效“已经绑定但首次攻击无声”和世界空间对话框会被 HUD 覆盖的问题，分别收束到资源预加载与屏幕空间坐标转换两条稳定管线中。
+
+1. **三动作音效映射**：`KingAttackAudio` 仍由场景直接保存 `Attack1 / Attack2 / Attack3` 三个音频引用，`EnemyAttackController.FireFeedback` 按当前攻击模式的 `CastAnimation` 选择对应音频，不在运行时创建加载器或 `AudioSource`。
+2. **WebGL 音频准备**：三个 Boss WAV 的导入设置启用 `preloadAudioData` 并关闭 3D 音效；组件 `Awake` 再主动请求音频数据。攻击发生时若浏览器还在解码，协程最多等待 3 秒并在数据进入 `Loaded` 后播放，避免首招的 `PlayOneShot` 被静默丢弃。
+3. **固定 2D 播放源**：国王的场景 `AudioSource` 被统一配置为非循环、非静音、`spatialBlend = 0`、忽略 Listener 暂停，并在 Boss 被禁用或死亡时停止声音与等待协程。
+4. **Overlay 对话结构**：`WorldDialogueBubble.prefab` 的根节点是 `Screen Space Overlay` Canvas，排序值固定为 Unity 可用的最高值 `32767`；其下保存一个固定尺寸的 `Bubble Root`，白底文本和 Enter 提示都是预制体内已有组件。
+5. **跟随人物**：`WorldDialogueBubble.LateUpdate` 通过当前 `Camera.main.WorldToScreenPoint` 把人物头顶的世界坐标转换到 Overlay Canvas 本地坐标，并把气泡限制在屏幕边缘以内。切换普通镜头和 Boss 镜头后不需要替换气泡或额外创建组件。
+6. **构筑与验证**：菜单 `Tools > Narrative & Audio > Rebuild Dialogue Prefab Only` 只重建对话预制体，不改写关卡；`KingRadialStoryObjectivePlayModeTests` 分别验证三段音频都能到达 `AudioSource`，以及四名剧情角色的对话 Canvas 均高于其他 UI。
+
+```text
+King attack begins
+  -> CastAnimation selects saved WAV
+  -> already loaded: PlayOneShot immediately
+  -> still decoding: wait with unscaled time -> PlayOneShot
+
+Dialogue line begins
+  -> character world position + head offset
+  -> active main camera converts to screen position
+  -> clamp Bubble Root inside viewport
+  -> Overlay Canvas order 32767 draws above every HUD panel
+```
