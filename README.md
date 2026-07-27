@@ -42,8 +42,9 @@ Start -> stage1 black screen
 4. **黑屏淡出**：第一关 Boss 剧情结束后，`EnemyHealth` 使用场景中已经保存的 `Story Fade Canvas/Black Fade`，按 unscaled time 在 1.15 秒内从透明变为纯黑；即使剧情将 `Time.timeScale` 保持为 0，淡出仍能正常完成。
 5. **第二关淡入**：加载 `stage2_full` 后，启用的 `StoryDialogueController` 从全黑开始。开场剧情已经完成时不重复台词，但仍执行 1.35 秒 `FadeFromBlack`，形成连续的“第一关淡出—加载—第二关淡入”。
 6. **最终胜利**：第二关 `nextStageSceneName` 为空。国王死亡后先播放完整胜利剧情，再使用同一个保存式黑幕在 1.15 秒内淡出，逐格播放 `Comic_Epilogue`；漫画完成后淡入最终 Victory 面板。面板同时显示路子轩、卢敏察、孟祥铭的院校与分工，按 Space 返回 `StartMenu` 时才通过 `GameProgress.ClearAll` 清除整轮背包、装备、能力、锻造、难度与剧情进度。
-7. **保存式组件**：流程直接配置两个场景内已有的 `EnemyHealth`、`StoryDialogueController` 和 `CanvasGroup`，没有在运行时补挂核心组件或创建永久 UI。只有淡入淡出协程属于短生命周期运行逻辑。
-8. **可重复构筑与验证**：菜单 `Tools > A Thousand Battles Later > Build Campaign Flow` 执行 `CampaignFlowBuilder.Build`，幂等写入开始目标、两关结算角色、淡出引用和 Build Settings；`Validate Campaign Flow` 检查第一关只通往第二关、第二关只显示最终 Victory、两个 Story System 已保存为启用状态，并验证四个正式场景的顺序。
+7. **第二关暂退续关**：`StartMenuController` 在场景中分别保存 `targetSceneName = stage1_full` 与 `resumeStageSceneName = stage2_full`。从第二关 Boss 房通过 ESC 返回主菜单时，本轮进度和 `Stage2Opening` 章节标记仍然存在，START 因此解析为第二关；最终胜利或手动清档会统一清除章节标记，下一次 START 重新从第一关开始。
+8. **保存式组件**：流程直接配置两个场景内已有的 `EnemyHealth`、`StoryDialogueController` 和 `CanvasGroup`，没有在运行时补挂核心组件或创建永久 UI。只有淡入淡出协程属于短生命周期运行逻辑。
+9. **可重复构筑与验证**：菜单 `Tools > A Thousand Battles Later > Build Campaign Flow` 执行 `CampaignFlowBuilder.Build`，幂等写入开始目标、两关结算角色、淡出引用和 Build Settings；`Validate Campaign Flow` 检查第一关只通往第二关、第二关只显示最终 Victory、两个 Story System 已保存为启用状态，并验证四个正式场景的顺序。
 
 ```text
 START

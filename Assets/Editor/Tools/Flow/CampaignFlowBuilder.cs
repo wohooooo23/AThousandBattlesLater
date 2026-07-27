@@ -38,7 +38,8 @@ public static class CampaignFlowBuilder
     {
         Scene start = EditorSceneManager.OpenScene(StartPath, OpenSceneMode.Single);
         StartMenuController menu = FindInScene<StartMenuController>(start).SingleOrDefault();
-        Require(menu != null && menu.TargetSceneName == Stage1Name, "START must load stage1_full.");
+        Require(menu != null && menu.TargetSceneName == Stage1Name && menu.ResumeStageSceneName == Stage2Name,
+            "START must begin at stage1_full and resume an active chapter-two run at stage2_full.");
 
         ValidateStage(Stage1Path, Stage2Name, false);
         ValidateStage(Stage2Path, string.Empty, true);
@@ -58,6 +59,7 @@ public static class CampaignFlowBuilder
         if (menu == null)
             throw new MissingReferenceException(StartPath + " is missing StartMenuController.");
         SetString(menu, "targetSceneName", Stage1Name);
+        SetString(menu, "resumeStageSceneName", Stage2Name);
         Save(scene, StartPath);
     }
 

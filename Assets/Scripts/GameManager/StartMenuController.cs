@@ -31,10 +31,17 @@ public sealed class StartMenuController : MonoBehaviour
     private static readonly Color ClearProgressArmedColor = new Color(0.86f, 0.40f, 0.40f, 1f);   // light red
     private static readonly Color SkinnedButtonLabelColor = new Color32(226, 231, 238, 255);
     [SerializeField] private string targetSceneName = "stage1_full";
+    [Tooltip("Existing campaigns that have reached chapter two resume here after returning to the menu.")]
+    [SerializeField] private string resumeStageSceneName = "stage2_full";
     [SerializeField] private string helpSceneName = "Help";
     private bool isLoading;
 
     public string TargetSceneName => targetSceneName;
+    public string ResumeStageSceneName => resumeStageSceneName;
+    public string ResolvedStartSceneName =>
+        GameProgress.HasAny && StoryProgress.IsPassed(StoryBeat.Stage2Opening)
+            ? resumeStageSceneName
+            : targetSceneName;
     public string HelpSceneName => helpSceneName;
     public bool CreditsOpen => creditsPanel != null && creditsPanel.activeSelf;
     public bool SettingsOpen => settingsPanel != null && settingsPanel.activeSelf;
@@ -51,8 +58,9 @@ public sealed class StartMenuController : MonoBehaviour
     private void Awake()
     {
         if (startButton == null || helpButton == null || string.IsNullOrWhiteSpace(targetSceneName) ||
-            string.IsNullOrWhiteSpace(helpSceneName))
-            throw new MissingReferenceException("StartMenuController requires its scene-authored Start/Help buttons and target scenes.");
+            string.IsNullOrWhiteSpace(resumeStageSceneName) || string.IsNullOrWhiteSpace(helpSceneName))
+            throw new MissingReferenceException(
+                "StartMenuController requires its scene-authored Start/Help buttons, new-run scene and resume scene.");
 
         startButton.onClick.AddListener(StartGame);
         helpButton.onClick.AddListener(OpenHelp);
@@ -200,7 +208,7 @@ public sealed class StartMenuController : MonoBehaviour
         if (isLoading)
             return;
         isLoading = true;
-        SceneManager.LoadScene(targetSceneName);
+        SceneManager.LoadScene(ResolvedStartSceneName);
     }
 
     public void OpenHelp()

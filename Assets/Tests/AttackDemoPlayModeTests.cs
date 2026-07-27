@@ -688,6 +688,8 @@ public class AttackDemoPlayModeTests : InputTestFixture
         // PlayerPrefs persists the language selected by manual play sessions. Pin this test to
         // English before the scene is loaded, then explicitly exercise the Chinese WebGL path.
         string savedLanguage = PlayerPrefs.GetInt("language", 0) == 1 ? "Chinese" : "English";
+        System.Type.GetType("GameProgress, Assembly-CSharp").GetMethod("ClearAll").Invoke(null, null);
+        System.Type.GetType("RunProgress, Assembly-CSharp").GetMethod("MarkRunStarted").Invoke(null, null);
         SetRuntimeLanguage("English");
         SceneManager.LoadScene("StartMenu");
         yield return null;
@@ -698,6 +700,10 @@ public class AttackDemoPlayModeTests : InputTestFixture
         Assert.That(menu.GetComponent<Canvas>(), Is.Not.Null);
         Assert.That(controller, Is.Not.Null);
         Assert.That((string)controller.GetType().GetProperty("TargetSceneName").GetValue(controller),
+            Is.EqualTo("stage1_full"));
+        Assert.That((string)controller.GetType().GetProperty("ResumeStageSceneName").GetValue(controller),
+            Is.EqualTo("stage2_full"));
+        Assert.That((string)controller.GetType().GetProperty("ResolvedStartSceneName").GetValue(controller),
             Is.EqualTo("stage1_full"));
         GameObject startButton = GameObject.Find("Start Button");
         UnityEngine.UI.Text title = GameObject.Find("Game Title").GetComponent<UnityEngine.UI.Text>();
@@ -759,6 +765,31 @@ public class AttackDemoPlayModeTests : InputTestFixture
         Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("stage1_full"));
         SetRuntimeLanguage(savedLanguage);
         // InputTestFixture removes the synthetic keyboard during teardown.
+    }
+
+    [UnityTest]
+    public IEnumerator StartMenuResumesStageTwoAfterLeavingItsBossRoom()
+    {
+        System.Type storyProgress = System.Type.GetType("StoryProgress, Assembly-CSharp");
+        System.Type storyBeat = System.Type.GetType("StoryBeat, Assembly-CSharp");
+        object stageTwoOpening = System.Enum.Parse(storyBeat, "Stage2Opening");
+        storyProgress.GetMethod("MarkPassed").Invoke(null, new[] { stageTwoOpening });
+
+        SceneManager.LoadScene("StartMenu");
+        yield return null;
+        yield return new WaitForFixedUpdate();
+
+        MonoBehaviour controller = GameObject.Find("Start Menu UI").GetComponent("StartMenuController") as MonoBehaviour;
+        Assert.That((string)controller.GetType().GetProperty("ResolvedStartSceneName").GetValue(controller),
+            Is.EqualTo("stage2_full"),
+            "An active chapter-two run must not be sent back to stage1 after using the pause menu.");
+
+        controller.GetType().GetMethod("StartGame").Invoke(controller, null);
+        yield return null;
+        yield return null;
+        Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("stage2_full"));
+
+        System.Type.GetType("GameProgress, Assembly-CSharp").GetMethod("ClearAll").Invoke(null, null);
     }
 
     [UnityTest]
