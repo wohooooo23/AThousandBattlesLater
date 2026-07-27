@@ -18,13 +18,13 @@ public static class AlphaUiBuilder
     private const string GoldCoinItemPath = "Assets/Prefab/GoldCoin.asset";
     /// <summary>Size of the top-right bag/forge entry icons (was 78 — too large on screen).</summary>
 
-    private const string GeneratedUiFolder = "Assets/GeneratedUI";
+    private const string GeneratedUiFolder = "Assets/Development/GeneratedUI";
     private const string GoldCoinIconPath = GeneratedUiFolder + "/GoldCoinIcon.png";
 
     private static readonly string[] GameplayScenes =
     {
-        "Assets/Scenes/stage1.unity",
-        "Assets/Scenes/stage1 boss.unity",
+        "Assets/Scenes/Legacy/stage1.unity",
+        "Assets/Scenes/Legacy/stage1 boss.unity",
         "Assets/Scenes/stage1_full.unity"
     };
 

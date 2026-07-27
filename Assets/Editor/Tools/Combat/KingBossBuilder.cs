@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 public static class KingBossBuilder
 {
     private const string Stage2Path = "Assets/Scenes/stage2_full.unity";
-    private const string Stage1Path = "Assets/Scenes/stage1 boss.unity";
+    private const string Stage1Path = "Assets/Scenes/Legacy/stage1 boss.unity";
     private const string SpriteFolder = "Assets/Enemy/Bosses/Medieval King Pack 2/Sprites/";
     private const string VisualName = "KingVisual";
     private const string OnDamageMaterialPath = "Assets/Material/OnDamage_Material.mat";

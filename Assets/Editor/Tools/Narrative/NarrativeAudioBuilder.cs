@@ -20,9 +20,9 @@ public static class NarrativeAudioBuilder
         "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private static readonly string[] GameplayScenePaths =
     {
-        "Assets/Scenes/stage1.unity",
+        "Assets/Scenes/Legacy/stage1.unity",
         "Assets/Scenes/stage1_full.unity",
-        "Assets/Scenes/stage1 boss.unity"
+        "Assets/Scenes/Legacy/stage1 boss.unity"
     };
 
     [MenuItem("Tools/Narrative & Audio/Repair Dialogue and BGM")]

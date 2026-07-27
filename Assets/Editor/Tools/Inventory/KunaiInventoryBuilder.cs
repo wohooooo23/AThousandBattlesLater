@@ -23,9 +23,9 @@ public static class KunaiInventoryBuilder
     private const string FullMapScenePath = "Assets/Scenes/stage1_full.unity";
     private static readonly string[] ProgressionScenePaths =
     {
-        "Assets/Scenes/stage1.unity",
+        "Assets/Scenes/Legacy/stage1.unity",
         FullMapScenePath,
-        "Assets/Scenes/stage1 boss.unity"
+        "Assets/Scenes/Legacy/stage1 boss.unity"
     };
 
     [MenuItem("Tools/Inventory/Build Kunai Inventory Item")]

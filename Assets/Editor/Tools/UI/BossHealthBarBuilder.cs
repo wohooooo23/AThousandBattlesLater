@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// <summary>Organizes the BossHp package and authors its animated HUD into the boss scene.</summary>
 public static class BossHealthBarBuilder
 {
-    public const string BossScenePath = "Assets/Scenes/stage1 boss.unity";
+    public const string BossScenePath = "Assets/Scenes/Legacy/stage1 boss.unity";
     public const string BossBarFolder = "Assets/Enemy/Bosses/EvilWizard/UI/BossHealthBar";
     public const string BossBarPrefabPath = BossBarFolder + "/BossHealthBar.prefab";
     private const string CanvasPrefabPath = "Assets/Prefab/Canvas.prefab";

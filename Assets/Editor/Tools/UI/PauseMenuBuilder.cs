@@ -16,7 +16,7 @@ using UnityEngine.UI;
 public static class PauseMenuBuilder
 {
     private const string CanvasPrefabPath = "Assets/Prefab/Canvas.prefab";
-    private const string BackgroundSpritePath = "Assets/Textures/Background/cover/samurai_no_watermark.png";
+    private const string BackgroundSpritePath = "Assets/Textures/Background/Stage1/cover/samurai_no_watermark.png";
 
     private static readonly Vector2 ButtonSize = new Vector2(410f, 100f);
     private static readonly Color ModalDimColor = new Color(0f, 0f, 0f, 0.72f);

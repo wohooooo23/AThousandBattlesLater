@@ -17,7 +17,7 @@ using UnityEngine.UI;
 /// </summary>
 public static class EquipmentBuilder
 {
-    private const string StageScenePath = "Assets/Scenes/stage1.unity";
+    private const string StageScenePath = "Assets/Scenes/Legacy/stage1.unity";
     private const string CanvasPrefabPath = "Assets/Prefab/Canvas.prefab";
     private const string ItemFolder = "Assets/Prefab/";
     public const string PickupFolder = "Assets/Prefab/EquipmentPickups";

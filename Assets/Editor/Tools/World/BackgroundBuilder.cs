@@ -22,15 +22,15 @@ public static class BackgroundBuilder
     private const float Stage2LayerScale = 12f;
     private static readonly string[] Stage2TexturePaths =
     {
-        "Assets/Textures/background 2/1.png",
-        "Assets/Textures/background 2/2.png",
-        "Assets/Textures/background 2/3.png"
+        "Assets/Textures/Background/Stage2/1.png",
+        "Assets/Textures/Background/Stage2/2.png",
+        "Assets/Textures/Background/Stage2/3.png"
     };
     private static readonly string[] GameplayScenePaths =
     {
-        "Assets/Scenes/stage1.unity",
+        "Assets/Scenes/Legacy/stage1.unity",
         "Assets/Scenes/stage1_full.unity",
-        "Assets/Scenes/stage1 boss.unity"
+        "Assets/Scenes/Legacy/stage1 boss.unity"
     };
 
     [MenuItem("Tools/Background/Repair Parallax Background")]

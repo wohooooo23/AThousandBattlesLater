@@ -15,7 +15,7 @@ using UnityEngine.Tilemaps;
 /// <summary>Builds and validates the persistent demo scene used by this project.</summary>
 public static class DemoSceneBuilder
 {
-    private const string ScenePath = "Assets/Scenes/stage1 boss.unity";
+    private const string ScenePath = "Assets/Scenes/Legacy/stage1 boss.unity";
     // Authored start-menu credit line. Rebuilding must not restore the old placeholder.
     private const string DeveloperCredit = "Team 3： Spark";
 
@@ -25,12 +25,12 @@ public static class DemoSceneBuilder
     private const float HeroGravityScale = 15f;
 
     private const string StartMenuScenePath = "Assets/Scenes/StartMenu.unity";
-    private const string ExampleMapStageScenePath = "Assets/Scenes/stage1.unity";
+    private const string ExampleMapStageScenePath = "Assets/Scenes/Legacy/stage1.unity";
     private const string FullMapStageScenePath = "Assets/Scenes/stage1_full.unity";
     private const string FullMapPrefabPath = "Assets/Prefab/Grid.prefab";
     private const string BossArenaPrefabPath = "Assets/Prefab/Grid1.prefab";
     private const string ExampleMapPrefabPath = "Assets/Prefab/Example.prefab";
-    private const string GeneratedFolder = "Assets/GeneratedAttackDemo";
+    private const string GeneratedFolder = "Assets/Development/GeneratedAttackDemo";
     private const string PlatformTilePrefabPath = GeneratedFolder + "/PlatformTile.prefab";
     private const string WallBlockPrefabPath = GeneratedFolder + "/CastleWallBlock.prefab";
     private const string GroundBlockPrefabPath = GeneratedFolder + "/GroundBlock.prefab";
@@ -54,7 +54,7 @@ public static class DemoSceneBuilder
     private const string TreasureChestPrefabPath = "Assets/Resources/Prefabs/TreasureChest.prefab";
     private const string AlphaUiPrefabPath = "Assets/Prefab/Canvas.prefab";
     private const string GoldCoinItemPath = "Assets/Prefab/GoldCoin.asset";
-    private const string GoldCoinIconPath = "Assets/GeneratedUI/GoldCoinIcon.png";
+    private const string GoldCoinIconPath = "Assets/Development/GeneratedUI/GoldCoinIcon.png";
     // Attack hitbox prefabs live under Resources so the runtime patterns can load them.
     private const string HitboxResourceFolder = "Assets/Resources/AttackHitboxes";
     private const string AttackSquareSpritePath = HitboxResourceFolder + "/AttackSquare.png";

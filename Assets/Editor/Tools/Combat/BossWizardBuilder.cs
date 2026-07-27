@@ -16,7 +16,7 @@ public static class BossWizardBuilder
     private const string BossPrefabPath = "Assets/Enemy/Bosses/EvilWizard/Boss_EvilWizard.prefab";
     private const string SpriteFolder = "Assets/Enemy/Bosses/EvilWizard/Visual/Sprites/";
     private const string VisualName = "WizardVisual";
-    private const string BossScenePath = "Assets/Scenes/stage1 boss.unity";
+    private const string BossScenePath = "Assets/Scenes/Legacy/stage1 boss.unity";
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
     private const string OnDamageMaterialPath = "Assets/Material/OnDamage_Material.mat";
     private const float TargetHeight = 3.2f;   // local height; the 6.25x Boss root produces the enlarged world model

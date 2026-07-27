@@ -32,9 +32,9 @@ public sealed class KingRadialStoryObjectivePlayModeTests
             .Distinct().OrderBy(path => path).ToArray();
         Assert.That(spritePaths, Is.EqualTo(new[]
         {
-            "Assets/Textures/background 2/1.png",
-            "Assets/Textures/background 2/2.png",
-            "Assets/Textures/background 2/3.png"
+            "Assets/Textures/Background/Stage2/1.png",
+            "Assets/Textures/Background/Stage2/2.png",
+            "Assets/Textures/Background/Stage2/3.png"
         }));
 
         Transform sky = background.transform.Find("Stage2 Sky");

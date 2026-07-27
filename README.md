@@ -424,7 +424,7 @@ Dialogue line begins
 
 第二关使用独立的 `Stage2Background.prefab`，直接保存于 `stage2_full` 场景中。它复用第一关的摄像机位移驱动方式，但按新素材的三张分层图建立真正的远、中、近景视差。
 
-1. **素材导入**：`Assets/Textures/background 2/1.png`、`2.png`、`3.png` 分别作为天空、远山云层和近景云层。构筑器把它们统一导入为 32 PPU、Point Filter、Full Rect、无 Mipmap 的单张 Sprite，透明中前景不会产生黑边。
+1. **素材导入**：`Assets/Textures/Background/Stage2/1.png`、`2.png`、`3.png` 分别作为天空、远山云层和近景云层。构筑器把它们统一导入为 32 PPU、Point Filter、Full Rect、无 Mipmap 的单张 Sprite，透明中前景不会产生黑边。
 2. **保存式预制体**：每个图层由中心、左侧、右侧三个 `SpriteRenderer` 构成，全部保存在 `Stage2Background.prefab` 内，不在运行时临时创建。三层缩放均为 12，在保持原图宽高比的同时，为探索镜头的纵向移动和更高的 Boss 镜头预留足够 overscan；排序值依次为 `-120 / -110 / -100`。九个 Renderer 全部固定在 `background` Sorting Layer，避免中心天空遮住远离原点时应当出现的左右副本。
 3. **跟随与景深**：天空使用水平/垂直 `1.0 / 1.0`，始终铺满镜头；中景使用 `0.92 / 0.98`，前景使用 `0.78 / 0.95`，角色移动时产生克制的横向视差，同时纵向不会轻易露出空白。
 4. **无限横向覆盖**：`ParallaxLayer` 根据 Sprite 的世界宽度循环移动三联画根节点。循环判断以摄像机中心越过“中心图块边界”为时机，而不是等中心图完全离开视口后才补图，因此即使 Boss 镜头比单张背景更宽，也不会在三联画末端短暂露出空白；循环使用 `while` 校正，传送跨越多个图宽同样有效。左右副本在预制体中水平镜像，使并非为平铺设计的山云素材以相同边缘相接，消除硬接缝。
@@ -481,4 +481,59 @@ Generated bilingual RGBA title
   -> StartMenuTitleBuilder replaces saved Text with saved Image
   -> CanvasScaler positions 1200x380 logo at (0, 250)
   -> Editor / Windows / WebGL render the same baked title artwork
+```
+
+## 项目文件结构与整理管线
+
+当前工程采用“正式运行资源、开发期产物、编辑器构筑工具”分层的目录结构。整理过程通过 Unity `AssetDatabase` 移动资源并保留每个 `.meta` GUID，因此场景、Prefab、材质与脚本引用不会因为文件换位而失效。`Resources`、角色/敌人 Prefab 和地图 Tile 仍保留原位：这些目录分别受运行时加载路径、场景引用和 Tilemap 工作流约束，没有为了外观整齐而进行高风险迁移。
+
+```text
+Assets/
+├─ Animations/                 # 正式动画与 Animator Controller
+├─ Audio/                      # BGM 与 SFX
+├─ Development/               # 构筑器生成、可重复生成的开发资源
+│  ├─ GeneratedAttackDemo/
+│  └─ GeneratedUI/
+├─ Editor/Tools/               # 只在 Unity Editor 中运行的构筑与验证工具
+│  ├─ Combat/                  # 敌人、Boss、攻击与血条构筑
+│  ├─ Flow/                    # 场景、关卡流程与数值流程
+│  ├─ Inventory/               # 物品、装备、符文与背包
+│  ├─ Narrative/               # 剧情、漫画与音频
+│  ├─ UI/                      # 菜单、HUD、锻造与本地化 UI
+│  └─ World/                   # 地图、背景、摄像机、宝箱与门
+├─ Enemy/                      # Mob 与 Boss 的正式资源
+├─ Material/                   # 正式材质
+├─ Prefab/                     # 场景共用正式 Prefab
+├─ Resources/                  # 保持运行时 Resources.Load 路径稳定
+├─ Scenes/
+│  ├─ StartMenu.unity          # 正式流程入口
+│  ├─ stage1_full.unity        # 第一关
+│  ├─ stage2_full.unity        # 第二关
+│  ├─ Help.unity               # 操作说明
+│  └─ Legacy/                  # 不进入正式 Build 的旧原型场景
+├─ Scripts/                    # 运行时代码，按系统职责分组
+├─ Tests/                      # EditMode / PlayMode 验证
+└─ Textures/
+   └─ Background/
+      ├─ Stage1/               # 第一关城堡与菜单背景素材
+      └─ Stage2/               # 第二关三层视差背景素材
+```
+
+整理与维护流程如下：
+
+1. **边界审计**：先读取 Build Settings 和代码中的硬编码路径，确认 `StartMenu → stage1_full → stage2_full → Help` 是正式场景集合；旧 `stage1`、`stage1 boss` 与 `New Scene` 只作为历史原型保留。
+2. **GUID 安全移动**：菜单 `Tools > Project > Organize Asset Structure` 调用 `ProjectStructureBuilder.Build`。脚本先创建全部目标目录并同步刷新 Asset Database，再移动生成资源、背景素材、旧场景和 Editor 工具；背景目录按内容迁移，以规避 Unity 6 在批处理模式中直接移动非空目录的刷新时序问题。
+3. **清理确定无效内容**：删除 Unity 自动生成在 `Assets` 根目录的 `InitTestScene*.unity` 恢复场景，以及确认无内容的 `Assets/Sprites`、`Assets/Animations/Enemy`。正式场景、旧原型、导入素材和用户正在修改的资源均不做推断式删除。
+4. **同步代码路径**：所有构筑器、验证器与测试中的生成资源、Legacy Scene、Stage1/Stage2 Background 路径同步到新位置。移动 Editor 脚本不会改变类型名或菜单入口，现有构筑命令仍可继续使用。
+5. **结构验证**：菜单 `Tools > Project > Validate Asset Structure` 检查正式目录、Legacy Scene、两套背景和六类 Editor 工具是否齐全，并确认旧顶层目录和恢复场景已经清除；缺失任一资源会直接抛出错误，避免以不完整结构继续构筑。
+6. **后续新增约定**：正式可运行资源放入对应系统目录；构筑器生成且可重建的产物放入 `Assets/Development`；废弃但仍有参考价值的场景放入 `Assets/Scenes/Legacy`；新编辑器工具按职责放入 `Editor/Tools` 的六个分类之一。
+
+```text
+Audit build/runtime paths
+  -> create destination folders
+  -> AssetDatabase move (preserve GUIDs)
+  -> update builder/test paths
+  -> remove confirmed recovery/empty folders
+  -> compile
+  -> Validate Asset Structure
 ```

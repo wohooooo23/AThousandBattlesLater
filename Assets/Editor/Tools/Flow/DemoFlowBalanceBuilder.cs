@@ -14,9 +14,9 @@ using UnityEngine.SceneManagement;
 public static class DemoFlowBalanceBuilder
 {
     private const string StartMenuScenePath = "Assets/Scenes/StartMenu.unity";
-    private const string StageOneScenePath = "Assets/Scenes/stage1.unity";
+    private const string StageOneScenePath = "Assets/Scenes/Legacy/stage1.unity";
     private const string FullMapScenePath = "Assets/Scenes/stage1_full.unity";
-    private const string BossScenePath = "Assets/Scenes/stage1 boss.unity";
+    private const string BossScenePath = "Assets/Scenes/Legacy/stage1 boss.unity";
 
     private const string HeroPrefabPath = "Assets/Prefab/Hero.prefab";
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
