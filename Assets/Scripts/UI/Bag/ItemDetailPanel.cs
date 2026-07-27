@@ -289,8 +289,8 @@ public sealed class ItemDetailPanel : MonoBehaviour
             : item.IsEquippable ? "[E] Equip    [Q] Cancel"
             : item.type == ItemType.Potion ? "[E] Use    [Q] Cancel" : "[Q] Close"
             : abilitySource != null ? "Click to inspect" : "Click for actions"));
-        // Noto Sans has taller metrics than LegacyRuntime. The authored title rectangle is deliberately
-        // compact, so clipping at its bottom could remove the entire line in WebGL.
+        // The two bundled faces have different vertical metrics. Allow the title to use its full
+        // authored bounds so neither WebGL font is clipped.
         titleText.horizontalOverflow = HorizontalWrapMode.Overflow;
         titleText.verticalOverflow = VerticalWrapMode.Overflow;
         foreach (Text label in new[] { titleText, typeText, statsText, descriptionText, promptText })
@@ -304,8 +304,8 @@ public sealed class ItemDetailPanel : MonoBehaviour
             return;
         // These labels are populated after scene-load, so they cannot rely on LocalizedText's
         // one-time font pass. Explicitly bind the shipped face and rebuild the mesh for WebGL.
-        if (UiFont.Regular != null)
-            label.font = UiFont.Regular;
+        if (UiFont.Current != null)
+            label.font = UiFont.Current;
         label.enabled = true;
         label.text = value ?? string.Empty;
         label.font?.RequestCharactersInTexture(label.text, label.fontSize, label.fontStyle);

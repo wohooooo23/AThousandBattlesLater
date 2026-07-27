@@ -19,6 +19,8 @@ public sealed class HelpScenePlayModeTests
         Button helpButton = GameObject.Find("Help Button")?.GetComponent<Button>();
         Assert.That(helpButton, Is.Not.Null, "The Start scene must store its Help button.");
         Assert.That(helpButton.GetComponentInChildren<Text>(true).text, Is.EqualTo("HELP"));
+        Font bundledEnglishFont = Resources.Load<Font>("Fonts/BoldPixels");
+        Assert.That(helpButton.GetComponentInChildren<Text>(true).font, Is.SameAs(bundledEnglishFont));
 
         helpButton.onClick.Invoke();
         yield return null;
@@ -35,7 +37,7 @@ public sealed class HelpScenePlayModeTests
         SetLanguage("Chinese");
         yield return null;
 
-        Font bundledFont = Resources.Load<Font>("Fonts/NotoSansSC-Regular");
+        Font bundledFont = Resources.Load<Font>("Fonts/ZCOOLXiaoWei-Regular");
         Text title = GameObject.Find("Controls Title").GetComponent<Text>();
         Text body = GameObject.Find("Controls Body").GetComponent<Text>();
         Text backLabel = GameObject.Find("Back Button Label").GetComponent<Text>();
@@ -43,7 +45,7 @@ public sealed class HelpScenePlayModeTests
         Assert.That(body.text, Does.Contain("\u6253\u5f00\u80cc\u5305"));
         Assert.That(backLabel.text, Is.EqualTo("\u8fd4\u56de"));
         Assert.That(new[] { title, body, backLabel }.All(label => label.font == bundledFont), Is.True,
-            "Every Help label must use the bundled WebGL Chinese font.");
+            "Every Chinese Help label must use the bundled ZCOOL XiaoWei WebGL font.");
 
         backButton.onClick.Invoke();
         yield return null;

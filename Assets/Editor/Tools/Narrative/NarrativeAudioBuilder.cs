@@ -16,8 +16,7 @@ public static class NarrativeAudioBuilder
     private const string DialoguePrefabPath = "Assets/Prefab/WorldDialogueBubble.prefab";
     private const string BgmPrefabPath = "Assets/Prefab/BgmPlayer.prefab";
     private const string BossBgmPath = "Assets/Audio/SFX/monume-tension-tension-music-547908.mp3";
-    private const string DialogueFontPath =
-        "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
+    private const string DialogueFontPath = "Assets/Resources/Fonts/BoldPixels SDF.asset";
     private static readonly string[] GameplayScenePaths =
     {
         "Assets/Scenes/Legacy/stage1.unity",

@@ -119,6 +119,8 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
             new object[] { wornWeaponSlot, new Vector2(900f, 500f) });
         Assert.That(title.text, Is.EqualTo("巨剑+1"),
             "The bundled CJK font must render the same item name in Chinese.");
+        Font chineseFont = Resources.Load<Font>("Fonts/ZCOOLXiaoWei-Regular");
+        Assert.That(title.font, Is.SameAs(chineseFont));
         Assert.That(title.cachedTextGenerator.vertexCount, Is.GreaterThan(0));
         SetLanguage("English");
         details.GetType().GetMethod("ShowEquipmentHover").Invoke(details,

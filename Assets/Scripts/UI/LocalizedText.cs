@@ -15,7 +15,6 @@ public sealed class LocalizedText : MonoBehaviour
 {
     private Text uiText;
     private TMP_Text tmpText;
-    private TMP_FontAsset originalTmpFont;
     private string sourceEnglish;
     private string lastApplied;
 
@@ -23,7 +22,6 @@ public sealed class LocalizedText : MonoBehaviour
     {
         uiText = GetComponent<Text>();
         tmpText = GetComponent<TMP_Text>();
-        originalTmpFont = tmpText != null ? tmpText.font : null;
         sourceEnglish = CurrentText();
         Apply();
     }
@@ -61,14 +59,13 @@ public sealed class LocalizedText : MonoBehaviour
     {
         // LegacyRuntime.ttf can use an installed Windows fallback in the Editor, but that fallback
         // does not exist in WebGL. Every localised legacy label therefore uses the shipped TTF.
-        if (uiText != null && UiFont.Regular != null && uiText.font != UiFont.Regular)
-            uiText.font = UiFont.Regular;
+        Font desiredLegacy = UiFont.Current;
+        if (uiText != null && desiredLegacy != null && uiText.font != desiredLegacy)
+            uiText.font = desiredLegacy;
 
         if (tmpText == null)
             return;
-        TMP_FontAsset desired = Localization.Current == GameLanguage.Chinese
-            ? UiFont.TmpRegular
-            : originalTmpFont;
+        TMP_FontAsset desired = UiFont.TmpCurrent;
         if (desired != null && tmpText.font != desired)
             tmpText.font = desired;
     }

@@ -20,7 +20,8 @@ using UnityEngine.UI;
 public static class StartMenuSettingsBuilder
 {
     private const string ScenePath = "Assets/Scenes/StartMenu.unity";
-    private const string ChineseFontPath = "Assets/Resources/Fonts/NotoSansSC-Regular.ttf";
+    private const string EnglishFontPath = "Assets/Resources/Fonts/BoldPixels.ttf";
+    private const string ChineseFontPath = "Assets/Resources/Fonts/ZCOOLXiaoWei-Regular.ttf";
     private static readonly Vector2 MenuButtonSize = new Vector2(410f, 100f);
 
     // A second centred row under START/HELP (which sit at (±400, -115)): SETTING left, CREDIT right.
@@ -154,12 +155,15 @@ public static class StartMenuSettingsBuilder
         if (controller.DifficultyPanel.transform.Find("Difficulty Back Button") == null)
             throw new InvalidOperationException("The difficulty panel needs Normal, Hard and Back buttons.");
 
-        Font bundledFont = AssetDatabase.LoadAssetAtPath<Font>(ChineseFontPath);
+        Font bundledFont = AssetDatabase.LoadAssetAtPath<Font>(EnglishFontPath);
         if (bundledFont == null)
-            throw new InvalidOperationException("Missing bundled WebGL Chinese font at " + ChineseFontPath + ".");
-        TrueTypeFontImporter importer = AssetImporter.GetAtPath(ChineseFontPath) as TrueTypeFontImporter;
-        if (importer == null || !importer.includeFontData)
-            throw new InvalidOperationException("The Noto Sans SC font data must be included in WebGL builds.");
+            throw new InvalidOperationException("Missing bundled English UI font at " + EnglishFontPath + ".");
+        Font chineseFont = AssetDatabase.LoadAssetAtPath<Font>(ChineseFontPath);
+        TrueTypeFontImporter englishImporter = AssetImporter.GetAtPath(EnglishFontPath) as TrueTypeFontImporter;
+        TrueTypeFontImporter chineseImporter = AssetImporter.GetAtPath(ChineseFontPath) as TrueTypeFontImporter;
+        if (chineseFont == null || englishImporter == null || chineseImporter == null ||
+            !englishImporter.includeFontData || !chineseImporter.includeFontData)
+            throw new InvalidOperationException("Both bundled language fonts must include data in WebGL builds.");
         foreach (Text label in controller.GetComponentsInChildren<Text>(true))
             if (label.font != bundledFont)
                 throw new InvalidOperationException(label.name + " still uses an OS-dependent legacy font.");
@@ -167,16 +171,16 @@ public static class StartMenuSettingsBuilder
         MenuButtonSkin.ValidateAll(controller.transform);
         const string requiredMenuGlyphs = "开始游戏帮助设置制作名单";
         foreach (char glyph in requiredMenuGlyphs)
-            if (!bundledFont.HasCharacter(glyph))
+            if (!chineseFont.HasCharacter(glyph))
                 throw new InvalidOperationException("The bundled menu font is missing Chinese glyph: " + glyph);
 
-        Debug.Log("START_MENU_VALIDATE_OK: all legacy labels use bundled Noto Sans SC with WebGL font data.");
+        Debug.Log("START_MENU_VALIDATE_OK: saved labels use BoldPixels and both WebGL font sources are bundled.");
     }
 
     private static void ApplyBundledFont(Transform menuRoot)
     {
-        Font bundledFont = AssetDatabase.LoadAssetAtPath<Font>(ChineseFontPath) ??
-            throw new InvalidOperationException("Missing bundled font at " + ChineseFontPath + ".");
+        Font bundledFont = AssetDatabase.LoadAssetAtPath<Font>(EnglishFontPath) ??
+            throw new InvalidOperationException("Missing bundled font at " + EnglishFontPath + ".");
         foreach (Text label in menuRoot.GetComponentsInChildren<Text>(true))
         {
             if (label.font == bundledFont)
@@ -369,7 +373,7 @@ public static class StartMenuSettingsBuilder
         textObject.transform.SetParent(parent, false);
         ApplyRect(textObject.GetComponent<RectTransform>(), position, size, CentreAnchor);
         Text text = textObject.GetComponent<Text>();
-        text.font = UiFont.Regular;   // Noto Sans SC — covers the Chinese label too
+        text.font = UiFont.Regular;   // English authoring face; LocalizedText swaps Chinese at runtime.
         text.fontSize = fontSize;
         text.fontStyle = style;
         text.alignment = TextAnchor.MiddleCenter;

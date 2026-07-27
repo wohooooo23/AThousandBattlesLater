@@ -25,8 +25,7 @@ public static class StoryChapterBuilder
         "路子轩 · ZJU — Map Design / Art / Code\n" +
         "卢敏察 · ZJU — Assets / Art\n" +
         "孟祥铭 · SJTU — Code";
-    private const string FontPath =
-        "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
+    private const string FontPath = "Assets/Resources/Fonts/BoldPixels SDF.asset";
     private const string ComicObjectName = "Story Comic Panel";
     private const string Stage2CastName = "Boss Introduction Cast";
     private const string WizardActorName = "Story Evil Wizard Idle_0";

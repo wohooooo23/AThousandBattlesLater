@@ -309,9 +309,9 @@ Hero enters the stage2 boss arena
 
 开始菜单的 Legacy UI 不再依赖 Unity 内置 `LegacyRuntime.ttf`。该字体在 Windows 编辑器中可能借用操作系统的中文字体回退，但 WebGL 浏览器构建无法访问相同的系统字形，因此 `START`、`HELP` 翻译为中文后曾显示为空白。
 
-1. **随包字体**：所有开始菜单 `UnityEngine.UI.Text` 直接引用 `Assets/Resources/Fonts/NotoSansSC-Regular.ttf`；字体数据的 `includeFontData` 保持启用，因此 WebGL Player 会把需要的字形数据包含在构建中。
+1. **随包字体**：英文界面使用 `Assets/Resources/Fonts/BoldPixels.ttf`，中文界面使用 `Assets/Resources/Fonts/ZCOOLXiaoWei-Regular.ttf`；两份字体数据的 `includeFontData` 均保持启用，因此 WebGL Player 会把实际字形来源包含在构建中。
 2. **保存式场景配置**：`Start Label`、`Help Label`、标题、开发者名称及设置/制作名单面板文本的字体引用直接保存在 `StartMenu.unity`，不会在运行时临时创建或替换组件。
-3. **语言切换**：`LocalizedText` 仍只负责把英文 key 变换成 `LocalizationTable` 中的中文；实际字形由场景保存的 Noto Sans SC 渲染。`START -> 开始游戏`、`HELP -> 帮助` 与已有的 `SETTING / CREDIT` 走同一条路径。
+3. **语言切换**：`LocalizedText` 在把英文 key 变换成 `LocalizationTable` 中文本的同时切换字体：英文选择 BoldPixels，中文选择站酷小薇体。`START -> 开始游戏`、`HELP -> 帮助` 与已有的 `SETTING / CREDIT` 走同一条路径。
 4. **幂等构筑**：`Tools > Start Menu > Build Settings And Credits` 会扫描开始菜单根对象下所有 active/inactive Legacy Text，并统一写入随包字体；以后重建或新增按钮也不会重新引入依赖系统字体的引用。
 5. **验证**：`Validate Start Menu` 会检查字体资源存在、字体数据会进入构建、所有菜单 Text 都引用该资源，并确认“开始游戏帮助设置制作名单”所需字形齐全；PlayMode 测试额外检查 Start/Help 的实际字体引用。
 
@@ -319,7 +319,7 @@ Hero enters the stage2 boss arena
 StartMenu scene loads
   -> LocalizedText reads English key
   -> LocalizationTable returns Chinese text
-  -> scene-authored Noto Sans SC renders bundled glyphs
+  -> UiFont selects BoldPixels or ZCOOL XiaoWei
   -> identical result in Editor, Windows Player and WebGL
 ```
 
@@ -327,10 +327,10 @@ StartMenu scene loads
 
 WebGL Player 无法像 Windows 编辑器一样从操作系统借用中文字形，因此只修复开始菜单不足以覆盖 Help、剧情气泡、关卡提示、背包和锻造界面。本地化渲染现在统一经过以下管线：
 
-1. **Legacy Text**：`LocalizedText` 在处理每个 `UnityEngine.UI.Text` 时同时绑定随包的 `Resources/Fonts/NotoSansSC-Regular.ttf`。即使旧场景仍保存 `LegacyRuntime.ttf`，进入 WebGL 后也会在显示中文前切换到真实随包字体。
-2. **TextMeshPro**：中文模式下，`LocalizedText` 将 TMP 标签切到 `Resources/Fonts/NotoSansSC SDF.asset`；英文模式恢复该对象原本的 TMP 字体。动态 SDF 的源 TTF 位于 Resources，WebGL 构建不会裁剪字形来源。
-3. **Help 场景**：标题、正文和返回按钮的 Noto 字体引用直接保存在 `Help.unity`。Help 正文的英文源文本与 `LocalizationTable` 使用完全一致的折叠空白 key，因此整页可一次性翻译，返回按钮显示“返回”。
-4. **构筑与检查**：`Tools > Localization > Build Chinese Font Fallback` 会保存 Help 字体并注册 TMP fallback；`Validate Chinese Font Fallback` 在 WebGL 目标下检查 TTF 数据、动态 TMP 字体、Help 全部字体引用及长文本翻译命中；`Build WebGL Localization Smoke Player` 会使用 Build Settings 中的完整场景列表在 `Builds/CodexWebGLLocalization` 生成 Development WebGL Player，防止仅在编辑器中验证成功。Unity 6000.5 禁止把 Player 输出到内部 `Library` 工作目录，因此该可丢弃输出改用已被 `.gitignore` 排除的标准构建目录。
+1. **Legacy Text**：`LocalizedText` 在处理每个 `UnityEngine.UI.Text` 时读取 `UiFont.Current`。英文绑定随包的 BoldPixels，中文绑定随包的站酷小薇体；旧场景即使仍保存 `LegacyRuntime.ttf`，首帧也会切换到正确字体。
+2. **TextMeshPro**：两份源 TTF 分别生成 `BoldPixels SDF.asset` 与 `ZCOOLXiaoWei SDF.asset`。它们使用 Dynamic Atlas，并保留源 TTF 于 Resources；英文 TMP 还把中文 TMP 设为 fallback，以覆盖夹杂中文的文本。
+3. **Help 场景**：标题、正文和返回按钮的 BoldPixels 引用直接保存在 `Help.unity`；切换中文后由 `LocalizedText` 同步替换文字与字体。Help 正文的英文源文本与 `LocalizationTable` 使用完全一致的折叠空白 key，因此整页可一次性翻译，返回按钮显示“返回”。
+4. **构筑与检查**：`Tools > Localization > Build Dual Language Fonts` 从下载目录导入两份源字体及许可证，创建 TMP 资产，并把英文字体保存到 StartMenu、Help 和 UI Prefab；`Validate Dual Language Fonts` 检查 TTF 数据、动态 TMP 字体、fallback 和保存式引用；`Build WebGL Localization Smoke Player` 会使用 Build Settings 中的完整场景列表在 `Builds/CodexWebGLLocalization` 生成 Development WebGL Player。
 5. **漫画首帧**：`StoryComicPanel.ShowPanel` 会重新启用 `RawImage`、标记 Canvas 为 dirty 并强制刷新。剧情协程在每一格显示后等待一个 `WaitForEndOfFrame`，保证 WebGL 完成大纹理上传和至少一次绘制后才开始监听 Enter，避免第一格逻辑存在但视觉为空。
 
 ```text
@@ -378,7 +378,7 @@ King finishes an attack
 本轮将四个表面上互不相关的问题收束到“资源准备—唯一数值源—运行时对象所有权—物理落点”四条明确管线中，避免依靠场景帧序或固定模型尺寸碰运气。
 
 1. **漫画首格预热**：`StoryComicPanel.Prepare` 在画面仍为透明时绑定完整漫画纹理、提交左上象限 UV、显式取得原生纹理句柄并刷新 Canvas。`StoryDialogueController` 先让隐藏画面完成一次帧末上传，再显示第一格；每格显示后下一帧重新提交一次纹理并等待帧末绘制，之后才开始接收 Enter。这样 WebGL 不会出现“逻辑停在第一格、纹理却要到第二格才出现”的情况。
-2. **物品名称显示**：`ItemDisplay.LocalizedName` 以 `itemName`、资源名和 `Unnamed Item` 依次兜底，本地化表的空结果不能再擦除名称。`ItemDetailPanel` 每次绘制都会重新绑定随包的 Noto Sans SC、请求当前文字字形、标记文字网格为 dirty；标题允许纵向溢出，避免 Noto 较高的字体度量在 WebGL 中把整行裁掉。中英文名称与 `+N` 锻造后缀走同一接口。
+2. **物品名称显示**：`ItemDisplay.LocalizedName` 以 `itemName`、资源名和 `Unnamed Item` 依次兜底，本地化表的空结果不能再擦除名称。`ItemDetailPanel` 每次绘制都会重新绑定当前语言对应的 BoldPixels / 站酷小薇体、请求当前文字字形并标记文字网格为 dirty；标题允许纵向溢出，避免两种字体度量差异在 WebGL 中裁掉整行。中英文名称与 `+N` 锻造后缀走同一接口。
 3. **巨剑唯一数值源**：`Weapon_Claymore.asset` 与 `EquipmentBuilder` 的基础攻击统一为 10 ATK；`RunProgress` 每锻造一级增加 10，因此 +1 必须同时在背包、装备栏、锻造界面和实际伤害中得到 20 ATK。构筑器与持久化资源不再分别保留 18 和 10 两套初始值。
 4. **Boss 导航点贴地**：`EnemyPlatformNavigator.RefreshNodes` 收集场景中保存的导航点后，从每个点向 Ground 层探测实际平台表面，再按当前 Boss 碰撞体底部到根节点的真实距离修正 Y 坐标。Evil Wizard 与四倍尺寸的 Medieval King 可以复用同一套节点拓扑，同时保证脚底刚好落在平台上；跳跃结束后仍恢复动态重力完成最终接触。
 5. **攻击特效所有权**：所有 `EnemyAttackPattern` 统一登记其预警、命中框、扇形 Mesh、激光、弹幕容器与国王剑气。Boss 死亡时 `EnemyHealth` 先清除这些受管对象，再禁用攻击模式并停止控制器协程；组件被禁用或销毁时也执行相同兜底，因此第一关巫师和第二关国王都不会把攻击残影留到 Victory 画面。
@@ -454,7 +454,7 @@ Boss arena camera becomes Camera.main
 2. **保存式交互**：每个 `Button` 的 `Transition` 保存为 `SpriteSwap`，普通图写入目标 `Image`，另外三态写入 `SpriteState`。所有引用都直接保存在 `StartMenu.unity`、`Help.unity` 与 `Canvas.prefab`，运行时不创建按钮或补挂组件。
 3. **开始菜单覆盖范围**：`Start / Help / Setting / Credit` 四个入口、难度选择、设置和制作名单页面中的语言、清档及全部返回按钮统一套用石板皮肤。难度中的困难选项与可执行的清档操作只把文字染成浅红，不再给整张石板染色。
 4. **帮助与暂停菜单**：`Help.unity` 的返回按钮使用相同四态皮肤；共享 `Canvas.prefab` 中的 `Resume / How To Play / Main Menu / Help Back` 同样保存完整 SpriteSwap 引用，所以两关使用同一个暂停菜单外观。
-5. **本地化兼容**：按钮图不烘焙文字。Legacy `Text` 继续使用随包的 Noto Sans SC，并由 `LocalizedText` 更新内容；皮肤构筑只统一字体颜色和粗体，不修改翻译 key 或点击事件。
+5. **本地化兼容**：按钮图不烘焙文字。Legacy `Text` 的英文使用 BoldPixels，中文使用站酷小薇体，并由 `LocalizedText` 同步更新内容与字体；皮肤构筑只统一字体颜色和粗体，不修改翻译 key 或点击事件。
 6. **可重复构筑**：菜单 `Tools > UI > Apply Dark Slate Button Skin` 会幂等地刷新两个场景和共享 Canvas；`StartMenuSettingsBuilder` 与 `PauseMenuBuilder` 也会在各自重建末尾重新套用皮肤，避免后续构筑恢复白色占位按钮。
 7. **验证**：`Tools > UI > Validate Dark Slate Button Skin` 检查四张 Sprite 的导入设置，以及每个目标按钮的 Normal、Hover、Pressed、Selected、Disabled 引用。开始菜单与暂停菜单原有验证器也会执行同一检查。
 
@@ -536,4 +536,28 @@ Audit build/runtime paths
   -> remove confirmed recovery/empty folders
   -> compile
   -> Validate Asset Structure
+```
+
+## BoldPixels / 站酷小薇体双字体管线
+
+项目不再让一份通用字体同时承担中英文美术表现。英文界面统一使用粗颗粒像素字体 BoldPixels，中文界面统一使用更适合剧情与菜单阅读的站酷小薇体；语言切换同时更新文本内容与字体资产。
+
+1. **源字体与许可**：`BoldPixels.ttf`、`ZCOOLXiaoWei-Regular.ttf` 及各自许可证保存在 `Assets/Resources/Fonts`。TTF 的 `includeFontData` 必须开启，以保证 Windows 与 WebGL 均使用仓库内同一份字形，而不是操作系统回退字体。
+2. **两套 UI 入口**：`UiFont.English / Chinese` 提供 Legacy `Text` 字体，`UiFont.TmpEnglish / TmpChinese` 提供 TMP 字体；`Current / TmpCurrent` 根据 `Localization.Current` 返回当前语言的字体。原有 `Regular` 只作为 Editor 构筑器的英文 authoring 入口保留。
+3. **运行时同步切换**：`LocalizedText.Apply` 先调用 `ApplyBundledFont`，再翻译文字。这样语言事件触发时，同一帧内完成 BoldPixels 与站酷小薇体切换，不会出现中文内容配英文字体、或英文切回后仍保留中文字形度量的状态。
+4. **TMP 动态字形**：构筑器从两份 TTF 分别生成 2048×2048、允许多图集的 Dynamic SDF。BoldPixels TMP 把站酷小薇体 TMP 注册为 fallback；剧情中混合的按键名、英文专名和中文句子因此不需要临时创建第三套字体组件。
+5. **保存式 UI**：`StartMenu.unity`、`Help.unity`、暂停/背包/剧情对话等 UI Prefab 直接保存 BoldPixels 引用。关卡内文本由已存在的 `LocalizedText` 在加载时切换；核心字体和 UI Component 均不是运行时临时创建。
+6. **可重复构筑与验证**：菜单 `Tools > Localization > Build Dual Language Fonts` 负责导入、生成 TMP、部署和 fallback 配置；`Validate Dual Language Fonts` 检查源字体随包数据、TMP 源字体与 Dynamic 模式、Start/Help 及 UI Prefab 的保存式英文引用。WebGL 冒烟构建继续使用 `Build WebGL Localization Smoke Player`。
+
+```text
+Downloaded TTF + license
+  -> copy into Resources/Fonts
+  -> enable includeFontData
+  -> generate English / Chinese Dynamic TMP assets
+  -> save BoldPixels into authored scenes and prefabs
+  -> language changes
+       -> translate English key
+       -> UiFont selects BoldPixels or ZCOOL XiaoWei
+       -> rebuild UI glyph geometry
+  -> validate Editor / Windows / WebGL font sources
 ```
