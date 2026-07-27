@@ -165,8 +165,14 @@ public static class StartMenuSettingsBuilder
             !englishImporter.includeFontData || !chineseImporter.includeFontData)
             throw new InvalidOperationException("Both bundled language fonts must include data in WebGL builds.");
         foreach (Text label in controller.GetComponentsInChildren<Text>(true))
-            if (label.font != bundledFont)
-                throw new InvalidOperationException(label.name + " still uses an OS-dependent legacy font.");
+        {
+            FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+            Font expected = fixedFont != null && fixedFont.Language == GameLanguage.Chinese
+                ? chineseFont
+                : bundledFont;
+            if (label.font != expected)
+                throw new InvalidOperationException(label.name + " uses the wrong saved language font.");
+        }
         MenuButtonSkin.ValidateSpriteAssets();
         MenuButtonSkin.ValidateAll(controller.transform);
         const string requiredMenuGlyphs = "开始游戏帮助设置制作名单";
@@ -183,6 +189,13 @@ public static class StartMenuSettingsBuilder
             throw new InvalidOperationException("Missing bundled font at " + EnglishFontPath + ".");
         foreach (Text label in menuRoot.GetComponentsInChildren<Text>(true))
         {
+            FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+            if (fixedFont != null)
+            {
+                fixedFont.Apply();
+                EditorUtility.SetDirty(label);
+                continue;
+            }
             if (label.font == bundledFont)
                 continue;
             label.font = bundledFont;
@@ -244,6 +257,8 @@ public static class StartMenuSettingsBuilder
             new Vector2(0f, 80f));
         english = EnsureMenuButton(panel.transform, "English Button", "English Label", "English", 34,
             new Vector2(0f, -40f));
+        ConfigureFixedLanguageLabel(chinese, GameLanguage.Chinese);
+        ConfigureFixedLanguageLabel(english, GameLanguage.English);
         // Authored white-on-black; StartMenuController recolours it to light red on white whenever
         // there is progress to throw away.
         clearProgress = EnsureMenuButton(panel.transform, "Clear Progress Button", "Clear Progress Label",
@@ -321,6 +336,18 @@ public static class StartMenuSettingsBuilder
         CreateLabel(buttonObject.transform, labelName, label, fontSize, Vector2.zero,
             new Vector2(MenuButtonSize.x - 30f, MenuButtonSize.y - 10f), Color.black, FontStyle.Bold);
         return button;
+    }
+
+    private static void ConfigureFixedLanguageLabel(Button button, GameLanguage language)
+    {
+        Text label = button.GetComponentInChildren<Text>(true) ??
+            throw new InvalidOperationException(button.name + " is missing its language label.");
+        FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+        if (fixedFont == null)
+            fixedFont = label.gameObject.AddComponent<FixedLanguageFont>();
+        fixedFont.Configure(language);
+        EditorUtility.SetDirty(fixedFont);
+        EditorUtility.SetDirty(label);
     }
 
     private static GameObject CreateBlock(Transform parent, string name, Vector2 position, Vector2 size, Color color)

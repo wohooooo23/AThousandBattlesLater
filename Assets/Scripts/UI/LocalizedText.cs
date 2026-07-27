@@ -102,11 +102,11 @@ public sealed class LocalizedText : MonoBehaviour
     private static void Attach()
     {
         foreach (Text label in FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (label.GetComponent<LocalizedText>() == null)
+            if (label.GetComponent<FixedLanguageFont>() == null && label.GetComponent<LocalizedText>() == null)
                 label.gameObject.AddComponent<LocalizedText>();
 
         foreach (TMP_Text label in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (label.GetComponent<LocalizedText>() == null)
+            if (label.GetComponent<FixedLanguageFont>() == null && label.GetComponent<LocalizedText>() == null)
                 label.gameObject.AddComponent<LocalizedText>();
     }
 }

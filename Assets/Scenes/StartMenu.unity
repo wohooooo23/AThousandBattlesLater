@@ -2733,6 +2733,7 @@ GameObject:
   - component: {fileID: 1453809506}
   - component: {fileID: 1453809508}
   - component: {fileID: 1453809507}
+  - component: {fileID: 1453809509}
   m_Layer: 0
   m_Name: English Label
   m_TagString: Untagged
@@ -2801,6 +2802,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1453809505}
   m_CullTransparentMesh: 1
+--- !u!114 &1453809509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453809505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f159c0dc35ec9cc4ba19a2858316ecc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FixedLanguageFont
+  language: 0
 --- !u!1 &1530577557
 GameObject:
   m_ObjectHideFlags: 0
@@ -3162,6 +3176,7 @@ GameObject:
   - component: {fileID: 1746072584}
   - component: {fileID: 1746072586}
   - component: {fileID: 1746072585}
+  - component: {fileID: 1746072587}
   m_Layer: 0
   m_Name: Chinese Label
   m_TagString: Untagged
@@ -3209,7 +3224,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_FontData:
-    m_Font: {fileID: 12800000, guid: 2da0d31d79bd8994e80375f2672ebf23, type: 3}
+    m_Font: {fileID: 12800000, guid: b50fab7e10db78c44b81a95ea8fb641a, type: 3}
     m_FontSize: 34
     m_FontStyle: 1
     m_BestFit: 0
@@ -3230,6 +3245,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1746072583}
   m_CullTransparentMesh: 1
+--- !u!114 &1746072587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1746072583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f159c0dc35ec9cc4ba19a2858316ecc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FixedLanguageFont
+  language: 1
 --- !u!1 &1852221382
 GameObject:
   m_ObjectHideFlags: 0

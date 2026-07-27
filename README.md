@@ -548,6 +548,7 @@ Audit build/runtime paths
 4. **TMP 动态字形**：构筑器从两份 TTF 分别生成 2048×2048、允许多图集的 Dynamic SDF。BoldPixels TMP 把站酷小薇体 TMP 注册为 fallback；剧情中混合的按键名、英文专名和中文句子因此不需要临时创建第三套字体组件。
 5. **保存式 UI**：`StartMenu.unity`、`Help.unity`、暂停/背包/剧情对话等 UI Prefab 直接保存 BoldPixels 引用。关卡内文本由已存在的 `LocalizedText` 在加载时切换；核心字体和 UI Component 均不是运行时临时创建。
 6. **可重复构筑与验证**：菜单 `Tools > Localization > Build Dual Language Fonts` 负责导入、生成 TMP、部署和 fallback 配置；`Validate Dual Language Fonts` 检查源字体随包数据、TMP 源字体与 Dynamic 模式、Start/Help 及 UI Prefab 的保存式英文引用。WebGL 冒烟构建继续使用 `Build WebGL Localization Smoke Player`。
+7. **语言选择器例外**：设置页的“中文”和“English”是语言名称，不是随当前语言翻译的普通正文。两个保存于场景的标签分别挂载 `FixedLanguageFont`，固定使用站酷小薇体与 BoldPixels；`LocalizedText` 自动扫描时跳过这类标签。这样英文界面仍能显示“中文”，中文界面也不会把 “English” 换成中文字形度量，且不依赖组件事件的执行顺序。
 
 ```text
 Downloaded TTF + license
@@ -555,9 +556,9 @@ Downloaded TTF + license
   -> enable includeFontData
   -> generate English / Chinese Dynamic TMP assets
   -> save BoldPixels into authored scenes and prefabs
-  -> language changes
-       -> translate English key
-       -> UiFont selects BoldPixels or ZCOOL XiaoWei
-       -> rebuild UI glyph geometry
+  -> ordinary label: language changes
+       -> translate English key -> UiFont selects current face -> rebuild glyph geometry
+  -> language-choice label: saved FixedLanguageFont
+       -> 中文 always uses ZCOOL XiaoWei / English always uses BoldPixels
   -> validate Editor / Windows / WebGL font sources
 ```

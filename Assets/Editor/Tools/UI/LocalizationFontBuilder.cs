@@ -13,7 +13,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Imports the authored English and Chinese faces, creates dynamic TMP assets and deploys the
-/// English face into saved UI. LocalizedText switches every label to the Chinese face at runtime.
+/// English face into saved UI. Fixed language-choice labels retain their own face, while
+/// LocalizedText switches ordinary labels to the Chinese face at runtime.
 /// Both source TTF files live in Resources so WebGL can populate dynamic glyph atlases.
 /// </summary>
 public static class LocalizationFontBuilder
@@ -47,8 +48,8 @@ public static class LocalizationFontBuilder
         ConfigureFallbacks(englishTmp, chineseTmp);
 
         foreach (string scenePath in UiScenePaths)
-            DeployToScene(scenePath, english, englishTmp);
-        DeployToUiPrefabs(english, englishTmp);
+            DeployToScene(scenePath, english, chinese, englishTmp, chineseTmp);
+        DeployToUiPrefabs(english, chinese, englishTmp, chineseTmp);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
@@ -75,7 +76,8 @@ public static class LocalizationFontBuilder
         foreach (string scenePath in UiScenePaths)
         {
             Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            ValidateLabels(FindInScene<Text>(scene), FindInScene<TMP_Text>(scene), english, englishTmp, scenePath);
+            ValidateLabels(FindInScene<Text>(scene), FindInScene<TMP_Text>(scene),
+                english, chinese, englishTmp, chineseTmp, scenePath);
         }
 
         foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefab", "Assets/Resources/Prefabs" }))
@@ -85,7 +87,7 @@ public static class LocalizationFontBuilder
             if (prefab == null)
                 continue;
             ValidateLabels(prefab.GetComponentsInChildren<Text>(true),
-                prefab.GetComponentsInChildren<TMP_Text>(true), english, englishTmp, path);
+                prefab.GetComponentsInChildren<TMP_Text>(true), english, chinese, englishTmp, chineseTmp, path);
         }
 
         Debug.Log("DUAL_LANGUAGE_FONTS_VALIDATE_OK: sources, TMP atlases, saved UI and WebGL data are valid.");
@@ -205,10 +207,12 @@ public static class LocalizationFontBuilder
         EditorUtility.SetDirty(primary);
     }
 
-    private static void DeployToScene(string path, Font english, TMP_FontAsset englishTmp)
+    private static void DeployToScene(string path, Font english, Font chinese,
+        TMP_FontAsset englishTmp, TMP_FontAsset chineseTmp)
     {
         Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
-        bool changed = ApplyFonts(FindInScene<Text>(scene), FindInScene<TMP_Text>(scene), english, englishTmp);
+        bool changed = ApplyFonts(FindInScene<Text>(scene), FindInScene<TMP_Text>(scene),
+            english, chinese, englishTmp, chineseTmp);
         if (!changed)
             return;
         EditorSceneManager.MarkSceneDirty(scene);
@@ -216,7 +220,8 @@ public static class LocalizationFontBuilder
             throw new InvalidOperationException("Failed to save font changes to " + path + ".");
     }
 
-    private static void DeployToUiPrefabs(Font english, TMP_FontAsset englishTmp)
+    private static void DeployToUiPrefabs(Font english, Font chinese,
+        TMP_FontAsset englishTmp, TMP_FontAsset chineseTmp)
     {
         foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefab", "Assets/Resources/Prefabs" }))
         {
@@ -225,7 +230,7 @@ public static class LocalizationFontBuilder
             try
             {
                 if (ApplyFonts(root.GetComponentsInChildren<Text>(true),
-                    root.GetComponentsInChildren<TMP_Text>(true), english, englishTmp))
+                    root.GetComponentsInChildren<TMP_Text>(true), english, chinese, englishTmp, chineseTmp))
                     PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally
@@ -236,22 +241,28 @@ public static class LocalizationFontBuilder
     }
 
     private static bool ApplyFonts(IEnumerable<Text> legacyLabels, IEnumerable<TMP_Text> tmpLabels,
-        Font english, TMP_FontAsset englishTmp)
+        Font english, Font chinese, TMP_FontAsset englishTmp, TMP_FontAsset chineseTmp)
     {
         bool changed = false;
         foreach (Text label in legacyLabels)
         {
-            if (label.font == english)
+            FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+            Font expected = fixedFont != null && fixedFont.Language == GameLanguage.Chinese ? chinese : english;
+            if (label.font == expected)
                 continue;
-            label.font = english;
+            label.font = expected;
             EditorUtility.SetDirty(label);
             changed = true;
         }
         foreach (TMP_Text label in tmpLabels)
         {
-            if (label.font == englishTmp)
+            FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+            TMP_FontAsset expected = fixedFont != null && fixedFont.Language == GameLanguage.Chinese
+                ? chineseTmp
+                : englishTmp;
+            if (label.font == expected)
                 continue;
-            label.font = englishTmp;
+            label.font = expected;
             EditorUtility.SetDirty(label);
             changed = true;
         }
@@ -277,10 +288,22 @@ public static class LocalizationFontBuilder
     }
 
     private static void ValidateLabels(IEnumerable<Text> legacyLabels, IEnumerable<TMP_Text> tmpLabels,
-        Font english, TMP_FontAsset englishTmp, string owner)
+        Font english, Font chinese, TMP_FontAsset englishTmp, TMP_FontAsset chineseTmp, string owner)
     {
-        Text invalidLegacy = legacyLabels.FirstOrDefault(label => label.font != english);
-        TMP_Text invalidTmp = tmpLabels.FirstOrDefault(label => label.font != englishTmp);
+        Text invalidLegacy = legacyLabels.FirstOrDefault(label =>
+        {
+            FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+            Font expected = fixedFont != null && fixedFont.Language == GameLanguage.Chinese ? chinese : english;
+            return label.font != expected;
+        });
+        TMP_Text invalidTmp = tmpLabels.FirstOrDefault(label =>
+        {
+            FixedLanguageFont fixedFont = label.GetComponent<FixedLanguageFont>();
+            TMP_FontAsset expected = fixedFont != null && fixedFont.Language == GameLanguage.Chinese
+                ? chineseTmp
+                : englishTmp;
+            return label.font != expected;
+        });
         if (invalidLegacy != null || invalidTmp != null)
             throw new InvalidOperationException(owner + " still contains a label using an old font.");
     }

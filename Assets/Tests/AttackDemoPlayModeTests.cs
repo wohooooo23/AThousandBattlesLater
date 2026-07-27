@@ -704,6 +704,11 @@ public class AttackDemoPlayModeTests : InputTestFixture
         UnityEngine.UI.Text developer = GameObject.Find("Developer Name").GetComponent<UnityEngine.UI.Text>();
         UnityEngine.UI.Text startLabel = GameObject.Find("Start Label").GetComponent<UnityEngine.UI.Text>();
         UnityEngine.UI.Text helpLabel = GameObject.Find("Help Label").GetComponent<UnityEngine.UI.Text>();
+        GameObject settingsPanel = (GameObject)controller.GetType().GetProperty("SettingsPanel").GetValue(controller);
+        UnityEngine.UI.Text chineseChoice = settingsPanel.transform
+            .Find("Chinese Button/Chinese Label").GetComponent<UnityEngine.UI.Text>();
+        UnityEngine.UI.Text englishChoice = settingsPanel.transform
+            .Find("English Button/English Label").GetComponent<UnityEngine.UI.Text>();
         Font bundledEnglishFont = Resources.Load<Font>("Fonts/BoldPixels");
         Font bundledChineseFont = Resources.Load<Font>("Fonts/ZCOOLXiaoWei-Regular");
         Assert.That(startButton.GetComponent<UnityEngine.UI.Button>(), Is.Not.Null);
@@ -720,6 +725,11 @@ public class AttackDemoPlayModeTests : InputTestFixture
         Assert.That(bundledChineseFont, Is.Not.Null);
         Assert.That(startLabel.font, Is.SameAs(bundledEnglishFont));
         Assert.That(helpLabel.font, Is.SameAs(bundledEnglishFont));
+        Assert.That(chineseChoice.font, Is.SameAs(bundledChineseFont),
+            "The fixed Chinese language choice must remain visible while the menu is English.");
+        Assert.That(englishChoice.font, Is.SameAs(bundledEnglishFont));
+        Assert.That(chineseChoice.GetComponent("FixedLanguageFont"), Is.Not.Null);
+        Assert.That(englishChoice.GetComponent("FixedLanguageFont"), Is.Not.Null);
         Assert.That(bundledChineseFont.HasCharacter('\u5f00'), Is.True);
         Assert.That(bundledChineseFont.HasCharacter('\u5e2e'), Is.True);
         SetRuntimeLanguage("Chinese");
@@ -728,6 +738,9 @@ public class AttackDemoPlayModeTests : InputTestFixture
         Assert.That(helpLabel.text, Is.EqualTo("\u5e2e\u52a9"));
         Assert.That(startLabel.font, Is.SameAs(bundledChineseFont));
         Assert.That(helpLabel.font, Is.SameAs(bundledChineseFont));
+        Assert.That(chineseChoice.font, Is.SameAs(bundledChineseFont));
+        Assert.That(englishChoice.font, Is.SameAs(bundledEnglishFont),
+            "The fixed English language choice must remain on BoldPixels while the menu is Chinese.");
         SetRuntimeLanguage("English");
         yield return null;
         Assert.That(startLabel.font, Is.SameAs(bundledEnglishFont));
