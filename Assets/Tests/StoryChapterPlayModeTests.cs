@@ -27,6 +27,7 @@ public sealed class StoryChapterPlayModeTests
         Texture2D prologue = Property(stage1, "OpeningComic") as Texture2D;
         Assert.That(prologue, Is.Not.Null);
         Assert.That(Property(stage1, "BossIntroductionComic"), Is.Null);
+        Assert.That(Property(stage1, "EndingComic"), Is.Null);
         Assert.That(Line(stage1, "openingLines", 4),
             Is.EqualTo("I swear to defend justice and demand the truth for my lord!"));
         Assert.That(Line(stage1, "bossVictoryLines", 6),
@@ -72,6 +73,10 @@ public sealed class StoryChapterPlayModeTests
         Assert.That(Property<int>(stage2, "BossVictoryLineCount"), Is.EqualTo(3));
         Assert.That(Property(stage2, "OpeningComic"), Is.Null);
         Assert.That(Property(stage2, "BossIntroductionComic"), Is.Not.Null);
+        Texture2D epilogue = Property(stage2, "EndingComic") as Texture2D;
+        Assert.That(epilogue, Is.Not.Null);
+        Assert.That(epilogue.name, Is.EqualTo("Comic_Epilogue"));
+        Assert.That(Property<float>(stage2, "EndingFadeToBlackDuration"), Is.EqualTo(1.15f).Within(0.001f));
         Assert.That(Property<int>(stage2, "BossIntroductionComicAfterLine"), Is.EqualTo(6));
         Assert.That(Property<MonoBehaviour>(stage2, "ComicPanel").gameObject.activeSelf, Is.True);
         Assert.That(Line(stage2, "bossIntroductionLines", 5),
@@ -81,6 +86,30 @@ public sealed class StoryChapterPlayModeTests
         Assert.That(Line(stage2, "bossIntroductionLines", 19), Is.EqualTo("I will defend justice!"));
         Assert.That(Line(stage2, "bossVictoryLines", 2),
             Is.EqualTo("I will return to the future with one vow intact: justice, no matter the cost."));
+
+        UnityEngine.UI.Text endingText = Object.FindObjectsByType<UnityEngine.UI.Text>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Single(label => label.transform.parent != null && label.transform.parent.name == "Victory Overlay");
+        const string englishCredits =
+            "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n" +
+            "路子轩 · ZJU — Map Design / Art / Code\n" +
+            "卢敏察 · ZJU — Assets / Art\n" +
+            "孟祥铭 · SJTU — Code";
+        Assert.That(endingText.text, Is.EqualTo(englishCredits));
+        Assert.That(endingText.rectTransform.sizeDelta, Is.EqualTo(new Vector2(1500f, 650f)));
+        Assert.That(endingText.fontSize, Is.EqualTo(38));
+        System.Type localizationTable = System.AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(assembly => assembly.GetTypes())
+            .Single(type => type.Name == "LocalizationTable");
+        object[] translationArguments = { englishCredits, null };
+        bool translated = (bool)localizationTable.GetMethod("TryGetChinese",
+                BindingFlags.Public | BindingFlags.Static)
+            .Invoke(null, translationArguments);
+        string chineseCredits = (string)translationArguments[1];
+        Assert.That(translated, Is.True);
+        Assert.That(chineseCredits, Does.Contain("路子轩 · ZJU — 地图设计 / 美工 / 代码"));
+        Assert.That(chineseCredits, Does.Contain("卢敏察 · ZJU — 素材 / 美工"));
+        Assert.That(chineseCredits, Does.Contain("孟祥铭 · SJTU — 代码"));
     }
 
     private static MonoBehaviour Find(string typeName) =>

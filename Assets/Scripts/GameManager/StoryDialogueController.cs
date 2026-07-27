@@ -58,6 +58,9 @@ public sealed class StoryDialogueController : MonoBehaviour
     [SerializeField] private StoryComicPanel comicPanel;
     [SerializeField] private Texture2D openingComic;
     [SerializeField] private Texture2D bossIntroductionComic;
+    [Tooltip("Optional four-panel epilogue played after the final Boss dialogue and a fade to black.")]
+    [SerializeField] private Texture2D endingComic;
+    [SerializeField, Min(0.05f)] private float endingFadeToBlackDuration = 1.15f;
     [Tooltip("Show the Boss comic after this many introduction lines; -1 disables it.")]
     [SerializeField] private int bossIntroductionComicAfterLine = -1;
     [SerializeField] private StoryBeat openingProgressBeat = StoryBeat.Opening;
@@ -107,6 +110,8 @@ public sealed class StoryDialogueController : MonoBehaviour
     public StoryComicPanel ComicPanel => comicPanel;
     public Texture2D OpeningComic => openingComic;
     public Texture2D BossIntroductionComic => bossIntroductionComic;
+    public Texture2D EndingComic => endingComic;
+    public float EndingFadeToBlackDuration => endingFadeToBlackDuration;
     public int BossIntroductionComicAfterLine => bossIntroductionComicAfterLine;
     public StoryBeat OpeningProgressBeat => openingProgressBeat;
     public StoryBeat BossIntroductionProgressBeat => bossIntroductionProgressBeat;
@@ -335,7 +340,17 @@ public sealed class StoryDialogueController : MonoBehaviour
         {
             HideAllBubbles();
         }
+
+        bool hasEndingComic = showFinalVictoryOverlay && endingComic != null && comicPanel != null;
+        if (hasEndingComic)
+        {
+            yield return FadeToBlack(endingFadeToBlackDuration);
+            yield return PlayComic(endingComic);
+        }
+
         victoryOverlay.SetActive(showFinalVictoryOverlay);
+        if (hasEndingComic)
+            yield return FadeFromBlack(0.65f);
         isPlaying = false;
         // Keep the final screen paused. EnemyHealth either fades to the next stage with unscaled
         // time or restores time before leaving the final Victory screen.
@@ -464,6 +479,8 @@ public sealed class StoryDialogueController : MonoBehaviour
     {
         if (fadeOverlay == null)
             yield break;
+        fadeOverlay.gameObject.SetActive(true);
+        fadeOverlay.blocksRaycasts = true;
         float elapsed = 0f;
         while (elapsed < duration)
         {
@@ -472,6 +489,26 @@ public sealed class StoryDialogueController : MonoBehaviour
             yield return null;
         }
         fadeOverlay.alpha = 0f;
+        fadeOverlay.blocksRaycasts = false;
+        fadeOverlay.interactable = false;
+    }
+
+    private IEnumerator FadeToBlack(float duration)
+    {
+        if (fadeOverlay == null)
+            yield break;
+        fadeOverlay.gameObject.SetActive(true);
+        fadeOverlay.blocksRaycasts = true;
+        fadeOverlay.interactable = false;
+        float startAlpha = fadeOverlay.alpha;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            fadeOverlay.alpha = Mathf.Lerp(startAlpha, 1f, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+        fadeOverlay.alpha = 1f;
     }
 
     private void HideBossVisuals()

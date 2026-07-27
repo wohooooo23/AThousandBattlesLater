@@ -18348,6 +18348,8 @@ MonoBehaviour:
   comicPanel: {fileID: 510808013}
   openingComic: {fileID: 0}
   bossIntroductionComic: {fileID: 2800000, guid: 8c48df8e7e2a7064692f7941ae537a0f, type: 3}
+  endingComic: {fileID: 2800000, guid: 6f50eb1050e6411f924963b620ce4e06, type: 3}
+  endingFadeToBlackDuration: 1.15
   bossIntroductionComicAfterLine: 6
   openingProgressBeat: 8
   bossIntroductionProgressBeat: 9
@@ -19818,7 +19820,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 900, y: 220}
+  m_SizeDelta: {x: 1500, y: 650}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1265228732
 MonoBehaviour:
@@ -19842,20 +19844,20 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 54
+    m_FontSize: 38
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 54
+    m_MaxSize: 38
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'VICTORY
-
-    Press Space for Main Menu'
+  m_Text: "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n\u8DEF\u5B50\u8F69
+    \u00B7 ZJU \u2014 Map Design / Art / Code\n\u5362\u654F\u5BDF \u00B7 ZJU \u2014 Assets
+    / Art\n\u5B5F\u7965\u94ED \u00B7 SJTU \u2014 Code"
 --- !u!222 &1265228733
 CanvasRenderer:
   m_ObjectHideFlags: 0

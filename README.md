@@ -2,18 +2,19 @@
 
 ## 两章剧情、英文对白与四格漫画管线
 
-正式流程现在用两张带英文人物对白框的像素风四格漫画和两组独立的章节台词，完整交代武士对国王的敬仰、国王牺牲村落牟利的真相，以及“未来武士刺杀国王—原时间线武士因此复仇”的时间闭环。英文是场景中保存的规范正文；运行时继续通过现有语言切换系统，把全部 48 句正文映射为润色后的简体中文。
+正式流程现在用三张带英文人物对白框的像素风四格漫画和两组独立的章节台词，完整交代武士对国王的敬仰、国王牺牲村落牟利的真相，以及“未来武士刺杀国王—原时间线武士因此复仇”的时间闭环。英文是场景中保存的规范正文；运行时继续通过现有语言切换系统，把全部 48 句正文映射为润色后的简体中文。
 
 1. **序章漫画**：`Assets/Resources/Story/Comic_Prologue.png` 复用 Hero、Medieval King、Evil Wizard 和 Orc 的轮廓与配色，并改为参考图所示的大颗粒、低内部像素分辨率画风。四个严格正方形分格依次表现国王在重伤武士与平民前迎战怪物、武士宣誓效忠、尸横遍野的战场上传来国王遇刺消息、老年武士来到巫师城堡坚守誓言；每格带一条简短英文对白。
 2. **真相漫画**：`Assets/Resources/Story/Comic_Betrayal.png` 的四个正方形分格表现国王把领地划给巫师与怪物、国王守着金币而远处村民受难、未来武士亲手斩杀国王、原时间线武士跪在国王身旁而未来武士携绿色符文光藏在阴影里。具体分镜以仓库根目录的 `comic.txt` 为创作来源。
-3. **逐格播放**：两张素材都是正方形的 2×2 漫画纹理，每个象限也是严格正方形。场景保存的 `StoryComicPanel` 使用 `RawImage.uvRect` 按“左上—右上—左下—右下”依次裁出四格；每按一次 Enter 才进入下一格。单格以 900×900 原比例显示，不会被横向拉伸或压缩到难以阅读。
-4. **保存式 UI**：`Assets/Prefab/StoryComicPanel.prefab` 保存 Screen Space Overlay Canvas、黑色遮罩、漫画 RawImage、白色描边和 `Press Enter to continue` 提示。两关各保存一个 prefab 实例，并由 `StoryDialogueController.comicPanel` 直接引用；运行时不临时创建任何核心 Canvas 或 Component。
-5. **第一关插入点**：首次进入 `stage1_full` 时，序章漫画显示在黑幕之上；四格播放完成后才淡入地图，再播放五句武士独白。遭遇怪物、进入巫师 Boss 房和击败巫师后的台词均按新大纲重写。最后一句 `Wait... why is the crimson rune glowing?` 在第一关切换黑幕开始时保持可见，直到第二关加载。
-6. **第二关插入点**：`StoryBeat.Stage2Opening` 与第一关 `Opening` 分开记录，因此转场后会播放四句穿越独白，死亡重载时又不会重复。进入国王房后先显示国王；第 4 句前显示只有 `Idle_0` 的巫师演员并把巫师台词挂到他头顶，巫师说完 `First, see the truth for yourself.` 后逐格播放真相漫画；第 12 句前隐藏巫师、显示国王身边的完整 Orc，并继续国王、怪物和武士的现场对话。
-7. **说话者路由**：`StoryDialogueController` 在原 Hero/Boss 两个气泡之外保存 `additionalSpeakerBubbles`，将 `EvilWizard` 与 `Monster` 分别路由到巫师和 Orc 自己的世界空间气泡。四名演员的台词不再共享国王气泡；漫画内的对白框仍烘焙进图片，不依赖运行时排版。
-8. **中英双语**：场景只存一份英文键，`LocalizationTable` 为当前两章 48 句逐句保存中文翻译。对话框仍调用统一的 `Localization.Get`，所以开始菜单已有的语言切换会同时影响剧情、提示与界面，不另建第二套剧情组件。
-8. **进度兼容**：`Stage2Opening` 追加在 `StoryBeat` 枚举末尾，避免改变旧教学触发器已经保存的枚举数值。`PrepareForNextStage` 仍只重置 Boss Introduction，第二关开场由自己的进度位控制。
-9. **重建与验证**：`Tools > Narrative & Audio > Build Two-Chapter Story` 配置两张纹理为 Point Filter、无 mipmap、无压缩，重建漫画 prefab，并幂等写入两关台词、图片引用和插入索引。`Validate Two-Chapter Story` 检查台词数量、章节进度位、漫画引用、插入位置与保存式 Canvas；`StoryChapterPlayModeTests` 进一步验证两关关键英文台词和四个 UV 裁切区域。
+3. **结尾漫画**：`Assets/Resources/Story/Comic_Epilogue.png` 从国王倒下开始，依次表现未来武士意识到自己正是历史中的刺客、绿色符文开启时间裂隙、原时间线武士收到死讯并立誓复仇，以及多年后他再次来到巫师城堡。最后一格的 `A THOUSAND BATTLES LATER...` 将第二关结局重新扣回序章和标题。
+4. **逐格播放**：三张素材都是正方形的 2×2 漫画纹理，每个象限也是严格正方形。场景保存的 `StoryComicPanel` 使用 `RawImage.uvRect` 按“左上—右上—左下—右下”依次裁出四格；每按一次 Enter 才进入下一格。单格以 900×900 原比例显示，不会被横向拉伸或压缩到难以阅读。
+5. **保存式 UI 与资源引用**：`Assets/Prefab/StoryComicPanel.prefab` 保存 Screen Space Overlay Canvas、黑色遮罩、漫画 RawImage、白色描边和 `Press Enter to continue` 提示。两关各保存一个 prefab 实例，并由 `StoryDialogueController.comicPanel` 直接引用；Stage 2 的 `endingComic` 也直接保存为 `Comic_Epilogue`，运行时不临时创建任何核心 Canvas 或 Component。
+6. **第一关插入点**：首次进入 `stage1_full` 时，序章漫画显示在黑幕之上；四格播放完成后才淡入地图，再播放五句武士独白。遭遇怪物、进入巫师 Boss 房和击败巫师后的台词均按新大纲重写。最后一句 `Wait... why is the crimson rune glowing?` 在第一关切换黑幕开始时保持可见，直到第二关加载。
+7. **第二关插入点**：`StoryBeat.Stage2Opening` 与第一关 `Opening` 分开记录，因此转场后会播放四句穿越独白，死亡重载时又不会重复。进入国王房后先显示国王；第 4 句前显示只有 `Idle_0` 的巫师演员并把巫师台词挂到他头顶，巫师说完 `First, see the truth for yourself.` 后逐格播放真相漫画；第 12 句前隐藏巫师、显示国王身边的完整 Orc，并继续国王、怪物和武士的现场对话。国王死亡后的三句收尾对白结束后，黑幕用 unscaled time 渐出，再逐格播放结尾漫画。
+8. **说话者路由**：`StoryDialogueController` 在原 Hero/Boss 两个气泡之外保存 `additionalSpeakerBubbles`，将 `EvilWizard` 与 `Monster` 分别路由到巫师和 Orc 自己的世界空间气泡。四名演员的台词不再共享国王气泡；漫画内的对白框仍烘焙进图片，不依赖运行时排版。
+9. **中英双语**：场景只存一份英文键，`LocalizationTable` 为当前两章 48 句逐句保存中文翻译，并保存最终 Victory/团队分工界面的整块中文映射。对话框与结算界面都走开始菜单已有的语言切换，不另建第二套组件。
+10. **进度兼容**：`Stage2Opening` 追加在 `StoryBeat` 枚举末尾，避免改变旧教学触发器已经保存的枚举数值。`PrepareForNextStage` 仍只重置 Boss Introduction，第二关开场由自己的进度位控制。
+11. **重建与验证**：`Tools > Narrative & Audio > Build Two-Chapter Story` 配置三张纹理为 Point Filter、无 mipmap、无压缩，重建漫画 prefab，并幂等写入两关台词、图片引用、插入索引与 Stage 2 团队分工文本。`Validate Two-Chapter Story` 检查台词数量、章节进度位、三张漫画引用、结尾淡出时长与保存式 Canvas；`StoryChapterPlayModeTests` 进一步验证关键英文台词、四个 UV 裁切区域、结尾资源和中英分工文本。
 
 ```text
 Start -> stage1 black screen
@@ -23,7 +24,9 @@ Start -> stage1 black screen
   -> stage2 time-travel opening
   -> king-room dialogue lines 1..6
   -> betrayal comic panels 1..4 (Enter)
-  -> king bargain revelation -> king battle -> final Victory
+  -> king bargain revelation -> king battle -> victory dialogue
+  -> black fade-out -> epilogue comic panels 1..4 (Enter)
+  -> final Victory / team contributions
 ```
 
 `final test` 是当前 Unity 6（`6000.5.2f1`）工作工程。项目的完整玩法由
@@ -38,7 +41,7 @@ Start -> stage1 black screen
 3. **进度继承**：第一关结束时不调用 `GameProgress.ClearAll`，因此背包堆叠、已装备物品、红/绿符文、能力解锁和锻造等级全部通过现有静态 Run 数据进入第二关。`StoryProgress.PrepareForNextStage` 只清除 Boss Introduction 标记，使第二关 Boss 仍能播放入场对话，其余开场和教学不重复。
 4. **黑屏淡出**：第一关 Boss 剧情结束后，`EnemyHealth` 使用场景中已经保存的 `Story Fade Canvas/Black Fade`，按 unscaled time 在 1.15 秒内从透明变为纯黑；即使剧情将 `Time.timeScale` 保持为 0，淡出仍能正常完成。
 5. **第二关淡入**：加载 `stage2_full` 后，启用的 `StoryDialogueController` 从全黑开始。开场剧情已经完成时不重复台词，但仍执行 1.35 秒 `FadeFromBlack`，形成连续的“第一关淡出—加载—第二关淡入”。
-6. **最终胜利**：第二关 `nextStageSceneName` 为空，因此 Boss 死亡后沿用完整胜利剧情并显示 Victory 面板；按 Space 返回 `StartMenu` 时才通过 `GameProgress.ClearAll` 清除整轮背包、装备、能力、锻造、难度与剧情进度。
+6. **最终胜利**：第二关 `nextStageSceneName` 为空。国王死亡后先播放完整胜利剧情，再使用同一个保存式黑幕在 1.15 秒内淡出，逐格播放 `Comic_Epilogue`；漫画完成后淡入最终 Victory 面板。面板同时显示路子轩、卢敏察、孟祥铭的院校与分工，按 Space 返回 `StartMenu` 时才通过 `GameProgress.ClearAll` 清除整轮背包、装备、能力、锻造、难度与剧情进度。
 7. **保存式组件**：流程直接配置两个场景内已有的 `EnemyHealth`、`StoryDialogueController` 和 `CanvasGroup`，没有在运行时补挂核心组件或创建永久 UI。只有淡入淡出协程属于短生命周期运行逻辑。
 8. **可重复构筑与验证**：菜单 `Tools > A Thousand Battles Later > Build Campaign Flow` 执行 `CampaignFlowBuilder.Build`，幂等写入开始目标、两关结算角色、淡出引用和 Build Settings；`Validate Campaign Flow` 检查第一关只通往第二关、第二关只显示最终 Victory、两个 Story System 已保存为启用状态，并验证四个正式场景的顺序。
 
@@ -50,7 +53,8 @@ START
   -> load stage2_full, preserve RunInventory / RunEquipment / RunProgress
   -> black fade-in
   -> stage2 Boss victory dialogue
-  -> Victory panel
+  -> black fade-out -> Comic_Epilogue panels 1..4 (Enter)
+  -> fade-in -> Victory / team contributions panel
   -> Space: clear run and return to StartMenu
 ```
 
@@ -279,7 +283,7 @@ EnemyAttackController selects King Radial Blade Burst
 3. **Orc 仅作演出**：第 12 句开始前隐藏巫师并激活 `Boss Companion Orc`，让怪物台词仍显示在 Orc 自己头顶；最后一句结束后，`actorsHiddenAfterBossIntroduction` 同时关闭巫师和 Orc。跳过已经看过的剧情时也会直接应用相同状态，不会让 Orc 短暂进入战斗。
 4. **逐句演员提示**：`bossIntroductionActorCues` 在显示指定行之前执行。当前 cue 为第 4 句显示巫师、第 12 句隐藏巫师并显示 Orc；剧情收尾统一隐藏两名临时演员，只留下 Hero 与 King。
 5. **独立气泡**：`Wizard Story Dialogue` 与 `Orc Story Dialogue` 都是保存于 `Dialogue Bubbles` 下的 `WorldDialogueBubble.prefab` 实例，分别跟随各自演员。Samurai、King、EvilWizard、Monster 四类 speaker 均解析到不同气泡，剧情结束时统一隐藏。
-6. **单一胜利目标**：第二关国王的 `EnemyHealth.victoryObjective` 为空，场景不再挂载 `BossEncounterObjective`。国王死亡后直接进入现有双语胜利剧情与 Victory 界面，剧情 Orc 的生命状态完全不参与结算。
+6. **单一胜利目标**：第二关国王的 `EnemyHealth.victoryObjective` 为空，场景不再挂载 `BossEncounterObjective`。国王死亡后直接进入现有双语胜利剧情、黑幕、结尾漫画与 Victory/团队分工界面，剧情 Orc 的生命状态完全不参与结算。
 7. **中英存储**：两关英文台词仍由 `StoryChapterBuilder` 写入场景，简体中文逐句写在 `LocalizationTable`；`ValidateTranslations` 会枚举两章全部 48 句，拒绝缺失、空白或仍与英文相同的翻译。
 8. **幂等构筑**：菜单 `Tools > Narrative & Audio > Build Stage2 Boss Cast and Localization` 会删除旧 `Boss Introduction Cast` 后重建演员、气泡和 cue，并清除旧联合目标引用，但保留场景里当前 Hero、King、地图和宝箱位置。随后验证 Idle_0、完整 Orc、四气泡、三个 cue、开战隐藏状态、King 单目标结算与 48 句本地化。
 9. **自动测试**：`KingRadialStoryObjectivePlayModeTests` 验证剑气网格全部顶点与 Bounds 有限、剑气确实向外加速并旋转、半场攻击上下对称、四名说话者路由正确、中文翻译生效、开战时 Orc 消失，以及只击败 King 即可结束战斗。
@@ -296,7 +300,9 @@ Hero enters the stage2 boss arena
   -> dialogue ends -> Wizard and Orc disappear
   -> King fights alone
   -> King EnemyHealth is defeated
-  -> bilingual boss-victory dialogue -> final Victory screen
+  -> bilingual boss-victory dialogue -> black fade
+  -> Comic_Epilogue panels 1..4 (Enter)
+  -> final Victory / team contributions screen
 ```
 
 ## WebGL 开始菜单中文字体管线

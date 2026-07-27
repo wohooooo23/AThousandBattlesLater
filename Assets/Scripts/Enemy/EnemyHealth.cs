@@ -51,7 +51,8 @@ public sealed class EnemyHealth : CombatHealth
     {
         // Space, not Enter: the victory dialogue advances on Enter, and reusing it would let the
         // keypress that closes the last line also dismiss the victory screen in the same frame.
-        if (isDead && victoryOverlay.activeSelf && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        if (isDead && victoryOverlay.activeSelf && (storyController == null || !storyController.IsPlaying) &&
+            Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             Time.timeScale = 1f;
             // The backpack, gear, abilities and forge levels end with the run too. They are cleared

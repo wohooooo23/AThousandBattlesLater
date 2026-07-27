@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// <summary>Authors the two-chapter English story and its panel-by-panel comic presentation.</summary>
+/// <summary>Authors the two-chapter English story and its three panel-by-panel comics.</summary>
 public static class StoryChapterBuilder
 {
     private const string Stage1Path = "Assets/Scenes/stage1_full.unity";
@@ -19,6 +19,12 @@ public static class StoryChapterBuilder
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
     private const string ProloguePath = "Assets/Resources/Story/Comic_Prologue.png";
     private const string BetrayalPath = "Assets/Resources/Story/Comic_Betrayal.png";
+    private const string EpiloguePath = "Assets/Resources/Story/Comic_Epilogue.png";
+    private const string Stage2EndScreenText =
+        "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n" +
+        "路子轩 · ZJU — Map Design / Art / Code\n" +
+        "卢敏察 · ZJU — Assets / Art\n" +
+        "孟祥铭 · SJTU — Code";
     private const string FontPath =
         "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private const string ComicObjectName = "Story Comic Panel";
@@ -31,13 +37,14 @@ public static class StoryChapterBuilder
     {
         ConfigureComicTexture(ProloguePath);
         ConfigureComicTexture(BetrayalPath);
+        ConfigureComicTexture(EpiloguePath);
         BuildComicPrefab();
         ConfigureStage1();
         ConfigureStage2();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Validate();
-        Debug.Log("STORY_CHAPTER_BUILD_OK: polished two-stage dialogue and two panel-by-panel comics are saved.");
+        Debug.Log("STORY_CHAPTER_BUILD_OK: two-stage dialogue, three comics and final team credits are saved.");
     }
 
     [MenuItem("Tools/Narrative & Audio/Build Stage2 Boss Cast and Localization")]
@@ -55,10 +62,11 @@ public static class StoryChapterBuilder
     {
         ValidateComicTexture(ProloguePath);
         ValidateComicTexture(BetrayalPath);
+        ValidateComicTexture(EpiloguePath);
         ValidateStage(Stage1Path, StoryBeat.Opening, StoryBeat.BossIntroduction,
-            5, 3, 6, 7, true, false);
+            5, 3, 6, 7, true, false, false);
         ValidateStage(Stage2Path, StoryBeat.Stage2Opening, StoryBeat.Stage2BossIntroduction,
-            4, 0, 20, 3, false, true);
+            4, 0, 20, 3, false, true, true);
         ValidateTranslations();
         ValidateStage2BossCast();
         Debug.Log("STORY_CHAPTER_VALIDATE_OK: story text, comic insertion points and saved UI references are valid.");
@@ -74,6 +82,7 @@ public static class StoryChapterBuilder
         SetObject(data, "comicPanel", panel);
         SetObject(data, "openingComic", AssetDatabase.LoadAssetAtPath<Texture2D>(ProloguePath));
         SetObject(data, "bossIntroductionComic", null);
+        SetObject(data, "endingComic", null);
         data.FindProperty("bossIntroductionComicAfterLine").intValue = -1;
         data.FindProperty("openingProgressBeat").enumValueIndex = (int)StoryBeat.Opening;
         data.FindProperty("bossIntroductionProgressBeat").enumValueIndex =
@@ -97,6 +106,8 @@ public static class StoryChapterBuilder
         SetObject(data, "comicPanel", panel);
         SetObject(data, "openingComic", null);
         SetObject(data, "bossIntroductionComic", AssetDatabase.LoadAssetAtPath<Texture2D>(BetrayalPath));
+        SetObject(data, "endingComic", AssetDatabase.LoadAssetAtPath<Texture2D>(EpiloguePath));
+        data.FindProperty("endingFadeToBlackDuration").floatValue = 1.15f;
         data.FindProperty("bossIntroductionComicAfterLine").intValue = 6;
         data.FindProperty("openingProgressBeat").enumValueIndex = (int)StoryBeat.Stage2Opening;
         data.FindProperty("bossIntroductionProgressBeat").enumValueIndex =
@@ -107,6 +118,7 @@ public static class StoryChapterBuilder
         SetLines(data.FindProperty("bossIntroductionLines"), Stage2BossIntroduction());
         SetLines(data.FindProperty("bossVictoryLines"), Stage2BossVictory());
         ConfigureStage2BossCast(scene, story, data);
+        ConfigureStage2EndScreen(scene);
         data.ApplyModifiedPropertiesWithoutUndo();
         Save(scene, Stage2Path);
     }
@@ -224,6 +236,25 @@ public static class StoryChapterBuilder
         if (story == null)
             throw new MissingReferenceException(path + " requires exactly one StoryDialogueController.");
         return story;
+    }
+
+    private static void ConfigureStage2EndScreen(Scene scene)
+    {
+        Transform overlay = FindInScene<Transform>(scene).SingleOrDefault(candidate =>
+            candidate.name == "Victory Overlay");
+        Text label = overlay != null ? overlay.GetComponentInChildren<Text>(true) : null;
+        if (label == null)
+            throw new MissingReferenceException("stage2 requires the saved Victory Overlay text.");
+
+        label.text = Stage2EndScreenText;
+        label.fontSize = 38;
+        label.resizeTextForBestFit = false;
+        label.alignment = TextAnchor.MiddleCenter;
+        RectTransform rect = label.rectTransform;
+        rect.sizeDelta = new Vector2(1500f, 650f);
+        rect.anchoredPosition = Vector2.zero;
+        EditorUtility.SetDirty(label);
+        EditorUtility.SetDirty(rect);
     }
 
     private static StoryComicPanel EnsureComicPanel(Scene scene)
@@ -344,7 +375,8 @@ public static class StoryChapterBuilder
     }
 
     private static void ValidateStage(string path, StoryBeat openingBeat, StoryBeat bossIntroBeat, int openingCount,
-        int encounterCount, int bossIntroCount, int victoryCount, bool hasOpeningComic, bool hasBossComic)
+        int encounterCount, int bossIntroCount, int victoryCount, bool hasOpeningComic, bool hasBossComic,
+        bool hasEndingComic)
     {
         StoryDialogueController story = OpenStory(path, out Scene scene);
         if (!story.gameObject.activeSelf)
@@ -359,6 +391,7 @@ public static class StoryChapterBuilder
             throw new InvalidOperationException(path + " has incomplete chapter dialogue.");
         if ((story.OpeningComic != null) != hasOpeningComic ||
             (story.BossIntroductionComic != null) != hasBossComic ||
+            (story.EndingComic != null) != hasEndingComic ||
             story.BossIntroductionComicAfterLine != (hasBossComic ? 6 : -1))
             throw new InvalidOperationException(path + " has the wrong comic or insertion point.");
         Canvas canvas = panels[0].GetComponent<Canvas>();
@@ -368,6 +401,16 @@ public static class StoryChapterBuilder
             raw == null || ((RectTransform)raw.transform).sizeDelta != new Vector2(900f, 900f) ||
             hint == null || hint.text != "Press Enter to continue")
             throw new InvalidOperationException(path + " comic presentation prefab is incomplete.");
+        if (hasEndingComic)
+        {
+            Transform overlay = FindInScene<Transform>(scene).SingleOrDefault(candidate =>
+                candidate.name == "Victory Overlay");
+            Text label = overlay != null ? overlay.GetComponentInChildren<Text>(true) : null;
+            if (label == null || label.text != Stage2EndScreenText || label.fontSize != 38 ||
+                label.rectTransform.sizeDelta != new Vector2(1500f, 650f) ||
+                Mathf.Abs(story.EndingFadeToBlackDuration - 1.15f) > 0.001f)
+                throw new InvalidOperationException("stage2 ending comic and team credits are incomplete.");
+        }
     }
 
     private static void ValidateTranslations()
