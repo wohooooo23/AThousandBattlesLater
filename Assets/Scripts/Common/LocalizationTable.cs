@@ -132,8 +132,8 @@ public static class LocalizationTable
         { "Press B to open the backpack, N to open the forge.", "按 B 打开背包，按 N 打开锻造。" },
         { "Press Space in midair to double-jump.", "在空中按空格进行二段跳。" },
         { "Press Shift while moving to dash.", "移动时按 Shift 冲刺。" },
-        { "The gate has a red rune-shaped recess.", "大门上有一个红色的符文凹槽" },
-        { "The gate has a green rune-shaped recess.", "大门上有一个绿色的符文凹槽" },
+        { "You need to equip the Red Rune.", "需要装备红色符文" },
+        { "You need to equip the Green Rune.", "需要装备绿色符文" },
 
         // ---------- Start menu ----------
         { "A THOUSAND BATTLES LATER", "武者之誓" },

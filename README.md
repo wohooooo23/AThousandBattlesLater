@@ -119,7 +119,7 @@ Rune_Crimson equipped
 红、绿符文同时承担装备和 Boss 房钥匙职责。门只检查对应符文是否正在装备，不消耗物品；这样玩家必须在背包详情中明确装备钥匙，进入后仍保留原有符文能力。
 
 1. **场景保存式配置**：两关现有的 `BossArenaController` 增加 `requiresEquippedRune`、`requiredRuneSlot` 和 `missingRuneMessage` 三个序列化字段。`stage1_full` 保存为 `Accessory`（红符文），`stage2_full` 保存为 `GreenRune`；不在运行时创建门禁组件。
-2. **开门检查**：Hero 进入 Boss 门触发器时先调用 `RunEquipment.Get(requiredRuneSlot)`。对应槽为空时取消传送并由 `PlayerProgression` 显示提示；红、绿门分别显示“大门上有一个红色/绿色的符文凹槽”。装备正确符文后再次接触门，才进入原有的相机、BGM、Boss 激活和剧情流程。
+2. **开门检查**：Hero 进入 Boss 门触发器时先调用 `RunEquipment.Get(requiredRuneSlot)`。对应槽为空时取消传送并由 `PlayerProgression` 显示明确提示；第一关显示“需要装备红色符文”，第二关显示“需要装备绿色符文”，英文分别为 `You need to equip the Red/Green Rune.`。装备正确符文后再次接触门，才进入原有的相机、BGM、Boss 激活和剧情流程。
 3. **第一关奖励**：保留全部三个宝箱及其编辑器位置。上方 `Supply Treasure Chest` 固定掉落红符文、回复药水和一组飞镖；上方宝箱的小地图圆点改为比普通宝箱大 35% 的红色圆点。左下、右下宝箱及其能力光球不变。
 4. **第二关奖励**：删除上方 Supply 宝箱及其小地图标记；左下 `Double Jump Treasure Chest` 提供回复药水、一组飞镖、遗漏的剑与遗漏的二段跳，右下 `Dash Treasure Chest` 提供绿色符文、遗漏的盾与遗漏的冲刺。两只下方宝箱的位置不修改，唯一装备和能力均按跨场景进度去重。
 5. **第二关小地图**：右下绿符文宝箱使用比普通宝箱大 35% 的绿色圆点；Boss 门和其他地图信息仍沿用原小地图相机与 Marker Layer。

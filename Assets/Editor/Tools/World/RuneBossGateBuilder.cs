@@ -36,7 +36,7 @@ public static class RuneBossGateBuilder
     [MenuItem("Tools/A Thousand Battles Later/Validate Rune Boss Gates")]
     public static void Validate()
     {
-        ValidateStage(Stage1Path, ItemType.Accessory, "The gate has a red rune-shaped recess.",
+        ValidateStage(Stage1Path, ItemType.Accessory, "You need to equip the Red Rune.",
             SupplyChest, RedMarker, new Dictionary<string, string[]>
             {
                 { SupplyChest, new[] { EquipmentBuilder.GemPickupPath, EquipmentBuilder.HealthPotionPickupPath,
@@ -45,7 +45,7 @@ public static class RuneBossGateBuilder
                 { RightChest, null }
             });
 
-        ValidateStage(Stage2Path, ItemType.GreenRune, "The gate has a green rune-shaped recess.",
+        ValidateStage(Stage2Path, ItemType.GreenRune, "You need to equip the Green Rune.",
             RightChest, GreenMarker, new Dictionary<string, string[]>
             {
                 { SupplyChest, Array.Empty<string>() },
@@ -60,7 +60,7 @@ public static class RuneBossGateBuilder
     private static void ConfigureStage1()
     {
         Scene scene = EditorSceneManager.OpenScene(Stage1Path, OpenSceneMode.Single);
-        ConfigureGate(scene, ItemType.Accessory, "The gate has a red rune-shaped recess.");
+        ConfigureGate(scene, ItemType.Accessory, "You need to equip the Red Rune.");
         TreasureChest2D supply = RequireChest(scene, SupplyChest);
         SetDrops(supply, EquipmentBuilder.GemPickupPath, EquipmentBuilder.HealthPotionPickupPath,
             KunaiInventoryBuilder.PickupPath);
@@ -71,7 +71,7 @@ public static class RuneBossGateBuilder
     private static void ConfigureStage2()
     {
         Scene scene = EditorSceneManager.OpenScene(Stage2Path, OpenSceneMode.Single);
-        ConfigureGate(scene, ItemType.GreenRune, "The gate has a green rune-shaped recess.");
+        ConfigureGate(scene, ItemType.GreenRune, "You need to equip the Green Rune.");
 
         TreasureChest2D upper = FindInScene<TreasureChest2D>(scene)
             .SingleOrDefault(chest => chest.name == SupplyChest);

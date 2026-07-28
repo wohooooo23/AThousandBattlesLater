@@ -31,7 +31,7 @@ public sealed class BossArenaController : MonoBehaviour
     [Tooltip("When enabled, the Hero must be wearing the configured rune before this arena can be entered.")]
     [SerializeField] private bool requiresEquippedRune;
     [SerializeField] private ItemType requiredRuneSlot = ItemType.Accessory;
-    [SerializeField] private string missingRuneMessage = "The gate has a red rune-shaped recess.";
+    [SerializeField] private string missingRuneMessage = "You need to equip the Red Rune.";
 
     private bool entered;
 

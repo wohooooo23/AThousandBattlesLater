@@ -1240,7 +1240,7 @@ public static class DemoSceneBuilder
         SetSerializedObject(controller, "bossHealthBar", bossBar);
         SetSerializedBool(controller, "requiresEquippedRune", true);
         SetSerializedInt(controller, "requiredRuneSlot", (int)ItemType.Accessory);
-        SetSerializedString(controller, "missingRuneMessage", "The gate has a red rune-shaped recess.");
+        SetSerializedString(controller, "missingRuneMessage", "You need to equip the Red Rune.");
         return controller;
     }
 
