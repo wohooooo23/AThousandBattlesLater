@@ -551,6 +551,7 @@ Audit build/runtime paths
 6. **可重复构筑与验证**：菜单 `Tools > Localization > Build Dual Language Fonts` 负责导入、生成 TMP、部署和 fallback 配置；`Validate Dual Language Fonts` 检查源字体随包数据、TMP 源字体与 Dynamic 模式、Start/Help 及 UI Prefab 的保存式英文引用。WebGL 冒烟构建继续使用 `Build WebGL Localization Smoke Player`。
 7. **语言选择器例外**：设置页的“中文”和“English”是语言名称，不是随当前语言翻译的普通正文。两个保存于场景的标签分别挂载 `FixedLanguageFont`，固定使用站酷小薇体与 BoldPixels；`LocalizedText` 自动扫描时跳过这类标签。这样英文界面仍能显示“中文”，中文界面也不会把 “English” 换成中文字形度量，且不依赖组件事件的执行顺序。
 8. **ESC 帮助页同步**：`Canvas.prefab` 中保存的 `Pause Help Body` 与独立 `Help.unity` 共用完全相同的英文源键，包含四个装备栏、绿色符文锻造以及红色符文不可锻造说明。标题、正文、返回按钮都直接在 Prefab 中保存 `LocalizedText`，打开暂停帮助时用同一组中文词条并切换到站酷小薇体，不依赖运行时临时补组件；`PauseMenuBuilder.Validate` 会同时比较 Prefab 正文、构筑常量、保存式组件与中文词条，防止旧说明静默退回英文。
+9. **结算名单双语键**：第二关 Victory 的英文源文本只使用 BoldPixels 确定覆盖的 ASCII 字符，成员名保存为 `Zixuan Lu / Mincha Lu / Xiangming Meng`，院校和分工同样使用英文；`LocalizationTable` 以整块英文为键，在中文模式替换为中文姓名与中文分工并切换站酷小薇体。`StoryChapterBuilder`、`stage2_full` 与测试共用同一文本，避免场景仍保存中文姓名时英文像素字体把姓名渲染为空白。
 
 ```text
 Downloaded TTF + license

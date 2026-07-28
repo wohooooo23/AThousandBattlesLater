@@ -161,9 +161,9 @@ public static class LocalizationTable
         { "VICTORY\nPress Space for Main Menu", "胜利\n按空格返回主菜单" },
         {
             "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n" +
-            "路子轩 · ZJU — Map Design / Art / Code\n" +
-            "卢敏察 · ZJU — Assets / Art\n" +
-            "孟祥铭 · SJTU — Code",
+            "Zixuan Lu - ZJU - Map Design / Art / Code\n" +
+            "Mincha Lu - ZJU - Assets / Art\n" +
+            "Xiangming Meng - SJTU - Code",
             "胜利\n按空格返回主菜单\n\n小组分工\n" +
             "路子轩 · ZJU — 地图设计 / 美工 / 代码\n" +
             "卢敏察 · ZJU — 素材 / 美工\n" +

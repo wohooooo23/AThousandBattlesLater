@@ -92,9 +92,9 @@ public sealed class StoryChapterPlayModeTests
             .Single(label => label.transform.parent != null && label.transform.parent.name == "Victory Overlay");
         const string englishCredits =
             "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n" +
-            "路子轩 · ZJU — Map Design / Art / Code\n" +
-            "卢敏察 · ZJU — Assets / Art\n" +
-            "孟祥铭 · SJTU — Code";
+            "Zixuan Lu - ZJU - Map Design / Art / Code\n" +
+            "Mincha Lu - ZJU - Assets / Art\n" +
+            "Xiangming Meng - SJTU - Code";
         Assert.That(endingText.text, Is.EqualTo(englishCredits));
         Assert.That(endingText.rectTransform.sizeDelta, Is.EqualTo(new Vector2(1500f, 650f)));
         Assert.That(endingText.fontSize, Is.EqualTo(38));

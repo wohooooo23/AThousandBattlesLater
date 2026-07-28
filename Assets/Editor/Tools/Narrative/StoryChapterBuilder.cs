@@ -22,9 +22,9 @@ public static class StoryChapterBuilder
     private const string EpiloguePath = "Assets/Resources/Story/Comic_Epilogue.png";
     private const string Stage2EndScreenText =
         "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n" +
-        "路子轩 · ZJU — Map Design / Art / Code\n" +
-        "卢敏察 · ZJU — Assets / Art\n" +
-        "孟祥铭 · SJTU — Code";
+        "Zixuan Lu - ZJU - Map Design / Art / Code\n" +
+        "Mincha Lu - ZJU - Assets / Art\n" +
+        "Xiangming Meng - SJTU - Code";
     private const string FontPath = "Assets/Resources/Fonts/BoldPixels SDF.asset";
     private const string ComicObjectName = "Story Comic Panel";
     private const string Stage2CastName = "Boss Introduction Cast";

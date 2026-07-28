@@ -19855,9 +19855,9 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\n\u8DEF\u5B50\u8F69
-    \u00B7 ZJU \u2014 Map Design / Art / Code\n\u5362\u654F\u5BDF \u00B7 ZJU \u2014 Assets
-    / Art\n\u5B5F\u7965\u94ED \u00B7 SJTU \u2014 Code"
+  m_Text: "VICTORY\nPress Space for Main Menu\n\nTEAM CONTRIBUTIONS\nZixuan
+    Lu - ZJU - Map Design / Art / Code\nMincha Lu - ZJU - Assets / Art\nXiangming
+    Meng - SJTU - Code"
 --- !u!222 &1265228733
 CanvasRenderer:
   m_ObjectHideFlags: 0
