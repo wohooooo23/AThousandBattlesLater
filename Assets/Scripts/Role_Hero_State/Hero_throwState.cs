@@ -37,12 +37,15 @@ public sealed class Hero_throwState : RoleState
 
         Vector2 velocity = role.rb.linearVelocity;
         role.Change_Vec(velocity.x * role.throwHorizontalFactor, velocity.y * role.throwVerticalFactor);
+       
     }
 
     public override void Update()
     {
         base.Update();
-
+        Vector2 velocity = role.rb.linearVelocity;
+        role.Change_Vec(velocity.x * role.throwHorizontalFactor, velocity.y * role.throwVerticalFactor);
+       
         // Phase 1: play the throw animation. Wait for its end event (or the safety cap).
         if (!animationDone)
         {

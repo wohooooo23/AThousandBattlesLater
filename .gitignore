@@ -1,17 +1,18 @@
-# This repository intentionally stores only the four Unity project source folders below.
+# Store Unity project source and documentation, excluding local editor state.
 /*
 !/.gitignore
 !/README.md
+!/TODO.md
 !/Assets/
 !/Packages/
 !/ProjectSettings/
-!/UserSettings/
 
 # Keep Unity asset metadata; it is required to preserve GUID references.
 !/**/*.meta
 
 # Never admit generated Unity/editor/build output if it is later placed under an allowed folder.
 **/[Ll]ibrary/
+**/[Uu]serSettings/
 **/[Tt]emp/
 **/[Oo]bj/
 **/[Bb]uild/
@@ -38,3 +39,5 @@
 # Unity Test Framework may leave recovery scenes when a PlayMode run is interrupted.
 /Assets/InitTestScene*.unity
 /Assets/InitTestScene*.unity.meta
+/Assets/_Recovery/
+/Assets/_Recovery.meta

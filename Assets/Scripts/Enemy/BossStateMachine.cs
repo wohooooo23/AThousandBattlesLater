@@ -1,40 +1,56 @@
 using UnityEngine;
 
-/// <summary>
-/// The Evil Wizard boss's animation state machine. It sits on top of the existing
-/// EnemyAttackController: the controller still picks and runs the six skills, while this machine
-/// reflects the boss's activity into the wizard's sprite animations and handles facing.
-///
-/// Cast timing is push-driven by the running skill (via EnemyAttackController), so the wizard's
-/// windup is locked to the skill's charge and the release frame lands exactly on the fire instant:
-///   OnCastBegin  -> BeginCast (freeze on frame 0)
-///   OnCastCharge -> SetCastProgress (scrub windup frames with the charge bar)
-///   OnCastFire   -> ReleaseCast (play the follow-through once)
-///   OnCastEnd    -> back to Idle/Reposition
-///
-/// States: Idle | Reposition (Run) | Cast | Hurt (never interrupts Cast) | Dead.
-/// </summary>
+/// <summary>Connects boss combat callbacks to the Animator Controller on its visual child.</summary>
 [RequireComponent(typeof(EnemyAttackController))]
 public sealed class BossStateMachine : MonoBehaviour
 {
     public enum State { Idle, Reposition, Cast, Hurt, Dead }
 
-    [SerializeField] private BossSpriteAnimator animator;
-    [Tooltip("Flinch length when hit outside of a cast.")]
+    private static readonly int IdleHash = Animator.StringToHash("Base Layer.Idle");
+    private static readonly int RunHash = Animator.StringToHash("Base Layer.Run");
+    private static readonly int Attack1Hash = Animator.StringToHash("Base Layer.Attack1");
+    private static readonly int Attack2Hash = Animator.StringToHash("Base Layer.Attack2");
+    private static readonly int Attack3Hash = Animator.StringToHash("Base Layer.Attack3");
+    private static readonly int HurtHash = Animator.StringToHash("Base Layer.Hurt");
+    private static readonly int DeathHash = Animator.StringToHash("Base Layer.Death");
+    private static readonly int MovingHash = Animator.StringToHash("Moving");
+
+    [SerializeField] private Animator animator;
+    [SerializeField] private SpriteRenderer visualRenderer;
+    [SerializeField] private bool defaultFacesRight = true;
+    [SerializeField] private bool compensateOffCenterPivot;
     [SerializeField, Min(0f)] private float hurtDuration = 0.28f;
-    [Tooltip("Beyond this distance the boss plays Run instead of Idle.")]
     [SerializeField, Min(0f)] private float repositionDistance = 6f;
+    [Header("Attack release frames")]
+    [SerializeField, Min(0)] private int attack1ReleaseFrame = 5;
+    [SerializeField, Min(0)] private int attack2ReleaseFrame = 5;
+    [SerializeField, Min(0)] private int attack3ReleaseFrame = 2;
+    [SerializeField, Min(1)] private int attack1FrameCount = 8;
+    [SerializeField, Min(1)] private int attack2FrameCount = 8;
+    [SerializeField, Min(1)] private int attack3FrameCount = 4;
 
     private Transform hero;
     private State state = State.Idle;
     private float hurtTimer;
+    private int castHash;
+    private float castReleaseTime;
+    private float visualCenterLocalX;
 
     public State Current => state;
+    public bool FacingRight { get; private set; } = true;
+    public Animator VisualAnimator => animator;
 
     private void Awake()
     {
         if (animator == null)
-            animator = GetComponentInChildren<BossSpriteAnimator>();
+            animator = GetComponentInChildren<Animator>(true);
+        if (visualRenderer == null && animator != null)
+            visualRenderer = animator.GetComponent<SpriteRenderer>();
+        if (animator == null || animator.runtimeAnimatorController == null || visualRenderer == null)
+            throw new MissingReferenceException(name + " requires a configured visual Animator and SpriteRenderer.");
+        if (visualRenderer.sprite != null)
+            visualCenterLocalX = visualRenderer.transform.localPosition.x +
+                                 visualRenderer.sprite.bounds.center.x * visualRenderer.transform.localScale.x;
     }
 
     private void Start()
@@ -42,86 +58,94 @@ public sealed class BossStateMachine : MonoBehaviour
         CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
         if (player != null)
             hero = player.transform;
-        SwitchTo(State.Idle, force: true);   // force so the idle clip actually starts at spawn
+        SwitchTo(State.Idle, true);
     }
 
     private void Update()
     {
         if (state == State.Dead)
             return;
-
         if (state != State.Cast)
             FaceHero();
-
-        if (hurtTimer > 0f)
+        bool hurtFinished = state == State.Hurt;
+        if (hurtFinished)
         {
             hurtTimer -= Time.deltaTime;
             if (hurtTimer > 0f)
-                return;   // hold the flinch until it elapses
+                return;
         }
-
         if (state == State.Cast)
-            return;   // the cast animation is driven by the OnCast* callbacks below
-
+            return;
         float distance = hero != null ? Vector2.Distance(transform.position, hero.position) : 0f;
-        if (hero != null && distance > repositionDistance)
-            SwitchTo(State.Reposition);
-        else
-            SwitchTo(State.Idle);
+        SwitchTo(hero != null && distance > repositionDistance ? State.Reposition : State.Idle, hurtFinished);
     }
-
-    // ---- push callbacks from EnemyAttackController / the running skill ----
 
     public void OnCastBegin(EnemyAttackPattern pattern)
     {
         if (state == State.Dead || pattern == null)
             return;
-        FaceHero(); // lock the authored attack direction before entering Cast
+        FaceHero();
         state = State.Cast;
         hurtTimer = 0f;
-        string clip = pattern.CastAnim switch
+        animator.speed = 0f;
+        switch (pattern.CastAnim)
         {
-            CastAnimation.Attack2 => "Attack2",
-            CastAnimation.Attack3 => "Attack3",
-            _ => "Attack1"
-        };
-        animator?.BeginCast(clip);
+            case CastAnimation.Attack2:
+                castHash = Attack2Hash;
+                castReleaseTime = ReleaseTime(attack2ReleaseFrame, attack2FrameCount);
+                break;
+            case CastAnimation.Attack3:
+                castHash = Attack3Hash;
+                castReleaseTime = ReleaseTime(attack3ReleaseFrame, attack3FrameCount);
+                break;
+            default:
+                castHash = Attack1Hash;
+                castReleaseTime = ReleaseTime(attack1ReleaseFrame, attack1FrameCount);
+                break;
+        }
+        animator.Play(castHash, 0, 0f);
+        animator.Update(0f);
     }
 
     public void OnCastCharge(float progress)
     {
-        if (state == State.Cast)
-            animator?.SetCastProgress(progress);
+        if (state != State.Cast)
+            return;
+        animator.Play(castHash, 0, Mathf.Clamp01(progress) * castReleaseTime);
+        animator.Update(0f);
     }
 
     public void OnCastFire()
     {
-        if (state == State.Cast)
-            animator?.ReleaseCast();
+        if (state != State.Cast)
+            return;
+        animator.Play(castHash, 0, castReleaseTime);
+        animator.Update(0f);
+        animator.speed = 1f;
     }
 
     public void OnCastEnd()
     {
-        if (state == State.Cast)
-            SwitchTo(State.Idle, force: true);
+        if (state != State.Cast)
+            return;
+        animator.speed = 1f;
+        SwitchTo(State.Idle, true);
     }
 
-    // ---- hurt / death from EnemyHealth ----
-
-    /// <summary>Flinches, but never interrupts a cast or death.</summary>
     public void NotifyHurt()
     {
         if (state == State.Dead || state == State.Cast)
             return;
         state = State.Hurt;
         hurtTimer = hurtDuration;
-        animator?.Play("TakeHit");
+        animator.Play(HurtHash, 0, 0f);
     }
 
     public void NotifyDead()
     {
         state = State.Dead;
-        animator?.Play("Death");
+        animator.speed = 1f;
+        animator.Play(DeathHash, 0, 0f);
     }
 
     private void SwitchTo(State next, bool force = false)
@@ -129,16 +153,27 @@ public sealed class BossStateMachine : MonoBehaviour
         if (!force && state == next)
             return;
         state = next;
-        switch (next)
-        {
-            case State.Idle: animator?.Play("Idle"); break;
-            case State.Reposition: animator?.Play("Run"); break;
-        }
+        animator.SetBool(MovingHash, next == State.Reposition);
+        if (force)
+            animator.Play(next == State.Reposition ? RunHash : IdleHash, 0, 0f);
     }
 
     private void FaceHero()
     {
-        if (hero != null)
-            animator?.SetFacing(hero.position.x >= transform.position.x);
+        if (hero == null)
+            return;
+        FacingRight = hero.position.x >= transform.position.x;
+        bool flip = FacingRight != defaultFacesRight;
+        visualRenderer.flipX = flip;
+        if (compensateOffCenterPivot && visualRenderer.sprite != null)
+        {
+            Vector3 position = visualRenderer.transform.localPosition;
+            float offset = visualRenderer.sprite.bounds.center.x * visualRenderer.transform.localScale.x;
+            position.x = visualCenterLocalX + (flip ? offset : -offset);
+            visualRenderer.transform.localPosition = position;
+        }
     }
+
+    private static float ReleaseTime(int releaseFrame, int frameCount) =>
+        Mathf.Clamp(releaseFrame, 0, Mathf.Max(1, frameCount) - 1) / (float)Mathf.Max(1, frameCount);
 }

@@ -93,97 +93,28 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
---- !u!114 &1051440663889490987
-MonoBehaviour:
+--- !u!95 &1051440663889490987
+Animator:
+  serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2920534645394663980}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f9115b98e065c464c83c5758f5a405db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossSpriteAnimator
-  defaultFacesRight: 1
-  idle:
-    name: Idle
-    frames:
-    - {fileID: -803321122, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: 1722800662, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: -722472064, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: -606836463, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: -1332049040, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: 302371626, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: 1179212406, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    - {fileID: -936345048, guid: 836ba81373ddf664c8a192783efe0ecd, type: 3}
-    fps: 8
-    loop: 1
-    releaseFrame: 0
-  run:
-    name: Run
-    frames:
-    - {fileID: 1949596342, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: 1038548815, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: -1705274026, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: 1780273231, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: 30082529, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: 409107420, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: 592879761, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    - {fileID: -151637083, guid: 0ee574384c0214845835ae718b1343c0, type: 3}
-    fps: 12
-    loop: 1
-    releaseFrame: 0
-  attack1:
-    name: Attack1
-    frames:
-    - {fileID: 143760055, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: 516175854, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: -864086529, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: 2033902712, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: -170978650, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: -181773083, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: 1648130528, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    - {fileID: 297391161, guid: 286e888c7c071b047930dd3085b26e6c, type: 3}
-    fps: 12
-    loop: 0
-    releaseFrame: 5
-  attack2:
-    name: Attack2
-    frames:
-    - {fileID: 1875799275, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: 451009987, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: 1617418296, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: -1931375925, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: -2076784600, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: -594963842, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: 485619121, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    - {fileID: -196339179, guid: 5e6f6f559289eab46a9e4c6148cfe51e, type: 3}
-    fps: 12
-    loop: 0
-    releaseFrame: 5
-  takeHit:
-    name: TakeHit
-    frames:
-    - {fileID: -1313988079, guid: 7263ba8e3d07f7c4c90dd7ca4dc14bdd, type: 3}
-    - {fileID: 965373608, guid: 7263ba8e3d07f7c4c90dd7ca4dc14bdd, type: 3}
-    - {fileID: -73526045, guid: 7263ba8e3d07f7c4c90dd7ca4dc14bdd, type: 3}
-    fps: 12
-    loop: 0
-    releaseFrame: 0
-  death:
-    name: Death
-    frames:
-    - {fileID: 2042929884, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    - {fileID: 571490102, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    - {fileID: 2019383376, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    - {fileID: -497466778, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    - {fileID: -503364013, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    - {fileID: 1852712213, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    - {fileID: -1937926999, guid: 800340ad506f62c4fbe1c509cf465433, type: 3}
-    fps: 10
-    loop: 0
-    releaseFrame: 0
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 47063c21c92e52ddb7883251fa9d10a9, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &4068017401467170543
 GameObject:
   m_ObjectHideFlags: 0
@@ -480,8 +411,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossStateMachine
   animator: {fileID: 1051440663889490987}
+  visualRenderer: {fileID: 8542033094372087840}
+  defaultFacesRight: 1
+  compensateOffCenterPivot: 0
   hurtDuration: 0.28
   repositionDistance: 6
+  attack1ReleaseFrame: 5
+  attack2ReleaseFrame: 5
+  attack3ReleaseFrame: 5
+  attack1FrameCount: 8
+  attack2FrameCount: 8
+  attack3FrameCount: 8
 --- !u!114 &6118492944907185859
 MonoBehaviour:
   m_ObjectHideFlags: 0

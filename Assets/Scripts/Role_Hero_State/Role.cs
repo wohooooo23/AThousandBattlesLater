@@ -48,8 +48,8 @@ public sealed class Role : Entity
 
     [Header("Kunai Throw")]
     [Tooltip("When the throw begins, the hero's velocity is multiplied by these to tune the feel: 1 keeps the momentum, 0 kills it. Horizontal and vertical are separate.")]
-    [Range(0f, 1f)] public float throwHorizontalFactor = 1f;
-    [Range(0f, 1f)] public float throwVerticalFactor = 1f;
+    [Range(0f, 1f)] public float throwHorizontalFactor = 0f;
+    [Range(0f, 1f)] public float throwVerticalFactor = 0f;
     [Tooltip("Gravity is suspended for the throw animation plus this cooldown, then restored — keeps the hero from dropping mid-throw.")]
     [Min(0f)] public float throwCooldown = 0.2f;
 

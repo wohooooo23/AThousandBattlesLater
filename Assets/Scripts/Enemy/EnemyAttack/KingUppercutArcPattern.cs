@@ -17,7 +17,7 @@ public sealed class KingUppercutArcPattern : EnemyAttackPattern
     public override IEnumerator Execute(EnemyAttackContext context)
     {
         Vector2 origin = context.Origin;
-        BossSpriteAnimator visual = context.Owner.GetComponentInChildren<BossSpriteAnimator>(true);
+        BossStateMachine visual = context.Owner.GetComponent<BossStateMachine>();
         Vector2 direction = visual == null || visual.FacingRight ? Vector2.right : Vector2.left;
         GameObject warning = CreateFilledSector(WarningObjectName, origin, direction, radius,
             sectorAngle, warningColor, 28);

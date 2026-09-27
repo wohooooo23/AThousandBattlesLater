@@ -92,7 +92,7 @@ public sealed class BossTeleport : MonoBehaviour
             yield return new WaitForSeconds(remainder);
     }
 
-    /// <summary>A random node other than the one the Boss is standing closest to.</summary>
+    /// <summary>Pick a random node that properly far from hero.</summary>
     private Transform PickDestination()
     {
         EnemyNavigationNode[] nodes = FindObjectsByType<EnemyNavigationNode>(FindObjectsSortMode.None);

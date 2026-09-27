@@ -166,10 +166,7 @@ public static class StoryChapterBuilder
     {
         GameObject wizardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WizardPrefabPath) ??
             throw new MissingReferenceException("Missing " + WizardPrefabPath);
-        BossSpriteAnimator sourceAnimator = wizardPrefab.GetComponentInChildren<BossSpriteAnimator>(true);
-        Sprite idle0 = sourceAnimator != null && sourceAnimator.idle.frames.Length > 0
-            ? sourceAnimator.idle.frames[0]
-            : null;
+        Sprite idle0 = wizardPrefab.transform.Find("WizardVisual")?.GetComponent<SpriteRenderer>()?.sprite;
         if (idle0 == null)
             throw new MissingReferenceException("The Evil Wizard prefab has no Idle_0 sprite.");
 
@@ -445,7 +442,7 @@ public static class StoryChapterBuilder
             throw new InvalidOperationException("The Wizard and companion Orc must be saved dormant under the cast root.");
 
         GameObject wizardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WizardPrefabPath);
-        Sprite expectedIdle0 = wizardPrefab.GetComponentInChildren<BossSpriteAnimator>(true).idle.frames[0];
+        Sprite expectedIdle0 = wizardPrefab.transform.Find("WizardVisual")?.GetComponent<SpriteRenderer>()?.sprite;
         SpriteRenderer wizardRenderer = wizard.GetComponent<SpriteRenderer>();
         if (wizardRenderer == null || wizardRenderer.sprite != expectedIdle0 ||
             wizard.GetComponent<Collider2D>() != null || wizard.GetComponent<CombatHealth>() != null)

@@ -235,7 +235,7 @@ public static class DemoSceneBuilder
         if (boss.GetComponent<MeshRenderer>() != null || boss.GetComponent<MeshFilter>() != null)
             throw new InvalidOperationException("The Evil Wizard Boss must not keep the old circle MeshRenderer/MeshFilter placeholder.");
         Transform wizardVisual = boss.transform.Find("WizardVisual");
-        if (!wizardVisual || !wizardVisual.GetComponent<SpriteRenderer>() || !wizardVisual.GetComponent<BossSpriteAnimator>())
+        if (!wizardVisual || !wizardVisual.GetComponent<SpriteRenderer>() || !wizardVisual.GetComponent<Animator>())
             throw new InvalidOperationException("The Boss must use the WizardVisual sprite model.");
         Require<Rigidbody2D>("Enemy");
         Require<CircleCollider2D>("Enemy");

@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Attaches the Evil Wizard 2 sprite pack to Boss.prefab: adds a "WizardVisual" child with a
-/// SpriteRenderer + BossSpriteAnimator (frames loaded from the sliced sheets), adds the
+/// SpriteRenderer + Animator (driven by the shared Wizard controller), adds the
 /// BossStateMachine, and assigns each existing skill a cast animation. Idempotent — re-running
 /// rebuilds the visual child and re-applies the wiring.
 /// </summary>
@@ -15,6 +15,7 @@ public static class BossWizardBuilder
 {
     private const string BossPrefabPath = "Assets/Enemy/Bosses/EvilWizard/Boss_EvilWizard.prefab";
     private const string SpriteFolder = "Assets/Enemy/Bosses/EvilWizard/Visual/Sprites/";
+    private const string AnimatorControllerPath = "Assets/Animations/Boss/Wizard.controller";
     private const string VisualName = "WizardVisual";
     private const string BossScenePath = "Assets/Scenes/Legacy/stage1 boss.unity";
     private const string OrcPrefabPath = "Assets/Enemy/Mobs/Orc/Mob_Orc.prefab";
@@ -41,24 +42,22 @@ public static class BossWizardBuilder
             if (existing != null)
                 Object.DestroyImmediate(existing.gameObject);
 
-            GameObject visual = new GameObject(VisualName, typeof(BossSpriteAnimator));
+            GameObject visual = new GameObject(VisualName, typeof(SpriteRenderer), typeof(Animator));
             visual.transform.SetParent(root.transform, false);
             visual.transform.localPosition = Vector3.zero;
 
-            BossSpriteAnimator anim = visual.GetComponent<BossSpriteAnimator>();
-            anim.idle.frames = LoadFrames("Idle");
-            anim.run.frames = LoadFrames("Run");
-            anim.attack1.frames = LoadFrames("Attack1");
-            anim.attack2.frames = LoadFrames("Attack2");
-            anim.takeHit.frames = LoadFrames("Take hit");
-            anim.death.frames = LoadFrames("Death");
+            Animator anim = visual.GetComponent<Animator>();
+            anim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorControllerPath);
+            if (anim.runtimeAnimatorController == null)
+                throw new MissingReferenceException("Missing " + AnimatorControllerPath);
+            Sprite[] idleFrames = LoadFrames("Idle");
 
             SpriteRenderer renderer = visual.GetComponent<SpriteRenderer>();
             renderer.sortingOrder = 10;
-            if (anim.idle.frames.Length > 0)
+            if (idleFrames.Length > 0)
             {
-                renderer.sprite = anim.idle.frames[0];
-                float spriteHeight = anim.idle.frames[0].bounds.size.y;
+                renderer.sprite = idleFrames[0];
+                float spriteHeight = idleFrames[0].bounds.size.y;
                 float scale = spriteHeight > 0.01f ? TargetHeight / spriteHeight : 1f;
                 visual.transform.localScale = new Vector3(scale, scale, 1f);
             }
@@ -67,7 +66,7 @@ public static class BossWizardBuilder
             BossStateMachine stateMachine = root.GetComponent<BossStateMachine>();
             if (stateMachine == null)
                 stateMachine = root.AddComponent<BossStateMachine>();
-            AssignAnimator(stateMachine, anim);
+            AssignAnimator(stateMachine, anim, renderer);
 
             // Hit flash + every-3-attacks blink, on the root so EnemyHealth/EnemyAttackController resolve them.
             AttachHitFlashAndTeleport(root, renderer);
@@ -114,10 +113,9 @@ public static class BossWizardBuilder
         if (wizard == null || wizard.GetComponent<SpriteRenderer>() == null)
             throw new MissingReferenceException("The current Boss scene is missing the Evil Wizard visual.");
 
-        BossSpriteAnimator wizardAnimator = wizard.GetComponent<BossSpriteAnimator>();
-        if (wizardAnimator == null || wizardAnimator.attack1.frames == null || wizardAnimator.attack1.frames.Length == 0 ||
-            wizardAnimator.attack2.frames == null || wizardAnimator.attack2.frames.Length == 0)
-            throw new MissingReferenceException("The current Boss scene is missing the Evil Wizard attack animation frames.");
+        Animator wizardAnimator = wizard.GetComponent<Animator>();
+        if (wizardAnimator == null || wizardAnimator.runtimeAnimatorController == null)
+            throw new MissingReferenceException("The current Boss scene is missing the Evil Wizard Animator Controller.");
 
         // The boss-room instance historically removed most components from the prefab and added
         // tuned replacements. That override also removed BossStateMachine, which made the attack
@@ -126,7 +124,7 @@ public static class BossWizardBuilder
         BossStateMachine sceneStateMachine = boss.GetComponent<BossStateMachine>();
         if (sceneStateMachine == null)
             sceneStateMachine = boss.AddComponent<BossStateMachine>();
-        AssignAnimator(sceneStateMachine, wizardAnimator);
+        AssignAnimator(sceneStateMachine, wizardAnimator, wizard.GetComponent<SpriteRenderer>());
         AttachHitFlashAndTeleport(boss, wizard.GetComponent<SpriteRenderer>());
 
         SetCastAnim(boss, typeof(LaserAttackPattern), CastAnimation.Attack1);
@@ -144,10 +142,19 @@ public static class BossWizardBuilder
         Debug.Log("BOSS_ORC_REPAIR_OK: blue Boss placeholder removed; every Enemy_Health Orc now awards its prefab coinReward.");
     }
 
-    private static void AssignAnimator(BossStateMachine stateMachine, BossSpriteAnimator animator)
+    private static void AssignAnimator(BossStateMachine stateMachine, Animator animator, SpriteRenderer renderer)
     {
         SerializedObject serialized = new SerializedObject(stateMachine);
         serialized.FindProperty("animator").objectReferenceValue = animator;
+        serialized.FindProperty("visualRenderer").objectReferenceValue = renderer;
+        serialized.FindProperty("defaultFacesRight").boolValue = true;
+        serialized.FindProperty("compensateOffCenterPivot").boolValue = false;
+        serialized.FindProperty("attack1ReleaseFrame").intValue = 5;
+        serialized.FindProperty("attack2ReleaseFrame").intValue = 5;
+        serialized.FindProperty("attack3ReleaseFrame").intValue = 5;
+        serialized.FindProperty("attack1FrameCount").intValue = 8;
+        serialized.FindProperty("attack2FrameCount").intValue = 8;
+        serialized.FindProperty("attack3FrameCount").intValue = 8;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(stateMachine);
     }

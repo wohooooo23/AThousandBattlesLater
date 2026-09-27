@@ -279,6 +279,7 @@ MonoBehaviour:
   attackresetduration: 0.2
   throwHorizontalFactor: 0
   throwVerticalFactor: 0
+  throwCooldown: 0.2
   maxJumpCount: 2
   jumpCountRemaining: 2
 --- !u!50 &2409211609458095408
@@ -380,7 +381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92b6c83957b66fc478973d5c5ba81d14, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Entity_VFX
-  targetRenderer: {fileID: 0}
+  targetRenderer: {fileID: 1575188162153482315}
   onDamageMaterial: {fileID: 2100000, guid: 2e35bf61486ea9c40abcf0483684c6cc, type: 2}
   onDamageVFXDuration: 0.2
 --- !u!114 &3883366657667944747

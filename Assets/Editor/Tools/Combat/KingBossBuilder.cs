@@ -13,6 +13,7 @@ public static class KingBossBuilder
     private const string Stage2Path = "Assets/Scenes/stage2_full.unity";
     private const string Stage1Path = "Assets/Scenes/Legacy/stage1 boss.unity";
     private const string SpriteFolder = "Assets/Enemy/Bosses/Medieval King Pack 2/Sprites/";
+    private const string AnimatorControllerPath = "Assets/Animations/Boss/King.controller";
     private const string VisualName = "KingVisual";
     private const string OnDamageMaterialPath = "Assets/Material/OnDamage_Material.mat";
     private const string BladeWaveMaterialPath = "Assets/Material/KingBladeWave_White.mat";
@@ -51,14 +52,18 @@ public static class KingBossBuilder
         MeshFilter placeholderMesh = boss.GetComponent<MeshFilter>();
         if (placeholderMesh != null) UnityEngine.Object.DestroyImmediate(placeholderMesh);
 
-        BossSpriteAnimator animator;
+        Animator animator;
         SpriteRenderer renderer;
         if (alreadyKing)
         {
             Transform visual = boss.transform.Find(VisualName);
-            animator = visual.GetComponent<BossSpriteAnimator>();
+            BossSpriteAnimator legacy = visual.GetComponent<BossSpriteAnimator>();
+            if (legacy != null)
+                UnityEngine.Object.DestroyImmediate(legacy);
+            animator = visual.GetComponent<Animator>() ?? visual.gameObject.AddComponent<Animator>();
+            animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorControllerPath);
             renderer = visual.GetComponent<SpriteRenderer>();
-            if (animator == null || renderer == null)
+            if (animator.runtimeAnimatorController == null || renderer == null)
                 throw new MissingReferenceException("The saved KingVisual is missing its animator or renderer.");
         }
         else
@@ -67,6 +72,15 @@ public static class KingBossBuilder
         }
         BossStateMachine stateMachine = boss.GetComponent<BossStateMachine>() ?? boss.AddComponent<BossStateMachine>();
         SetObject(stateMachine, "animator", animator);
+        SetObject(stateMachine, "visualRenderer", renderer);
+        SetBool(stateMachine, "defaultFacesRight", true);
+        SetBool(stateMachine, "compensateOffCenterPivot", true);
+        SetInt(stateMachine, "attack1ReleaseFrame", 2);
+        SetInt(stateMachine, "attack2ReleaseFrame", 2);
+        SetInt(stateMachine, "attack3ReleaseFrame", 2);
+        SetInt(stateMachine, "attack1FrameCount", 4);
+        SetInt(stateMachine, "attack2FrameCount", 4);
+        SetInt(stateMachine, "attack3FrameCount", 4);
 
         EnemyAttackController attacks = boss.GetComponent<EnemyAttackController>() ??
             boss.AddComponent<EnemyAttackController>();
@@ -113,14 +127,12 @@ public static class KingBossBuilder
             throw new InvalidOperationException("stage2 arena boss was not replaced in place.");
 
         Transform visual = boss.transform.Find(VisualName);
-        BossSpriteAnimator animator = visual != null ? visual.GetComponent<BossSpriteAnimator>() : null;
+        Animator animator = visual != null ? visual.GetComponent<Animator>() : null;
         SpriteRenderer renderer = visual != null ? visual.GetComponent<SpriteRenderer>() : null;
-        if (animator == null || renderer == null || !animator.compensateOffCenterPivot ||
-            !HasFrames(animator.idle, 8) || !HasFrames(animator.run, 8) ||
-            !HasFrames(animator.attack1, 4) || !HasFrames(animator.attack2, 4) ||
-            !HasFrames(animator.attack3, 4) || !HasFrames(animator.takeHit, 4) ||
-            !HasFrames(animator.death, 6))
-            throw new InvalidOperationException("KingVisual is missing one or more sliced animation sets.");
+        if (animator == null || renderer == null || animator.runtimeAnimatorController == null ||
+            AssetDatabase.GetAssetPath(animator.runtimeAnimatorController) != AnimatorControllerPath ||
+            ReferencedObject(boss.GetComponent<BossStateMachine>(), "visualRenderer") != renderer)
+            throw new InvalidOperationException("KingVisual is missing its Animator Controller or SpriteRenderer binding.");
 
         EnemyAttackPattern[] patterns = boss.GetComponents<EnemyAttackPattern>();
         KingHorizontalSlashPattern horizontal = boss.GetComponent<KingHorizontalSlashPattern>();
@@ -200,35 +212,22 @@ public static class KingBossBuilder
         Debug.Log("KING_BOSS_VALIDATE_OK: buffed health/combat, four attacks, long-lived wall-passing radial blades and every-attack retreat hop verified; stage1 unchanged.");
     }
 
-    private static BossSpriteAnimator CreateKingVisual(GameObject boss, out SpriteRenderer renderer)
+    private static Animator CreateKingVisual(GameObject boss, out SpriteRenderer renderer)
     {
-        GameObject visual = new GameObject(VisualName, typeof(SpriteRenderer), typeof(BossSpriteAnimator));
+        GameObject visual = new GameObject(VisualName, typeof(SpriteRenderer), typeof(Animator));
         visual.transform.SetParent(boss.transform, false);
         renderer = visual.GetComponent<SpriteRenderer>();
         renderer.sortingLayerName = SceneArt.EffectSortingLayer;
         renderer.sortingOrder = 10;
 
-        BossSpriteAnimator animator = visual.GetComponent<BossSpriteAnimator>();
-        animator.defaultFacesRight = true;
-        animator.compensateOffCenterPivot = true;
-        animator.idle.frames = LoadFrames("Idle");
-        animator.run.frames = LoadFrames("Run");
-        animator.attack1.frames = LoadFrames("Attack1");
-        animator.attack2.frames = LoadFrames("Attack2");
-        animator.attack3.frames = LoadFrames("Attack3");
-        animator.takeHit.frames = LoadFrames("Take Hit");
-        animator.death.frames = LoadFrames("Death");
-        ConfigureClip(animator.idle, 8f, true, 0);
-        ConfigureClip(animator.run, 12f, true, 0);
-        ConfigureClip(animator.attack1, 10f, false, 2);
-        ConfigureClip(animator.attack2, 10f, false, 2);
-        ConfigureClip(animator.attack3, 10f, false, 2);
-        ConfigureClip(animator.takeHit, 12f, false, 0);
-        ConfigureClip(animator.death, 8f, false, 0);
-
-        if (animator.idle.frames.Length == 0)
+        Animator animator = visual.GetComponent<Animator>();
+        animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorControllerPath);
+        if (animator.runtimeAnimatorController == null)
+            throw new MissingReferenceException("Missing " + AnimatorControllerPath);
+        Sprite[] idleFrames = LoadFrames("Idle");
+        if (idleFrames.Length == 0)
             throw new MissingReferenceException("Medieval King Idle sheet has no sliced sprites.");
-        Sprite first = animator.idle.frames[0];
+        Sprite first = idleFrames[0];
         renderer.sprite = first;
         float rootWorldScale = Mathf.Max(0.0001f, Mathf.Abs(boss.transform.lossyScale.y));
         float localScale = TargetWorldHeight / (Mathf.Max(0.01f, first.bounds.size.y) * rootWorldScale);
@@ -404,9 +403,9 @@ public static class KingBossBuilder
 
     private static void RemoveWizardVisuals(GameObject boss)
     {
-        foreach (BossSpriteAnimator animator in boss.GetComponentsInChildren<BossSpriteAnimator>(true).ToArray())
-            if (animator != null)
-                UnityEngine.Object.DestroyImmediate(animator.gameObject);
+        foreach (BossSpriteAnimator legacy in boss.GetComponentsInChildren<BossSpriteAnimator>(true).ToArray())
+            if (legacy != null)
+                UnityEngine.Object.DestroyImmediate(legacy.gameObject);
         Transform wizard = boss.transform.Find("WizardVisual");
         if (wizard != null) UnityEngine.Object.DestroyImmediate(wizard.gameObject);
         Transform king = boss.transform.Find(VisualName);
@@ -434,16 +433,6 @@ public static class KingBossBuilder
         int split = name.LastIndexOf('_');
         return split >= 0 && int.TryParse(name.Substring(split + 1), out int index) ? index : 0;
     }
-
-    private static void ConfigureClip(BossSpriteAnimator.Clip clip, float fps, bool loop, int releaseFrame)
-    {
-        clip.fps = fps;
-        clip.loop = loop;
-        clip.releaseFrame = releaseFrame;
-    }
-
-    private static bool HasFrames(BossSpriteAnimator.Clip clip, int expected) =>
-        clip != null && clip.frames != null && clip.frames.Length == expected;
 
     private static T[] FindInScene<T>(Scene scene) where T : Component => scene.GetRootGameObjects()
         .SelectMany(root => root.GetComponentsInChildren<T>(true)).ToArray();
@@ -490,6 +479,14 @@ public static class KingBossBuilder
         SerializedObject data = new SerializedObject(target);
         SerializedProperty field = data.FindProperty(property) ?? throw new MissingFieldException(target.name, property);
         field.intValue = value;
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void SetBool(UnityEngine.Object target, string property, bool value)
+    {
+        SerializedObject data = new SerializedObject(target);
+        SerializedProperty field = data.FindProperty(property) ?? throw new MissingFieldException(target.name, property);
+        field.boolValue = value;
         data.ApplyModifiedPropertiesWithoutUndo();
     }
 }

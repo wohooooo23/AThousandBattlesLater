@@ -111,7 +111,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         Transform wizardVisual = enemy.transform.Find("WizardVisual");
         Assert.That(wizardVisual, Is.Not.Null);
         Assert.That(wizardVisual.GetComponent<SpriteRenderer>(), Is.Not.Null);
-        Assert.That(wizardVisual.GetComponent("BossSpriteAnimator"), Is.Not.Null);
+        Assert.That(wizardVisual.GetComponent<Animator>(), Is.Not.Null);
         Assert.That(enemy.GetComponent("BossStateMachine"), Is.Not.Null,
             "The boss scene must store the state machine that replaces the old jitter/shrink attack pose.");
 
@@ -152,15 +152,18 @@ public class AttackDemoPlayModeTests : InputTestFixture
     [UnityTest]
     public IEnumerator EvilWizardAttackFramesFollowChargeAndFireCallbacks()
     {
-        SceneManager.LoadScene("stage1 boss");
+        SceneManager.LoadScene("stage1_full");
         yield return null;
+        MonoBehaviour arena = FindBehaviour("BossArenaController");
+        Assert.That(arena, Is.Not.Null);
+        GameObject enemy = arena.GetType().GetProperty("BossRoot").GetValue(arena) as GameObject;
+        Assert.That(enemy, Is.Not.Null);
+        enemy.SetActive(true);
         yield return null;
 
-        GameObject enemy = GameObject.Find("Enemy");
-        Assert.That(enemy, Is.Not.Null);
         MonoBehaviour controller = enemy.GetComponent("EnemyAttackController") as MonoBehaviour;
         MonoBehaviour stateMachine = enemy.GetComponent("BossStateMachine") as MonoBehaviour;
-        MonoBehaviour spriteAnimator = enemy.GetComponentInChildren(System.Type.GetType("BossSpriteAnimator, Assembly-CSharp")) as MonoBehaviour;
+        Animator spriteAnimator = enemy.GetComponentInChildren<Animator>();
         Assert.That(controller, Is.Not.Null);
         Assert.That(stateMachine, Is.Not.Null);
         Assert.That(spriteAnimator, Is.Not.Null);
@@ -178,20 +181,18 @@ public class AttackDemoPlayModeTests : InputTestFixture
                 pattern = candidate;
         Assert.That(pattern, Is.Not.Null);
 
-        object attackClip = spriteAnimator.GetType().GetField("attack1").GetValue(spriteAnimator);
-        Sprite[] frames = (Sprite[])attackClip.GetType().GetField("frames").GetValue(attackClip);
-        int releaseFrame = (int)attackClip.GetType().GetField("releaseFrame").GetValue(attackClip);
-        Assert.That(frames.Length, Is.GreaterThan(releaseFrame + 1),
-            "Attack1 needs at least one follow-through frame after its release frame.");
+        Assert.That(spriteAnimator.runtimeAnimatorController, Is.Not.Null);
 
         stateMachine.GetType().GetMethod("OnCastBegin").Invoke(stateMachine, new object[] { pattern });
         stateMachine.GetType().GetMethod("OnCastCharge").Invoke(stateMachine, new object[] { 1f });
         SpriteRenderer renderer = spriteAnimator.GetComponent<SpriteRenderer>();
-        Assert.That(renderer.sprite, Is.EqualTo(frames[releaseFrame]));
+        Assert.That(spriteAnimator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Attack1"), Is.True);
+        Sprite releaseSprite = renderer.sprite;
+        Assert.That(releaseSprite, Is.Not.Null);
 
         stateMachine.GetType().GetMethod("OnCastFire").Invoke(stateMachine, null);
         yield return new WaitForSeconds(0.12f);
-        Assert.That(renderer.sprite, Is.Not.EqualTo(frames[releaseFrame]),
+        Assert.That(renderer.sprite, Is.Not.EqualTo(releaseSprite),
             "The Evil Wizard must play attack follow-through frames after the skill fires.");
     }
 

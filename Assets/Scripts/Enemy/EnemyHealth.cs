@@ -42,8 +42,7 @@ public sealed class EnemyHealth : CombatHealth
     protected override void OnDamaged(float amount, Transform source)
     {
         stateMachine?.NotifyHurt();
-        // Same white hit flash the mobs use. Entity_VFX swaps the material while BossSpriteAnimator
-        // only swaps the sprite, so the flash and the animation do not fight over the renderer.
+        // Entity_VFX swaps the material while Animator swaps only the sprite.
         entityVFX?.PlayOnDamageVfx();
     }
 
