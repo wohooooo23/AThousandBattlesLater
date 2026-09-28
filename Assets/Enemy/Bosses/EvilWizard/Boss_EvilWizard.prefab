@@ -381,6 +381,13 @@ MonoBehaviour:
   maximumLinkDistance: 58
   maximumVerticalLink: 28
   repathInterval: 0.35
+  fallGravityScale: 6
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 64
+  landingTimeout: 2
+  landingSkin: 0.03
+  geometryPollInterval: 0.5
 --- !u!114 &1194950431501330264
 MonoBehaviour:
   m_ObjectHideFlags: 0

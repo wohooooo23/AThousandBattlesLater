@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Builds a collision-checked graph from scene navigation nodes and moves a dynamic
-/// boss between platforms with visible parabolic jumps.
-///
-/// Referenced interfaces:
-///   Enemy/EnemyNavigationNode.Position        — graph landing points collected from the scene
-///   Enemy/EnemyAttackController.IsAttacking    — pauses navigation while an attack charges
-/// Exposes: NavigationNodeCount, ResetNavigation() (used by PlayMode tests).
+/// Samples arena landing surfaces and moves a dynamic Boss between them with
+/// collision-checked parabolic jumps. Combat decisions and attack timing stay elsewhere.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyAttackController))]
 public sealed class EnemyPlatformNavigator : MonoBehaviour
@@ -25,17 +20,16 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     [SerializeField, Min(0.1f)] private float fallGravityScale = 6f;
     [SerializeField] private LayerMask groundMask = 1 << 6;
     [SerializeField, Min(0.1f)] private float landingTimeout = 2f;
-    [Tooltip("How far above an authored node the ground probe begins.")]
-    [SerializeField, Min(0.05f)] private float nodeProbeRise = 1f;
-    [Tooltip("Maximum distance below an authored node in which a landing surface is accepted.")]
-    [SerializeField, Min(0.5f)] private float nodeProbeDepth = 10f;
     [Tooltip("Small separation retained between the boss collider and the landing surface.")]
     [SerializeField, Min(0f)] private float landingSkin = 0.03f;
+    [Tooltip("How often to detect spawned or removed arena colliders without an explicit notification.")]
+    [SerializeField, Min(0.1f)] private float geometryPollInterval = 0.5f;
 
-    private readonly List<EnemyNavigationNode> nodes = new List<EnemyNavigationNode>();
-    private readonly List<EnemyNavigationNode> path = new List<EnemyNavigationNode>();
-    private readonly Dictionary<(EnemyNavigationNode, EnemyNavigationNode), bool> linkClearance =
-        new Dictionary<(EnemyNavigationNode, EnemyNavigationNode), bool>();
+    private readonly List<Vector2> path = new List<Vector2>();
+    private BossLandingGraph graph;
+    private Bounds arenaBounds;
+    private float geometryPollRemaining;
+    private bool geometryDirty;
     private Rigidbody2D body;
     private EnemyAttackController attackController;
     private Collider2D ownerCollider;
@@ -49,9 +43,8 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     private float hopDuration;
     private bool explicitHopActive;
     private bool awaitingLanding;
-    private float landingRemaining;
 
-    public int NavigationNodeCount => nodes.Count;
+    public int LandingSpotCount => graph != null ? graph.SpotCount : 0;
     public bool IsHopping => hopping;
 
     private void Awake()
@@ -60,13 +53,18 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         attackController = GetComponent<EnemyAttackController>();
         ownerCollider = GetComponent<Collider2D>();
         ConfigureFallingBody();
+        graph = new BossLandingGraph(ownerCollider, body, groundMask, landingSkin,
+            maximumLinkDistance, maximumVerticalLink, IsArcClear);
     }
 
     private void Start()
     {
         CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
         hero = player != null ? player.transform : null;
-        RefreshNodes();
+        ResolveArenaBounds();
+        RefreshSurfaces();
+        if (!hopping && !explicitHopActive)
+            BeginLanding();
         RebuildPath();
     }
 
@@ -74,6 +72,21 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     {
         if (hero == null || body == null)
             return;
+
+        geometryPollRemaining -= Time.fixedDeltaTime;
+        if (geometryDirty || geometryPollRemaining <= 0f)
+        {
+            geometryPollRemaining = geometryPollInterval;
+            int signature = graph.ReadGeometrySignature(arenaBounds);
+            if (geometryDirty || signature != graph.GeometrySignature)
+            {
+                if (hopping || explicitHopActive)
+                    CancelHop();
+                RefreshSurfaces();
+                repathRemaining = 0f;
+            }
+            geometryDirty = false;
+        }
 
         if (attackController.IsAttacking)
         {
@@ -90,8 +103,9 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         if (awaitingLanding)
         {
             HoldHorizontalPosition();
-            landingRemaining -= Time.fixedDeltaTime;
-            if (!IsGrounded() && landingRemaining > 0f)
+            // A coroutine timeout may release the attack controller, but pursuit
+            // must never turn a missing platform into another jump in mid-air.
+            if (!IsGrounded())
                 return;
             awaitingLanding = false;
             repathRemaining = 0f;
@@ -105,7 +119,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         {
             if (pathIndex >= path.Count)
                 return;
-            if (!BeginHop(path[pathIndex].Position))
+            if (!BeginHop(path[pathIndex]))
                 return;
         }
 
@@ -128,51 +142,47 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         }
     }
 
-    public void RefreshNodes()
+    private void ResolveArenaBounds()
     {
-        nodes.Clear();
-        linkClearance.Clear();
-        nodes.AddRange(FindObjectsByType<EnemyNavigationNode>(FindObjectsSortMode.None));
-        SnapNavigationNodesToGround();
+        foreach (BossArenaController arena in FindObjectsByType<BossArenaController>(
+                     FindObjectsInactive.Include))
+        {
+            if (arena.BossRoot != gameObject)
+                continue;
+            arenaBounds = new Bounds((arena.ArenaMin + arena.ArenaMax) * 0.5f,
+                arena.ArenaMax - arena.ArenaMin);
+            return;
+        }
+        // Legacy standalone scenes and isolated tests have no BossArenaController.
+        arenaBounds = new Bounds(transform.position, new Vector3(200f, 120f, 1f));
     }
 
-    /// <summary>
-    /// Normalizes authored graph points to the current boss collider. The same points are shared by
-    /// differently sized boss models, so storing a fixed world-space Y offset in the scene made the King
-    /// hover while a lower value buried the Wizard. Raycast to the platform, then place the root exactly
-    /// one collider-bottom clearance above it; the scripted hop and gravity now agree on the landing pose.
-    /// </summary>
-    public int SnapNavigationNodesToGround()
+    public void RefreshSurfaces()
     {
-        if (ownerCollider == null)
-            ownerCollider = GetComponent<Collider2D>();
-        if (ownerCollider == null || nodes.Count == 0)
-            return 0;
+        if (graph == null)
+            return;
+        if (arenaBounds.size.x <= 0f)
+            ResolveArenaBounds();
+        graph.Rebuild(arenaBounds);
+        path.Clear();
+        pathIndex = 0;
+    }
 
-        Physics2D.SyncTransforms();
-        float bottomClearance = transform.position.y - ownerCollider.bounds.min.y;
-        if (!float.IsFinite(bottomClearance) || bottomClearance <= 0.001f)
-            bottomClearance = Mathf.Max(0.01f, ownerCollider.bounds.extents.y);
+    /// <summary>Call after spawning or removing a platform to replan on the next physics step.</summary>
+    public void NotifyGeometryChanged(Bounds changedArea)
+    {
+        if (arenaBounds.Intersects(changedArea))
+            geometryDirty = true;
+    }
 
-        int snapped = 0;
-        float rise = Mathf.Max(0.05f, nodeProbeRise);
-        float distance = rise + Mathf.Max(0.5f, nodeProbeDepth);
-        foreach (EnemyNavigationNode node in nodes)
-        {
-            if (node == null)
-                continue;
-            Vector2 authored = node.Position;
-            RaycastHit2D ground = Physics2D.Raycast(authored + Vector2.up * rise,
-                Vector2.down, distance, groundMask);
-            if (ground.collider == null)
-                continue;
-
-            node.transform.position = new Vector3(authored.x,
-                ground.point.y + bottomClearance + landingSkin, node.transform.position.z);
-            snapped++;
-        }
-        Physics2D.SyncTransforms();
-        return snapped;
+    public bool TryGetBlinkDestination(out Vector2 destination)
+    {
+        destination = default;
+        if (graph == null)
+            return false;
+        RefreshSurfaces();
+        return graph.TryBlink(body.position, hero != null ? (Vector2)hero.position : body.position,
+            out destination);
     }
 
     public void ResetNavigation()
@@ -180,29 +190,22 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         CancelHop();
         if (body != null)
             body.position = transform.position;
-        RefreshNodes();
+        RefreshSurfaces();
         RebuildPath();
     }
 
-    /// <summary>
-    /// Uses the same navigation graph and hop motion as pursuit, but routes toward the reachable node
-    /// farthest from the Hero and performs only the first A* step. Used by the King after its attack
-    /// counter fires so relocation creates breathing room without crossing walls or skipping nodes.
-    /// </summary>
+    /// <summary>One reachable jump away from the Hero, used by the King's attack relocation.</summary>
     public IEnumerator RetreatHopRoutine(float speedMultiplier)
     {
         if (!PrepareExplicitHop())
             yield break;
 
-        EnemyNavigationNode start = FindClosestNode(body.position, true);
-        if (start == null)
+        List<Vector2> retreatPath = new List<Vector2>();
+        if (!graph.TryRetreat(body.position, hero.position, retreatPath))
             yield break;
 
-        List<EnemyNavigationNode> retreatPath = BuildRetreatPath(start, hero.position);
-        if (retreatPath.Count < 2)
-            yield break;
-
-        yield return HopToNodeRoutine(retreatPath[1].Position, speedMultiplier);
+        int next = CanHopTo(body.position, retreatPath[1]) ? 1 : 0;
+        yield return HopToNodeRoutine(retreatPath[next], speedMultiplier);
     }
 
     private bool PrepareExplicitHop()
@@ -218,13 +221,15 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
             return false;
 
         CancelHop();
-        RefreshNodes();
-        return nodes.Count > 1;
+        RefreshSurfaces();
+        return LandingSpotCount > 1;
     }
 
     private IEnumerator HopToNodeRoutine(Vector2 target, float speedMultiplier)
     {
         Vector2 start = body.position;
+        if (!CanHopTo(start, target))
+            yield break;
         explicitHopActive = true;
         BeginScriptedMotion();
         float multiplier = Mathf.Max(0.01f, speedMultiplier);
@@ -234,6 +239,8 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         while (elapsed < duration)
         {
             yield return new WaitForFixedUpdate();
+            if (!explicitHopActive)
+                yield break;
             elapsed += Time.fixedDeltaTime;
             float progress = Mathf.Clamp01(elapsed / duration);
             Vector2 desired = EvaluateHopPosition(start, target, progress);
@@ -259,132 +266,16 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         repathRemaining = repathInterval;
         path.Clear();
         pathIndex = 0;
-        if (nodes.Count == 0 || hero == null)
+        if (LandingSpotCount == 0 || hero == null)
             return;
-
-        EnemyNavigationNode start = FindClosestNode(body.position, true);
-        EnemyNavigationNode goal = FindClosestNode(hero.position);
-        if (start == null || goal == null || start == goal)
-            return;
-
-        FindPathAStar(start, goal, path);
-        // A* includes the graph start as element zero. It is an anchor, not a
-        // destination; visiting it first made the boss initially move away.
-        pathIndex = path.Count > 1 ? 1 : path.Count;
-    }
-
-    private void FindPathAStar(EnemyNavigationNode start, EnemyNavigationNode goal, List<EnemyNavigationNode> result)
-    {
-        List<EnemyNavigationNode> open = new List<EnemyNavigationNode> { start };
-        Dictionary<EnemyNavigationNode, EnemyNavigationNode> cameFrom = new Dictionary<EnemyNavigationNode, EnemyNavigationNode>();
-        Dictionary<EnemyNavigationNode, float> cost = new Dictionary<EnemyNavigationNode, float> { [start] = 0f };
-
-        while (open.Count > 0)
-        {
-            EnemyNavigationNode current = open[0];
-            float bestScore = cost[current] + Vector2.Distance(current.Position, goal.Position);
-            for (int i = 1; i < open.Count; i++)
-            {
-                float score = cost[open[i]] + Vector2.Distance(open[i].Position, goal.Position);
-                if (score < bestScore)
-                {
-                    current = open[i];
-                    bestScore = score;
-                }
-            }
-
-            if (current == goal)
-            {
-                result.Add(current);
-                while (cameFrom.TryGetValue(current, out EnemyNavigationNode previous))
-                {
-                    current = previous;
-                    result.Add(current);
-                }
-                result.Reverse();
-                return;
-            }
-
-            open.Remove(current);
-            foreach (EnemyNavigationNode neighbour in nodes)
-            {
-                if (neighbour == current || !CanLink(current, neighbour))
-                    continue;
-
-                float nextCost = cost[current] + Vector2.Distance(current.Position, neighbour.Position);
-                if (!cost.TryGetValue(neighbour, out float knownCost) || nextCost < knownCost)
-                {
-                    cameFrom[neighbour] = current;
-                    cost[neighbour] = nextCost;
-                    if (!open.Contains(neighbour))
-                        open.Add(neighbour);
-                }
-            }
-        }
-    }
-
-    private bool CanLink(EnemyNavigationNode a, EnemyNavigationNode b)
-    {
-        Vector2 delta = b.Position - a.Position;
-        if (Mathf.Abs(delta.x) > maximumLinkDistance ||
-            Mathf.Abs(delta.y) > maximumVerticalLink ||
-            delta.sqrMagnitude > maximumLinkDistance * maximumLinkDistance)
-            return false;
-
-        var key = (a, b);
-        if (!linkClearance.TryGetValue(key, out bool clear))
-        {
-            clear = IsArcClear(a.Position, b.Position);
-            linkClearance[key] = clear;
-        }
-        return clear;
-    }
-
-    private EnemyNavigationNode FindClosestNode(Vector2 point, bool requireClear = false)
-    {
-        EnemyNavigationNode closest = null;
-        float closestDistance = float.MaxValue;
-        foreach (EnemyNavigationNode node in nodes)
-        {
-            if (requireClear && !IsArcClear(point, node.Position))
-                continue;
-            float distance = ((Vector2)node.transform.position - point).sqrMagnitude;
-            if (distance < closestDistance)
-            {
-                closest = node;
-                closestDistance = distance;
-            }
-        }
-        return closest;
-    }
-
-    private List<EnemyNavigationNode> BuildRetreatPath(EnemyNavigationNode start, Vector2 threatPosition)
-    {
-        List<EnemyNavigationNode> bestPath = new List<EnemyNavigationNode>();
-        float farthestDistance = float.NegativeInfinity;
-        foreach (EnemyNavigationNode candidate in nodes)
-        {
-            if (candidate == start)
-                continue;
-
-            List<EnemyNavigationNode> candidatePath = new List<EnemyNavigationNode>();
-            FindPathAStar(start, candidate, candidatePath);
-            if (candidatePath.Count < 2)
-                continue;
-
-            float distance = (candidate.Position - threatPosition).sqrMagnitude;
-            if (distance > farthestDistance)
-            {
-                farthestDistance = distance;
-                bestPath = candidatePath;
-            }
-        }
-        return bestPath;
+        graph.TryPath(body.position, hero.position, path);
+        // Skip the sampled anchor when the real body can safely reach the next step.
+        pathIndex = path.Count > 1 && CanHopTo(body.position, path[1]) ? 1 : 0;
     }
 
     private bool BeginHop(Vector2 target)
     {
-        if (!IsArcClear(body.position, target))
+        if (!CanHopTo(body.position, target))
         {
             path.Clear();
             pathIndex = 0;
@@ -399,6 +290,13 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
         hopDuration = GetHopDuration(hopStart, hopTarget, 1f);
         hopping = true;
         return true;
+    }
+
+    private bool CanHopTo(Vector2 start, Vector2 target)
+    {
+        Vector2 delta = target - start;
+        return Mathf.Abs(delta.x) <= maximumLinkDistance && Mathf.Abs(delta.y) <= maximumVerticalLink &&
+               delta.sqrMagnitude <= maximumLinkDistance * maximumLinkDistance && IsArcClear(start, target);
     }
 
     private float GetHopDuration(Vector2 start, Vector2 target, float speedMultiplier)
@@ -461,7 +359,6 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
     {
         RestoreGravity();
         awaitingLanding = !IsGrounded();
-        landingRemaining = landingTimeout;
     }
 
     private void HoldHorizontalPosition()

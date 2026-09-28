@@ -318,28 +318,10 @@ public sealed class KingRadialStoryObjectivePlayModeTests
 
         Behaviour navigator = boss.GetComponent("EnemyPlatformNavigator") as Behaviour;
         MonoBehaviour attacks = boss.GetComponent("EnemyAttackController") as MonoBehaviour;
-        navigator.GetType().GetMethod("RefreshNodes").Invoke(navigator, null);
-        int snapped = (int)navigator.GetType().GetMethod("SnapNavigationNodesToGround")
-            .Invoke(navigator, null);
-        Assert.That(snapped, Is.GreaterThan(5), "Boss-arena graph points must find authored platforms.");
-        Collider2D ownerCollider = boss.GetComponent<Collider2D>();
-        float bottomClearance = boss.transform.position.y - ownerCollider.bounds.min.y;
-        int alignedNodes = 0;
-        foreach (MonoBehaviour node in Object.FindObjectsByType<MonoBehaviour>(
-                     FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if (node == null || node.GetType().Name != "EnemyNavigationNode")
-                continue;
-            RaycastHit2D ground = Physics2D.Raycast((Vector2)node.transform.position + Vector2.up,
-                Vector2.down, 11f, 1 << 6);
-            if (ground.collider == null)
-                continue;
-            Assert.That(node.transform.position.y - ground.point.y,
-                Is.EqualTo(bottomClearance + 0.03f).Within(0.08f),
-                "Every usable locator must place the King's collider feet on its platform.");
-            alignedNodes++;
-        }
-        Assert.That(alignedNodes, Is.GreaterThan(5));
+        navigator.GetType().GetMethod("RefreshSurfaces").Invoke(navigator, null);
+        int sampled = (int)navigator.GetType().GetProperty("LandingSpotCount").GetValue(navigator);
+        Assert.That(sampled, Is.GreaterThan(5),
+            "The King must derive landing surfaces from arena colliders without authored nodes.");
         navigator.enabled = false;
         attacks.enabled = false;
         body.position += Vector2.up * 5f;

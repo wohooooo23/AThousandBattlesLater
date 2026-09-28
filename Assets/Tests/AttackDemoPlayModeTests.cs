@@ -130,8 +130,9 @@ public class AttackDemoPlayModeTests : InputTestFixture
 
         MonoBehaviour navigator = enemy.GetComponent("EnemyPlatformNavigator") as MonoBehaviour;
         Assert.That(navigator, Is.Not.Null);
-        int nodeCount = (int)navigator.GetType().GetProperty("NavigationNodeCount").GetValue(navigator);
-        Assert.That(nodeCount, Is.GreaterThanOrEqualTo(12));
+        navigator.GetType().GetMethod("RefreshSurfaces").Invoke(navigator, null);
+        int spotCount = (int)navigator.GetType().GetProperty("LandingSpotCount").GetValue(navigator);
+        Assert.That(spotCount, Is.GreaterThanOrEqualTo(6));
 
         int patternCount = 0;
         foreach (MonoBehaviour behaviour in enemy.GetComponents<MonoBehaviour>())

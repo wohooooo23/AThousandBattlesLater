@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -10,7 +9,7 @@ public enum BossRelocationMode
 }
 
 /// <summary>
-/// After every few attacks the Boss relocates to a different navigation node. Evil Wizard uses the
+/// After every few attacks the Boss relocates to a safe sampled landing surface. Evil Wizard uses the
 /// original blink, while Medieval King asks EnemyPlatformNavigator to perform one accelerated
 /// retreat hop away from the Hero. This is deliberately
 /// a standalone window rather than something folded into the attack cooldown: the cooldown is still
@@ -70,14 +69,15 @@ public sealed class BossTeleport : MonoBehaviour
             yield break;
         }
 
-        Transform destination = PickDestination();
-        if (destination == null)
-            yield break;   // only one node (or none): nowhere useful to blink
+        if (navigator == null)
+            yield break;
 
         flash?.PlayOnDamageVfx();
         yield return new WaitForSeconds(relocateAt);
+        if (!navigator.TryGetBlinkDestination(out Vector2 destination))
+            yield break;
 
-        Vector3 target = destination.position;
+        Vector3 target = new Vector3(destination.x, destination.y, transform.position.z);
         transform.position = target;
         if (body != null)
             body.position = target;
@@ -92,30 +92,4 @@ public sealed class BossTeleport : MonoBehaviour
             yield return new WaitForSeconds(remainder);
     }
 
-    /// <summary>Pick a random node that properly far from hero.</summary>
-    private Transform PickDestination()
-    {
-        EnemyNavigationNode[] nodes = FindObjectsByType<EnemyNavigationNode>(FindObjectsSortMode.None);
-        if (nodes.Length < 2)
-            return null;
-
-        EnemyNavigationNode nearest = null;
-        float nearestSqr = float.PositiveInfinity;
-        Vector2 here = transform.position;
-        foreach (EnemyNavigationNode node in nodes)
-        {
-            float sqr = ((Vector2)node.Position - here).sqrMagnitude;
-            if (sqr < nearestSqr)
-            {
-                nearestSqr = sqr;
-                nearest = node;
-            }
-        }
-
-        List<EnemyNavigationNode> candidates = new List<EnemyNavigationNode>(nodes);
-        candidates.Remove(nearest);
-        if (candidates.Count == 0)
-            return null;
-        return candidates[Random.Range(0, candidates.Count)].transform;
-    }
 }
