@@ -26,33 +26,43 @@ public sealed class MobStateMachinePlayModeTests
             GameObject mob = Object.Instantiate(prefab, Vector3.zero, Quaternion.identity);
             yield return null;
 
-            MonoBehaviour machine = mob.GetComponent("MobStateMachine") as MonoBehaviour;
+            bool isFlyingEye = path.Contains("FlyingEye");
+            MonoBehaviour machine = mob.GetComponent(isFlyingEye ? "FlyingEyeController" : "MobStateMachine") as MonoBehaviour;
             MonoBehaviour animator = FindBehaviourInChildren(mob, "MobSpriteAnimator");
             MonoBehaviour health = mob.GetComponent("Enemy_Health") as MonoBehaviour;
             Rigidbody2D body = mob.GetComponent<Rigidbody2D>();
             Collider2D hitbox = mob.GetComponent<Collider2D>();
 
             Assert.That(machine, Is.Not.Null, path + " state machine must be saved on the prefab.");
-            Assert.That(animator, Is.Not.Null, path + " animator must be saved on the prefab.");
+            if (isFlyingEye)
+            {
+                Assert.That(animator, Is.Null);
+                Assert.That(mob.transform.Find("Visual").GetComponent<Animator>().runtimeAnimatorController, Is.Not.Null);
+            }
+            else
+                Assert.That(animator, Is.Not.Null, path + " animator must be saved on the prefab.");
             Assert.That(health, Is.Not.Null, path + " health must be saved on the prefab.");
-            bool isFlyingEye = path.Contains("FlyingEye");
-            Assert.That(ReadProperty<bool>(machine, "HasAttackLogic"), Is.EqualTo(isFlyingEye),
-                path + (isFlyingEye ? " must keep its designed ranged attack." : " must not attack before an attack design exists."));
+            Assert.That(ReadProperty<bool>(machine, "HasAttackLogic"), Is.EqualTo(!path.Contains("Goblin")),
+                path + " must retain its authored attack design.");
             if (isFlyingEye)
                 Assert.That(mob.GetComponent("FlyingEyeRangedAttack"), Is.Not.Null,
                     path + " must save its ranged attack component on the prefab.");
-            foreach (string clipName in new[] { "idle", "move", "hurt", "dead", "attackOne", "attackTwo" })
-                Assert.That(ReadFrames(animator, clipName), Is.Not.Empty, path + " clip " + clipName);
+            if (!isFlyingEye)
+            {
+                foreach (string clipName in new[] { "idle", "move", "hurt", "dead", "attackOne", "attackTwo" })
+                    Assert.That(ReadFrames(animator, clipName), Is.Not.Empty, path + " clip " + clipName);
+            }
 
+            string previousState = ReadProperty<object>(machine, "CurrentState").ToString();
             MethodInfo applyDamage = health.GetType().GetMethod("ApplyDamage");
             Assert.That((bool)applyDamage.Invoke(health, new object[] { 1f, null }), Is.True);
-            Assert.That(ReadProperty<object>(machine, "CurrentState").ToString(), Is.EqualTo("Hurt"));
-            Assert.That(ReadProperty<object>(animator, "ActiveState").ToString(), Is.EqualTo("Hurt"));
+            Assert.That(ReadProperty<object>(machine, "CurrentState").ToString(), Is.EqualTo(isFlyingEye ? "Hurt" : previousState));
 
             float maximumHealth = ReadProperty<float>(health, "MaximumHealth");
             Assert.That((bool)applyDamage.Invoke(health, new object[] { maximumHealth, null }), Is.True);
             Assert.That(ReadProperty<object>(machine, "CurrentState").ToString(), Is.EqualTo("Dead"));
-            Assert.That(ReadProperty<object>(animator, "ActiveState").ToString(), Is.EqualTo("Dead"));
+            if (!isFlyingEye)
+                Assert.That(ReadProperty<object>(animator, "ActiveState").ToString(), Is.EqualTo("Dead"));
             Assert.That(body.simulated, Is.False);
             Assert.That(hitbox.enabled, Is.False);
 

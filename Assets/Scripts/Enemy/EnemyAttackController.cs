@@ -44,7 +44,7 @@ public sealed class EnemyAttackController : MonoBehaviour
 
         SceneArt.EnsureSprites();
         body = GetComponent<Rigidbody2D>();
-        CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player);
         if (player != null)
         {
             hero = player.transform;

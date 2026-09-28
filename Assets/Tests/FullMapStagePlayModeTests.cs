@@ -29,7 +29,7 @@ public sealed class FullMapStagePlayModeTests
         Assert.That(hero.transform.localScale, Is.EqualTo(Vector3.one * 5f)
             .Using(Vector3ComparerWithEqualsOperator.Instance));
         Assert.That(hero.GetComponent("Role"), Is.Not.Null);
-        Assert.That(hero.GetComponent("HeroHealth"), Is.Not.Null);
+        Assert.That(hero.GetComponent("Role"), Is.Not.Null);
         Assert.That(hero.GetComponent<Rigidbody2D>().simulated, Is.True);
         Renderer[] mapRenderers = map.GetComponentsInChildren<Renderer>(true);
         Bounds renderedMapBounds = mapRenderers[0].bounds;
@@ -72,8 +72,10 @@ public sealed class FullMapStagePlayModeTests
             if (ranged != null)
             {
                 flyingEyeCount++;
-                Assert.That((float)ranged.GetType().GetProperty("WindupDuration").GetValue(ranged), Is.EqualTo(0.95f).Within(0.001f));
-                Assert.That((float)ranged.GetType().GetProperty("Cooldown").GetValue(ranged), Is.EqualTo(1.35f).Within(0.001f));
+                Assert.That((float)ranged.GetType().GetProperty("WindupDuration").GetValue(ranged), Is.EqualTo(0.5f * DifficultyScale("MobWindupScale")).Within(0.001f));
+                Assert.That(enemies[i].GetComponent("FlyingEyeController"), Is.Not.Null);
+                Assert.That(enemies[i].GetComponentInChildren<Animator>().runtimeAnimatorController.name, Is.EqualTo("FlyingEye"));
+                Assert.That((float)ranged.GetType().GetProperty("Cooldown").GetValue(ranged), Is.EqualTo(2f * DifficultyScale("MobAttackIntervalScale")).Within(0.001f));
                 Assert.That((float)ranged.GetType().GetProperty("ProjectileSpeed").GetValue(ranged), Is.EqualTo(22f).Within(0.001f));
                 Assert.That((float)ranged.GetType().GetProperty("AttackRange").GetValue(ranged), Is.GreaterThan(28f));
                 GameObject projectilePrefab = ranged.GetType().GetProperty("ProjectilePrefab").GetValue(ranged) as GameObject;
@@ -234,6 +236,8 @@ public sealed class FullMapStagePlayModeTests
         Assert.That(FindBehaviour("FlyingEyeProjectile2D"), Is.Not.Null,
             "Flying Eye must spawn its saved projectile prefab after the wind-up.");
     }
+
+    private static float DifficultyScale(string property) => (float)System.Type.GetType("Difficulty, Assembly-CSharp").GetProperty(property).GetValue(null);
 
     private static MonoBehaviour FindBehaviour(string typeName)
     {

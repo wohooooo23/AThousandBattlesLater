@@ -1,31 +1,33 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>Routes model animation events to the owning player or enemy.</summary>
 public class Entity_AniamtionTriggers : MonoBehaviour
 {
     private Entity entity;
-    private Entity_Combat entity_Combat;
-    private HeroKunaiThrow kunaiThrow;
+    private Entity_Combat enemyCombat;
+    private Role role;
+    private FlyingEyeController flyingEye;
+
     private void Awake()
     {
-        entity=GetComponentInParent<Entity>();
-        entity_Combat=GetComponentInParent<Entity_Combat>();
-        kunaiThrow=GetComponentInParent<HeroKunaiThrow>();
+        entity = GetComponentInParent<Entity>();
+        role = entity as Role;
+        flyingEye = entity as FlyingEyeController;
+        if (role == null)
+            enemyCombat = GetComponentInParent<Entity_Combat>();
     }
-    public void CurrentStateTrigger()//动画播放完毕时调用
-    {
 
-        entity.AnimationTrigger();
-    }
+    public void CurrentStateTrigger() => entity?.AnimationTrigger();
+
     private void AttackTrigger()
     {
-        entity_Combat.Attack();
+        if (role != null)
+            role.Attack();
+        else
+            enemyCombat?.Attack();
     }
-    // Release frame of the Throw clip: launch the kunai. Null-safe so non-hero entities ignore it.
-    private void ThrowTrigger()
-    {
-        if (kunaiThrow != null)
-            kunaiThrow.FireKunai();
-    }
+
+    private void ThrowTrigger() => role?.FireKunai();
+    private void FlyingEyeShotRelease() => flyingEye?.ReleaseShot();
+    private void FlyingEyeStateComplete(string state) => flyingEye?.CompleteAnimation(state);
 }

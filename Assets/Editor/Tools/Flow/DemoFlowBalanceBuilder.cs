@@ -96,7 +96,7 @@ public static class DemoFlowBalanceBuilder
     {
         PatchPrefab(HeroPrefabPath, PrefabActorScale, root =>
         {
-            Entity_Combat combat = root.GetComponent<Entity_Combat>();
+            Role combat = root.GetComponent<Role>();
             if (combat != null)
                 SetFloat(combat, "targetCheckRad", HeroAttackRadius);
         });
@@ -164,7 +164,7 @@ public static class DemoFlowBalanceBuilder
         foreach (Role hero in FindInScene<Role>(scene))
         {
             SetScale(hero.transform, SceneActorScale);
-            Entity_Combat combat = hero.GetComponent<Entity_Combat>();
+            Role combat = hero;
             if (combat != null)
                 SetFloat(combat, "targetCheckRad", HeroAttackRadius);
         }
@@ -232,7 +232,7 @@ public static class DemoFlowBalanceBuilder
         Role[] heroes = FindInScene<Role>(scene);
         Require(heroes.Length == 1 && Approximately(heroes[0].transform.localScale.x, SceneActorScale),
             path + " must contain one 5x Hero.");
-        Entity_Combat heroCombat = heroes[0].GetComponent<Entity_Combat>();
+        Role heroCombat = heroes[0];
         Require(heroCombat != null && Approximately(heroCombat.AttackRadius, HeroAttackRadius),
             path + " Hero attack radius must be 7.5.");
 

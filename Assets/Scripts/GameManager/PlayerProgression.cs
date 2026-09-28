@@ -9,7 +9,7 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class PlayerProgression : MonoBehaviour
 {
-    [SerializeField] private Entity_Combat playerCombat;
+    [SerializeField] private Role playerCombat;
     [SerializeField] private Text notificationText;
     [Tooltip("金币物品数据（拖 GoldCoin）。金币是背包里的普通物品，跨场景保留。")]
     [SerializeField] private ItemData coinItem;
@@ -30,13 +30,11 @@ public sealed class PlayerProgression : MonoBehaviour
     public int ForgeWeaponLevel => RunProgress.ForgeWeaponLevel;
     public int ForgeArmorLevel => RunProgress.ForgeArmorLevel;
     public int ForgeGreenRuneLevel => RunProgress.ForgeGreenRuneLevel;
-    // Base comes from the equipped gear (bare-handed 10 ATK / 2 DEF when nothing is worn),
-    // and each forge level adds on top — matching what the forge panel shows.
-    public const float UnarmedAttack = 10f;
+    // Role owns the authored attack base and the shared additive calculation used by combat and UI.
     public const float UnarmoredDefense = 2f;
-    public float WeaponAttack =>
-        (RunEquipment.Weapon != null ? RunEquipment.Weapon.attackBonus : UnarmedAttack) +
-        RunProgress.ForgeWeaponLevel * ItemDisplay.WeaponAttackPerLevel;
+    public float WeaponAttack => playerCombat != null ? playerCombat.AttackPower : 0f;
+    public float GetWeaponAttackAtForgeLevel(int forgeLevel) =>
+        playerCombat != null ? playerCombat.GetAttackAtForgeLevel(forgeLevel) : 0f;
     public float ArmorDefense =>
         (RunEquipment.Armor != null ? RunEquipment.Armor.defenseBonus : UnarmoredDefense) +
         RunProgress.ForgeArmorLevel * ItemDisplay.ArmorDefensePerLevel;
@@ -63,9 +61,7 @@ public sealed class PlayerProgression : MonoBehaviour
         if (resetRunOnAwake)
             RunProgress.MarkRunStarted();
 
-        // Weapon power now comes purely from equipped gear + the forge; entering the Boss room no
-        // longer spends coins on an automatic damage upgrade.
-        ApplyWeaponDamage();
+        // Role derives attack from its base plus current equipment/forge data, without a write-back.
         ApplyArmorDefense();   // re-apply any forged armor after a scene load
         notificationText.text = string.Empty;
     }
@@ -80,10 +76,9 @@ public sealed class PlayerProgression : MonoBehaviour
         RunEquipment.Changed -= ApplyEquipmentStats;
     }
 
-    /// <summary>Re-applies ATK/DEF whenever the hero wears or removes a piece of gear.</summary>
+    /// <summary>Re-applies defense on equipment changes; Role derives attack directly from run data.</summary>
     private void ApplyEquipmentStats()
     {
-        ApplyWeaponDamage();
         ApplyArmorDefense();
     }
 
@@ -114,28 +109,18 @@ public sealed class PlayerProgression : MonoBehaviour
 
     /// <summary>
     /// Called by the forge when a weapon, armor or Green Rune level changes. All three levels
-    /// persist across scenes; HeroHealth reads the Green Rune level for its regeneration rate.
+    /// persist across scenes; Role reads the Green Rune level for its regeneration rate.
     /// </summary>
     public void ApplyForgeStats(int weaponLevel, int armorLevel, int greenRuneLevel)
     {
         RunProgress.SetForgeLevels(weaponLevel, armorLevel, greenRuneLevel);
-        ApplyWeaponDamage();
         ApplyArmorDefense();
         // Deliberately silent: only coin pickups surface a notification.
     }
 
-    private void ApplyWeaponDamage()
-    {
-        playerCombat.SetDamage(WeaponAttack);   // absolute ATK equals the forge panel value
-        playerCombat.SetDamageMultiplier(1f);   // no coin-bought multiplier any more
-    }
-
     private void ApplyArmorDefense()
     {
-        HeroHealth hero = playerCombat.GetComponent<HeroHealth>();
-        if (hero == null)
-            hero = FindFirstObjectByType<HeroHealth>();
-        hero?.SetDefense(ArmorDefense);   // flat per-hit reduction equals the forge panel DEF
+        playerCombat.SetDefense(ArmorDefense);   // flat per-hit reduction equals the forge panel DEF
     }
 
     /// <summary>Shows a short HUD message for scene-authored interactions such as locked gates.</summary>

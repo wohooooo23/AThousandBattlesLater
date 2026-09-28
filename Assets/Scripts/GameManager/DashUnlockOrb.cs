@@ -64,7 +64,7 @@ public sealed class DashUnlockOrb : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!isReady || isCollected || other.GetComponentInParent<HeroHealth>() == null)
+        if (!isReady || isCollected || other.GetComponentInParent<Role>() == null)
             return;
 
         isCollected = true;

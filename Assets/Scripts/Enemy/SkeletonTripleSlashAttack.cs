@@ -106,7 +106,7 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
 
     private void DamagePlayerInSector(Vector2 origin, Vector2 direction, float radius)
     {
-        CombatHealth target = CombatHealth.FindClosest(origin, CombatFaction.Player, radius);
+        IDamageable target = CombatTargets.FindClosest(origin, CombatFaction.Player, radius);
         if (target == null) return;
         Vector2 offset = (Vector2)target.transform.position - origin;
         if (offset.sqrMagnitude <= radius * radius && Vector2.Angle(direction, offset) <= sectorAngle * 0.5f)

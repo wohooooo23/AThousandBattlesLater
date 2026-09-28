@@ -62,7 +62,7 @@ public sealed class BossArenaController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        HeroHealth heroHealth = other.GetComponentInParent<HeroHealth>();
+        Role heroHealth = other.GetComponentInParent<Role>();
         if (entered || heroHealth == null)
             return;
 

@@ -46,9 +46,9 @@ public static class VerdantRuneBuilder
             !Mathf.Approximately(Role.CrimsonJumpMultiplier, 1.1f) ||
             !Mathf.Approximately(Role.CrimsonDashMultiplier, 1.3f))
             throw new InvalidOperationException("Crimson Rune movement multipliers are incorrect.");
-        if (!Mathf.Approximately(HeroHealth.GetGreenRuneHps(0), 2f) ||
-            !Mathf.Approximately(HeroHealth.GetGreenRuneHps(1), 4f) ||
-            !Mathf.Approximately(HeroHealth.GetGreenRuneHps(5), 12f))
+        if (!Mathf.Approximately(Role.GetGreenRuneHps(0), 2f) ||
+            !Mathf.Approximately(Role.GetGreenRuneHps(1), 4f) ||
+            !Mathf.Approximately(Role.GetGreenRuneHps(5), 12f))
             throw new InvalidOperationException("Green Rune HPS progression is incorrect.");
 
         GameObject pickup = AssetDatabase.LoadAssetAtPath<GameObject>(EquipmentBuilder.GreenRunePickupPath);

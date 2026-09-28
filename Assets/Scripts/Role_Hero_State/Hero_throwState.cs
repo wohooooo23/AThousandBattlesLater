@@ -5,7 +5,7 @@ using UnityEngine;
 /// legacy Input, and the throw direction is the hero's facing side only (left/right), never the mouse.
 ///
 /// The kunai itself is spawned by the Throw clip's release-frame event (ThrowTrigger ->
-/// HeroKunaiThrow.FireKunai), and the clip's end event (CurrentStateTrigger -> triggerCalled).
+/// Role.FireKunai), and the clip's end event (CurrentStateTrigger -> triggerCalled).
 ///
 /// Vertical feel: gravity is suspended for the whole throw — the animation and then a Role.throwCooldown
 /// — so the hero holds its height instead of dropping mid-throw, and gravity is restored on exit. The

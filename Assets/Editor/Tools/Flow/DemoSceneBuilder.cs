@@ -211,7 +211,6 @@ public static class DemoSceneBuilder
         if (GameObject.Find("Hero").GetComponent<Collider2D>() == null)
             throw new InvalidOperationException("Hero is missing its collider.");
         Require<Role>("Hero");
-        Require<HeroHealth>("Hero");
         PlayerProgression progression = Require<PlayerProgression>("GameManager");
         if (progression.ResetsRunOnAwake)
             throw new InvalidOperationException("The Boss scene must preserve the map run (no fresh reset on entry).");
@@ -224,13 +223,13 @@ public static class DemoSceneBuilder
         Transform victoryOverlay = heroHud.transform.Find("Victory Overlay");
         if (!defeatedOverlay || !victoryOverlay)
             throw new InvalidOperationException("Hero HUD is missing its defeated or victory overlay.");
-        // The player HP bar is owned by the Alpha UI (Canvas.prefab); HeroHealth must point at it.
+        // The player HP bar is owned by the Alpha UI (Canvas.prefab); Role must point at it.
         HPBarController canvasHpBar = UnityEngine.Object.FindFirstObjectByType<HPBarController>(FindObjectsInactive.Include);
-        HeroHealth heroForBar = GameObject.Find("Hero").GetComponent<HeroHealth>();
+        Role heroForBar = GameObject.Find("Hero").GetComponent<Role>();
         if (canvasHpBar == null)
             throw new InvalidOperationException("The Alpha UI (Canvas.prefab) HP bar is missing from the scene.");
         if (new SerializedObject(heroForBar).FindProperty("healthBar").objectReferenceValue == null)
-            throw new InvalidOperationException("HeroHealth.healthBar must be wired to the Canvas HP bar.");
+            throw new InvalidOperationException("Role.healthBar must be wired to the Canvas HP bar.");
         GameObject boss = GameObject.Find("Enemy");
         if (boss.GetComponent<MeshRenderer>() != null || boss.GetComponent<MeshFilter>() != null)
             throw new InvalidOperationException("The Evil Wizard Boss must not keep the old circle MeshRenderer/MeshFilter placeholder.");
@@ -534,7 +533,6 @@ public static class DemoSceneBuilder
         ValidateScenePosition("Hero", ExampleHeroSpawn);
         if (heroRole.DashUnlocked)
             throw new InvalidOperationException("The Example map Hero must start without dash.");
-        Require<HeroHealth>("Hero");
         Require<GameManager>("GameManager");
         PlayerProgression progression = Require<PlayerProgression>("GameManager");
         if (!progression.ResetsRunOnAwake)
@@ -710,7 +708,7 @@ public static class DemoSceneBuilder
         if (role.DashUnlocked || role.MaxJumpCount != 1)
             throw new InvalidOperationException("stage1_full must begin with Dash locked and only one jump.");
 
-        HeroHealth heroHealth = hero.GetComponent<HeroHealth>();
+        Role heroHealth = hero.GetComponent<Role>();
         SerializedObject heroHealthData = new SerializedObject(heroHealth);
         if (heroHealthData.FindProperty("healthBar").objectReferenceValue == null ||
             heroHealthData.FindProperty("defeatedOverlay").objectReferenceValue == null)
@@ -740,10 +738,9 @@ public static class DemoSceneBuilder
                 if (prefabPath == FlyingEyePrefabPath)
                 {
                     FlyingEyeRangedAttack ranged = health.GetComponent<FlyingEyeRangedAttack>();
-                    MobStateMachine stateMachine = health.GetComponent<MobStateMachine>();
+                    FlyingEyeController stateMachine = health.GetComponent<FlyingEyeController>();
+                    FlyingEyeAnimatorBuilder.ValidateRoot(health.gameObject);
                     if (ranged == null || stateMachine == null || ranged.ProjectilePrefab == null ||
-                        Mathf.Abs(ranged.WindupDuration - MobAttackWindup) > 0.001f ||
-                        Mathf.Abs(ranged.Cooldown - MobAttackCooldown) > 0.001f ||
                         Mathf.Abs(ranged.ProjectileSpeed - FlyingEyeProjectileSpeed) > 0.001f ||
                         (ranged.ProjectilePrefab.transform.localScale - Vector3.one * FlyingEyeProjectileScale).sqrMagnitude > 0.001f ||
                         ranged.AttackRange <= 28f || stateMachine.DetectionRange <= ranged.AttackRange)
@@ -830,7 +827,7 @@ public static class DemoSceneBuilder
             throw new InvalidOperationException(
                 "The hero x enemy collision pair must stay disabled in ProjectSettings/Physics2D.");
         if (hero.layer != HeroPhysicsLayer)
-            throw new InvalidOperationException("The Hero must sit on the 'hero' physics layer (PlayerDropThrough masks by it).");
+            throw new InvalidOperationException("The Hero must sit on the 'hero' physics layer (Role masks by it).");
         if (new SerializedObject(role).FindProperty("groundLayer").intValue != ActorGroundMask)
             throw new InvalidOperationException("Hero ground probes must exclude the enemy and hero layers.");
         foreach (Enemy_Health roomEnemy in roomEnemies)
@@ -861,9 +858,9 @@ public static class DemoSceneBuilder
             if (colliderBody != null && !colliderBody.simulated)
                 throw new InvalidOperationException(importedCollider.name + " has an unsimulated Rigidbody2D, so its collider produces no geometry.");
         }
-        // PlayerDropThrough matches one-way platforms by tag, so the drop-through layer must carry it.
+        // Role matches one-way platforms by tag, so the drop-through layer must carry it.
         if (!importedColliders.Any(collider => collider.CompareTag("OneWayPlatform")))
-            Debug.LogWarning("stage1_full: no Tilemap is tagged OneWayPlatform, so PlayerDropThrough can never drop the hero through a platform.");
+            Debug.LogWarning("stage1_full: no Tilemap is tagged OneWayPlatform, so Role can never drop the hero through a platform.");
 
         Camera camera = Camera.main;
         MapCameraFollow2D follow = camera != null ? camera.GetComponent<MapCameraFollow2D>() : null;
@@ -905,7 +902,7 @@ public static class DemoSceneBuilder
     ///
     /// This used to rasterise every solid tile into merged BoxCollider2D rectangles under a
     /// "Full Map Collision" root and disable the Tilemap colliders. That fought with hand authoring
-    /// in two ways: the generated boxes were always Untagged, so PlayerDropThrough — which
+    /// in two ways: the generated boxes were always Untagged, so Role — which
     /// identifies one-way platforms with CompareTag("OneWayPlatform") — could never match them, and
     /// re-enabling the Tilemap colliders in the Editor was undone on the next rebuild. Tags and
     /// effectors set on the Tilemap objects live inside Grid.prefab, which rebuilding preserves.
@@ -1214,7 +1211,7 @@ public static class DemoSceneBuilder
         float bossViewBottom = heroSpawn.y - 5f;
         float bossViewTop = arenaBounds.max.y;
         float bossViewCentre = (bossViewBottom + bossViewTop) * 0.5f;
-        SetSerializedObject(bossCamera, "target", UnityEngine.Object.FindFirstObjectByType<HeroHealth>().transform);
+        SetSerializedObject(bossCamera, "target", UnityEngine.Object.FindFirstObjectByType<Role>().transform);
         SetSerializedVector2(bossCamera, "arenaMin", arenaBounds.min);
         SetSerializedVector2(bossCamera, "arenaMax", arenaBounds.max);
         SetSerializedFloat(bossCamera, "verticalCentre", bossViewCentre);
@@ -2108,12 +2105,10 @@ public static class DemoSceneBuilder
         Entity_Health duplicateHealth = target.GetComponent<Entity_Health>();
         if (duplicateHealth)
             UnityEngine.Object.DestroyImmediate(duplicateHealth);
-        HeroHealth health = GetOrAdd<HeroHealth>(target);
-        SetSerializedFloat(health, "maximumHealth", CombatBalance.DefaultMaximumHealth);
-
         Role controller = target.GetComponent<Role>();
         if (!controller)
             throw new InvalidOperationException("Hero.prefab must contain Role.");
+        SetSerializedFloat(controller, "maximumHealth", CombatBalance.DefaultMaximumHealth);
         SetSerializedFloat(controller, "speed", 45f);
         SetSerializedFloat(controller, "jumpForce", HeroJumpForce);
         SetSerializedVector2(controller, "walljumpforce", new Vector2(34f, 40f));
@@ -2128,12 +2123,8 @@ public static class DemoSceneBuilder
         SetSerializedFloat(controller, "grounddistance", ActorGroundProbe);
         SetSerializedFloat(controller, "walldistance", ActorWallProbe);
 
-        Entity_Combat combat = target.GetComponent<Entity_Combat>();
-        if (!combat)
-            throw new InvalidOperationException("Hero.prefab must contain Entity_Combat.");
-        SetSerializedFloat(combat, "damage", CombatBalance.PlayerDamagePerHit);
-        SetSerializedFloat(combat, "targetCheckRad", HeroAttackRadius);
-        SetSerializedInt(combat, "attackMode", (int)EntityAttackMode.ForwardArea);
+        SetSerializedFloat(controller, "damage", CombatBalance.PlayerDamagePerHit);
+        SetSerializedFloat(controller, "targetCheckRad", HeroAttackRadius);
 
         Rigidbody2D body = target.GetComponent<Rigidbody2D>();
         body.bodyType = RigidbodyType2D.Dynamic;
@@ -2161,11 +2152,9 @@ public static class DemoSceneBuilder
             Entity_Health duplicate = heroRoot.GetComponent<Entity_Health>();
             if (duplicate)
                 UnityEngine.Object.DestroyImmediate(duplicate);
-            HeroHealth health = GetOrAdd<HeroHealth>(heroRoot);
+            Role role = GetOrAdd<Role>(heroRoot);
             heroRoot.transform.localScale = Vector3.one * PrefabActorScale;
-            SetSerializedFloat(health, "maximumHealth", CombatBalance.DefaultMaximumHealth);
-            Role role = heroRoot.GetComponent<Role>();
-            Entity_Combat combat = heroRoot.GetComponent<Entity_Combat>();
+            SetSerializedFloat(role, "maximumHealth", CombatBalance.DefaultMaximumHealth);
             SetSerializedInt(role, "groundLayer", ActorGroundMask);
             SetSerializedFloat(role, "grounddistance", ActorGroundProbe);
             SetSerializedFloat(role, "walldistance", ActorWallProbe);
@@ -2176,21 +2165,19 @@ public static class DemoSceneBuilder
             SetSerializedFloat(role, "wallJumpInputLockDuration", 0.18f);
             SetSerializedFloat(role, "dashspeed", 120f);
             SetSerializedBool(role, "dashUnlocked", true);
-            SetSerializedFloat(combat, "damage", CombatBalance.PlayerDamagePerHit);
-            SetSerializedInt(combat, "attackMode", (int)EntityAttackMode.ForwardArea);
-            SetSerializedFloat(combat, "targetCheckRad", HeroAttackRadius);
+            SetSerializedFloat(role, "damage", CombatBalance.PlayerDamagePerHit);
+            SetSerializedFloat(role, "targetCheckRad", HeroAttackRadius);
             Rigidbody2D heroBody = heroRoot.GetComponent<Rigidbody2D>();
             if (heroBody != null)
                 heroBody.gravityScale = HeroGravityScale;
             heroRoot.tag = "Untagged";
             heroRoot.layer = HeroPhysicsLayer;
 
-            // Per-combo-step attack SFX. HeroAttackAudio auto-configures its AudioSource at runtime.
+            // Per-combo-step attack SFX. Role configures its AudioSource at runtime.
             // A missing/unimported clip must NOT abort the whole map rebuild — the SFX is cosmetic.
-            // Keep the array index-aligned (null for a missing clip); HeroAttackAudio.Play skips nulls,
+            // Keep the array index-aligned (null for a missing clip); Role.PlayAttackSound skips nulls,
             // so a missing 3rd clip just leaves that combo step silent instead of blocking Rebuild.
             GetOrAdd<AudioSource>(heroRoot);
-            HeroAttackAudio attackAudio = GetOrAdd<HeroAttackAudio>(heroRoot);
             AudioClip[] slashClips = new AudioClip[HeroAttackSfxPaths.Length];
             for (int i = 0; i < HeroAttackSfxPaths.Length; i++)
             {
@@ -2198,12 +2185,11 @@ public static class DemoSceneBuilder
                 if (slashClips[i] == null)
                     Debug.LogWarning("Hero attack SFX clip missing or not yet imported (skipped): " + HeroAttackSfxPaths[i]);
             }
-            SetSerializedObjectArray(attackAudio, "clips", slashClips);
+            SetSerializedObjectArray(role, "attackClips", slashClips);
 
             // Kunai ranged attack (I key). Reuses the faction-aware FlyingEyeProjectile2D — launched
             // by the hero it hits enemies. Consumes the stackable Kunai inventory item.
-            HeroKunaiThrow kunaiThrow = GetOrAdd<HeroKunaiThrow>(heroRoot);
-            SerializedObject kunaiData = new SerializedObject(kunaiThrow);
+            SerializedObject kunaiData = new SerializedObject(role);
             kunaiData.FindProperty("kunaiItem").objectReferenceValue = KunaiInventoryBuilder.EnsureAssets();
             kunaiData.FindProperty("projectilePrefab").objectReferenceValue = EnsureHeroKunaiProjectile();
             kunaiData.ApplyModifiedPropertiesWithoutUndo();
@@ -2324,12 +2310,12 @@ public static class DemoSceneBuilder
         scaler.matchWidthOrHeight = 0.5f;
 
         // The player HP bar now lives in Canvas.prefab (the Alpha UI). This HUD only authors the
-        // full-screen defeat/victory overlays; HeroHealth.healthBar is wired to the Canvas HP bar
+        // full-screen defeat/victory overlays; Role.healthBar is wired to the Canvas HP bar
         // in SetupAlphaUi (which runs right after this, once the Alpha UI is in the scene).
         GameObject defeatedOverlay = CreateEndScreenOverlay(hud.transform, "Defeated Overlay", "DEFEATED\nPress R to Restart");
         CreateEndScreenOverlay(hud.transform, "Victory Overlay", "VICTORY\nPress Space for Main Menu");
 
-        HeroHealth health = GameObject.Find("Hero").GetComponent<HeroHealth>();
+        Role health = GameObject.Find("Hero").GetComponent<Role>();
         SetSerializedObject(health, "defeatedOverlay", defeatedOverlay);
     }
 
@@ -2370,7 +2356,7 @@ public static class DemoSceneBuilder
         ItemData coinItem = EnsureGoldCoinItem();
 
         PlayerProgression progression = GetOrAdd<PlayerProgression>(managerObject);
-        SetSerializedObject(progression, "playerCombat", hero.GetComponent<Entity_Combat>());
+        SetSerializedObject(progression, "playerCombat", hero.GetComponent<Role>());
         SetSerializedObject(progression, "notificationText", notification);
         SetSerializedObject(progression, "coinItem", coinItem);
         KunaiInventoryBuilder.ConfigureProgression(progression, resetRunOnAwake);
@@ -2418,13 +2404,13 @@ public static class DemoSceneBuilder
         if (eventSystem.GetComponent<InputSystemUIInputModule>() == null)
             eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
 
-        // The player HP bar is owned by the Alpha UI (Canvas.prefab). Point HeroHealth at it so
+        // The player HP bar is owned by the Alpha UI (Canvas.prefab). Point Role at it so
         // there is a single HP bar and no duplicate scene-built one.
         HPBarController canvasHpBar = UnityEngine.Object.FindFirstObjectByType<HPBarController>(FindObjectsInactive.Include);
         GameObject heroObject = GameObject.Find("Hero");
         if (canvasHpBar != null && heroObject != null)
         {
-            HeroHealth heroHealth = heroObject.GetComponent<HeroHealth>();
+            Role heroHealth = heroObject.GetComponent<Role>();
             if (heroHealth != null)
                 SetSerializedObject(heroHealth, "healthBar", canvasHpBar);
         }
@@ -2606,73 +2592,9 @@ public static class DemoSceneBuilder
 
     private static void EnsureFlyingEyeCombatPrefab()
     {
-        Sprite projectileSprite = AssetDatabase.LoadAssetAtPath<Sprite>(AttackCircleSpritePath);
-        if (projectileSprite == null)
-            throw new InvalidOperationException("Flying Eye projectile requires " + AttackCircleSpritePath + ".");
-
-        GameObject projectileRoot = new GameObject("FlyingEyeProjectile", typeof(SpriteRenderer),
-            typeof(Rigidbody2D), typeof(CircleCollider2D), typeof(FlyingEyeProjectile2D));
-        projectileRoot.transform.localScale = Vector3.one * FlyingEyeProjectileScale;
-        SpriteRenderer projectileRenderer = projectileRoot.GetComponent<SpriteRenderer>();
-        projectileRenderer.sprite = projectileSprite;
-        projectileRenderer.color = new Color(1f, 0.05f, 0.05f, 0.95f);
-        projectileRenderer.sortingOrder = 30;
-        Rigidbody2D projectileBody = projectileRoot.GetComponent<Rigidbody2D>();
-        projectileBody.gravityScale = 0f;
-        projectileBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        projectileBody.constraints = RigidbodyConstraints2D.FreezeRotation;
-        CircleCollider2D projectileCollider = projectileRoot.GetComponent<CircleCollider2D>();
-        projectileCollider.isTrigger = true;
-        projectileCollider.radius = 0.5625f;
-        PrefabUtility.SaveAsPrefabAsset(projectileRoot, FlyingEyeProjectilePrefabPath);
-        UnityEngine.Object.DestroyImmediate(projectileRoot);
-
-        GameObject eyeRoot = PrefabUtility.LoadPrefabContents(FlyingEyePrefabPath);
-        try
-        {
-            MobStateMachine stateMachine = eyeRoot.GetComponent<MobStateMachine>();
-            MobSpriteAnimator visual = eyeRoot.GetComponentInChildren<MobSpriteAnimator>(true);
-            Enemy_Health health = eyeRoot.GetComponent<Enemy_Health>();
-            Rigidbody2D body = eyeRoot.GetComponent<Rigidbody2D>();
-            if (stateMachine == null || visual == null || health == null || body == null)
-                throw new InvalidOperationException("Mob_FlyingEye.prefab is missing its shared state, animation, health or Rigidbody2D component.");
-            if (visual.attackOne.frames == null || visual.attackOne.frames.Length == 0)
-                throw new InvalidOperationException("Mob_FlyingEye.prefab needs its imported Attack1 animation frames.");
-
-            FlyingEyeRangedAttack ranged = eyeRoot.GetComponent<FlyingEyeRangedAttack>();
-            if (ranged == null)
-                ranged = eyeRoot.AddComponent<FlyingEyeRangedAttack>();
-            SetSerializedObject(ranged, "visual", visual);
-            SetSerializedObject(ranged, "projectilePrefab", AssetDatabase.LoadAssetAtPath<GameObject>(FlyingEyeProjectilePrefabPath));
-            SetSerializedFloat(ranged, "attackRange", 38f);
-            SetSerializedFloat(ranged, "preferredDistance", 24f);
-            SetSerializedFloat(ranged, "windupDuration", MobAttackWindup);
-            SetSerializedFloat(ranged, "cooldown", MobAttackCooldown);
-            SetSerializedFloat(ranged, "projectileSpeed", FlyingEyeProjectileSpeed);
-            SetSerializedFloat(ranged, "damage", CombatBalance.EnemyDamagePerHit);
-            SetSerializedFloat(ranged, "warningDiameter", 7.5f);
-
-            eyeRoot.transform.localScale = Vector3.one * PrefabActorScale;
-            SetSerializedObject(stateMachine, "attackBehaviour", ranged);
-            SetSerializedFloat(stateMachine, "detectionRange", 48f);
-            SetSerializedFloat(stateMachine, "patrolRange", 10f);
-            SetSerializedFloat(stateMachine, "patrolSpeed", 5f);
-            SetSerializedFloat(stateMachine, "chaseSpeed", 8f);
-            SetSerializedFloat(health, "maximumHealth", CombatBalance.DefaultMaximumHealth);
-            SetSerializedInt(health, "coinReward", 20);
-            SetSerializedObject(health, "worldHealthBar", null);
-            body.gravityScale = 0f;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            eyeRoot.layer = EnemyPhysicsLayer;
-            foreach (SpriteRenderer renderer in eyeRoot.GetComponentsInChildren<SpriteRenderer>(true))
-                renderer.sortingOrder = 10;
-            PrefabUtility.SaveAsPrefabAsset(eyeRoot, FlyingEyePrefabPath);
-        }
-        finally
-        {
-            PrefabUtility.UnloadPrefabContents(eyeRoot);
-        }
+        // Upgrade/configure in place: keep the saved collider, Visual, bars and combat tuning.
+        // New level instances receive their explicit health/reward settings below.
+        FlyingEyeAnimatorBuilder.EnsurePrefab();
     }
 
     private static GameObject CreateConfiguredFlyingEye(Transform parent, string name, Vector3 position)
@@ -2685,7 +2607,7 @@ public static class DemoSceneBuilder
         eye.transform.localScale = Vector3.one * FullMapActorScale;
 
         Enemy_Health health = eye.GetComponent<Enemy_Health>();
-        MobStateMachine stateMachine = eye.GetComponent<MobStateMachine>();
+        FlyingEyeController stateMachine = eye.GetComponent<FlyingEyeController>();
         FlyingEyeRangedAttack ranged = eye.GetComponent<FlyingEyeRangedAttack>();
         if (health == null || stateMachine == null || ranged == null)
             throw new InvalidOperationException("Mob_FlyingEye.prefab is missing unified health, state machine or ranged attack.");

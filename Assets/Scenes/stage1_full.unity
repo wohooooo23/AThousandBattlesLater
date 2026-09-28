@@ -2794,7 +2794,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64d2bc5dd785ccf4185c4a40e3974755, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProgression
-  playerCombat: {fileID: 477912989}
+  playerCombat: {fileID: 477912988}
   notificationText: {fileID: 1671942668}
   coinItem: {fileID: 11400000, guid: ddbe73d69b16d7246bc7a7eb4ad6ff57, type: 2}
   startingKunaiItem: {fileID: 11400000, guid: 3595f1d2f8b204749b86c359f124e8cd, type: 2}
@@ -3274,15 +3274,15 @@ PrefabInstance:
       propertyPath: m_SortingOrder
       value: 10
       objectReference: {fileID: 0}
-    - target: {fileID: 3883366657667944747, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: healthBar
       value: 
       objectReference: {fileID: 1940986362}
-    - target: {fileID: 3883366657667944747, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: maximumHealth
       value: 200
       objectReference: {fileID: 0}
-    - target: {fileID: 3883366657667944747, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: defeatedOverlay
       value: 
       objectReference: {fileID: 79885186}
@@ -3390,15 +3390,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 7840154124746744241, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: damage
       value: 2000
       objectReference: {fileID: 0}
-    - target: {fileID: 7840154124746744241, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7840154124746744241, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: targetCheckRad
       value: 3.5
       objectReference: {fileID: 0}
@@ -3423,17 +3419,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 867d5d810d11da443885acb72099ab93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &477912989 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7840154124746744241, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-  m_PrefabInstance: {fileID: 477912986}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d41c47fa174e3c04ca7144e5dd221a71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Entity_Combat
 --- !u!1 &497596922
 GameObject:
   m_ObjectHideFlags: 0

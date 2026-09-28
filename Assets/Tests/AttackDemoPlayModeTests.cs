@@ -494,13 +494,13 @@ public class AttackDemoPlayModeTests : InputTestFixture
     }
 
     [UnityTest]
-    public IEnumerator HeroHealthBarLosesExactlyOneFifthPerHit()
+    public IEnumerator RoleBarLosesExactlyOneFifthPerHit()
     {
         SceneManager.LoadScene("stage1 boss");
         yield return null;
 
         GameObject hero = GameObject.Find("Hero");
-        MonoBehaviour health = hero.GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour health = hero.GetComponent("Role") as MonoBehaviour;
         MonoBehaviour bar = System.Array.Find(Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None),
             behaviour => behaviour.GetType().Name == "HPBarController");
         Assert.That(health, Is.Not.Null, "Hero must own the health component.");
@@ -536,7 +536,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         SceneManager.LoadScene("stage1 boss");
         yield return null;
 
-        MonoBehaviour health = GameObject.Find("Hero").GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour health = GameObject.Find("Hero").GetComponent("Role") as MonoBehaviour;
         // Each hit is 20 raw minus the hero's 2 points of unarmoured defense (18), so six are needed.
         MethodInfo takeDamage = health.GetType().GetMethod("TakeDamage");
         for (int hit = 0; hit < 6; hit++)
@@ -547,7 +547,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         yield return null;
         yield return null;
 
-        MonoBehaviour restartedHealth = GameObject.Find("Hero").GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour restartedHealth = GameObject.Find("Hero").GetComponent("Role") as MonoBehaviour;
         Assert.That((bool)restartedHealth.GetType().GetProperty("IsDead").GetValue(restartedHealth), Is.False);
         Assert.That((float)restartedHealth.GetType().GetProperty("CurrentHealth").GetValue(restartedHealth), Is.EqualTo(100f));
         if (keyboard.added)
@@ -560,7 +560,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         SceneManager.LoadScene("stage1 boss");
         yield return null;
 
-        MonoBehaviour player = GameObject.Find("Hero").GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour player = GameObject.Find("Hero").GetComponent("Role") as MonoBehaviour;
         MonoBehaviour boss = GameObject.Find("Enemy").GetComponent("EnemyHealth") as MonoBehaviour;
         MonoBehaviour orc = GameObject.Find("Orc").GetComponent("Enemy_Health") as MonoBehaviour;
         Assert.That(player, Is.Not.Null);
@@ -658,7 +658,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         yield return new WaitForSeconds(1.36f);
         Assert.That((bool)orcController.GetType().GetProperty("CanAttack").GetValue(orcController), Is.True);
 
-        MonoBehaviour heroHealth = hero.GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour heroHealth = hero.GetComponent("Role") as MonoBehaviour;
         float startHealth = (float)heroHealth.GetType().GetProperty("CurrentHealth").GetValue(heroHealth);
         orc.transform.position = hero.transform.position + Vector3.right * 4f;
         Physics2D.SyncTransforms();
@@ -931,12 +931,12 @@ public class AttackDemoPlayModeTests : InputTestFixture
         yield return new WaitForFixedUpdate();
 
         MonoBehaviour stageExit = GameObject.Find("Boss Exit").GetComponent("StageExit") as MonoBehaviour;
-        MonoBehaviour hero = GameObject.Find("Hero").GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour hero = GameObject.Find("Hero").GetComponent("Role") as MonoBehaviour;
         MonoBehaviour role = hero.GetComponent("Role") as MonoBehaviour;
         MonoBehaviour dashOrb = GameObject.Find("Dash Unlock Orb").GetComponent("DashUnlockOrb") as MonoBehaviour;
         MonoBehaviour progression = GameObject.Find("GameManager").GetComponent("PlayerProgression") as MonoBehaviour;
         MonoBehaviour backpack = FindBehaviour("InventoryPanel");
-        MonoBehaviour heroCombat = hero.GetComponent("Entity_Combat") as MonoBehaviour;
+        MonoBehaviour heroCombat = hero.GetComponent("Role") as MonoBehaviour;
         System.Type progressionType = progression.GetType();
         System.Type heroCombatType = heroCombat.GetType();
         List<MonoBehaviour> enemies = new List<MonoBehaviour>();
@@ -960,11 +960,12 @@ public class AttackDemoPlayModeTests : InputTestFixture
         Assert.That(Vector3.Distance(GameObject.Find("Boss Exit").transform.position,
             new Vector3(44.77f, -7.6f, 0f)), Is.LessThan(0.02f));
         Assert.That((int)progressionType.GetProperty("Coins").GetValue(progression), Is.EqualTo(0));
-        // Damage now comes from equipped gear + forge level, not a fixed constant: bare-handed = 10.
+        // Attack is the authored Hero base plus equipped weapon attack and forge bonuses.
         float baseDamage = (float)heroCombatType.GetProperty("Damage").GetValue(heroCombat);
         Assert.That(baseDamage, Is.EqualTo(
             (float)progressionType.GetProperty("WeaponAttack").GetValue(progression)).Within(0.01f));
-        Assert.That(baseDamage, Is.EqualTo(10f).Within(0.01f), "Unarmed hero attack is 10.");
+        Assert.That(baseDamage, Is.EqualTo((float)heroCombatType.GetProperty("BaseDamage").GetValue(heroCombat)).Within(0.01f),
+            "Without equipment or forge levels, attack must equal the authored Hero base.");
         Assert.That(GameObject.Find("Outer Right Wall"), Is.Not.Null);
         Assert.That(GameObject.Find("Outer Ceiling"), Is.Not.Null);
         Assert.That(GameObject.Find("Expanded Example Map").transform.localScale.y, Is.EqualTo(3.5f).Within(0.01f));
@@ -1032,7 +1033,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
             "Entering the unlocked green exit must load the existing Boss fight.");
 
         MonoBehaviour bossProgression = GameObject.Find("GameManager").GetComponent("PlayerProgression") as MonoBehaviour;
-        MonoBehaviour upgradedCombat = GameObject.Find("Hero").GetComponent("Entity_Combat") as MonoBehaviour;
+        MonoBehaviour upgradedCombat = GameObject.Find("Hero").GetComponent("Role") as MonoBehaviour;
         System.Type bossProgressionType = bossProgression.GetType();
         float upgradedDamage = (float)upgradedCombat.GetType().GetProperty("Damage").GetValue(upgradedCombat);
         // Entering the Boss room no longer spends coins on an automatic damage upgrade, so the map's
@@ -1055,7 +1056,7 @@ public class AttackDemoPlayModeTests : InputTestFixture
         yield return null;
 
         MonoBehaviour boss = GameObject.Find("Enemy").GetComponent("EnemyHealth") as MonoBehaviour;
-        MonoBehaviour hero = GameObject.Find("Hero").GetComponent("HeroHealth") as MonoBehaviour;
+        MonoBehaviour hero = GameObject.Find("Hero").GetComponent("Role") as MonoBehaviour;
         float maximumHealth = (float)boss.GetType().GetProperty("MaximumHealth").GetValue(boss);
         boss.GetType().GetMethod("ApplyDamage").Invoke(boss, new object[] { maximumHealth, hero.transform });
 

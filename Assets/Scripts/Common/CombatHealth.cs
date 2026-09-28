@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// One health calculation for every combat actor. Subclasses only provide the
-/// faction and their intentionally different death response.
+/// Shared enemy health pool. Role owns the player's health and uses the same IDamageable contract.
 /// </summary>
 [DisallowMultipleComponent]
 public abstract class CombatHealth : MonoBehaviour, IDamageable
 {
-    private static readonly List<CombatHealth> Active = new List<CombatHealth>();
-
     [SerializeField, Min(1f)] protected float maximumHealth = CombatBalance.DefaultMaximumHealth;
     [SerializeField] private EnemyHealthBar worldHealthBar;
 
@@ -38,13 +34,12 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
 
     protected virtual void OnEnable()
     {
-        if (!Active.Contains(this))
-            Active.Add(this);
+        CombatTargets.Register(this);
     }
 
     protected virtual void OnDisable()
     {
-        Active.Remove(this);
+        CombatTargets.Unregister(this);
     }
 
     public bool ApplyDamage(float amount, Transform source)
@@ -86,7 +81,7 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
     protected virtual void OnDamaged(float amount, Transform source) { }
     protected abstract void OnDefeated(Transform source);
 
-    /// <summary>Hook for armor/defense. Base actors take full damage; HeroHealth subtracts forged DEF.</summary>
+    /// <summary>Hook for enemy-specific mitigation. Base actors take full damage.</summary>
     protected virtual float MitigateIncomingDamage(float amount) => amount;
 
     protected void UpdateDisplays()
@@ -95,21 +90,4 @@ public abstract class CombatHealth : MonoBehaviour, IDamageable
         HealthChanged?.Invoke(HealthFraction);
     }
 
-    public static CombatHealth FindClosest(Vector2 origin, CombatFaction faction, float maximumDistance = float.PositiveInfinity)
-    {
-        CombatHealth closest = null;
-        float bestSquaredDistance = maximumDistance * maximumDistance;
-        foreach (CombatHealth candidate in Active)
-        {
-            if (candidate == null || candidate.isDead || candidate.Faction != faction)
-                continue;
-            float squaredDistance = ((Vector2)candidate.transform.position - origin).sqrMagnitude;
-            if (squaredDistance < bestSquaredDistance)
-            {
-                bestSquaredDistance = squaredDistance;
-                closest = candidate;
-            }
-        }
-        return closest;
-    }
 }

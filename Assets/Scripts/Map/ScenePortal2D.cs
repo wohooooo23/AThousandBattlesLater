@@ -22,7 +22,7 @@ public sealed class ScenePortal2D : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (isLoading || other.GetComponentInParent<HeroHealth>() == null)
+        if (isLoading || other.GetComponentInParent<Role>() == null)
             return;
         isLoading = true;
         SceneManager.LoadScene(targetSceneName);

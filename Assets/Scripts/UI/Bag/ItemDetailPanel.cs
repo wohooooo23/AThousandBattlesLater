@@ -314,7 +314,7 @@ public sealed class ItemDetailPanel : MonoBehaviour
 
     private bool TryUsePotion(ItemData item)
     {
-        HeroHealth hero = FindAnyObjectByType<HeroHealth>();
+        Role hero = FindAnyObjectByType<Role>();
         if (hero == null || hero.IsDead || hero.CurrentHealth >= hero.MaximumHealth || RunInventory.Count(item) <= 0)
             return false;
         if (!RunInventory.Remove(item, 1))

@@ -34,7 +34,7 @@ public class ItemPickup : MonoBehaviour
         if (collected || Time.time < pickupEnabledAt || itemData == null)
             return;
 
-        CombatHealth collector = other.GetComponentInParent<CombatHealth>();
+        IDamageable collector = other.GetComponentInParent<IDamageable>();
         if (collector == null || collector.Faction != CombatFaction.Player)
             return;
 

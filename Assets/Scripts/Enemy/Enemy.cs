@@ -37,7 +37,7 @@ public class Enemy : Entity
 
     public bool RoleDetection()
     {
-        CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player, roleCheckDistance);
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, roleCheckDistance);
         if (player == null)
             return false;
         float horizontal = player.transform.position.x - transform.position.x;

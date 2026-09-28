@@ -23,7 +23,7 @@ public static class BossArenaCameraBuilder
         BossArenaController arena = FindSceneComponent<BossArenaController>(scene);
         MapCameraFollow2D explorationCamera = FindSceneComponents<MapCameraFollow2D>(scene)
             .FirstOrDefault(component => component.name == ExplorationCameraName);
-        HeroHealth hero = FindSceneComponent<HeroHealth>(scene);
+        Role hero = FindSceneComponent<Role>(scene);
         GameObject minimapHud = FindSceneObject(scene, "Minimap HUD");
         UIManager uiManager = FindSceneComponent<UIManager>(scene);
         BgmPlayer bgmPlayer = FindSceneComponent<BgmPlayer>(scene);

@@ -106,7 +106,7 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
         Assert.That(title.text, Is.EqualTo("Claymore Sword+1"));
         Assert.That(forgedAttack, Is.EqualTo(20f));
         Assert.That(stats.text, Is.EqualTo("20 ATK"),
-            "Backpack/equipped details must show the same forged ATK used by combat.");
+            "Item details show the weapon contribution; Role's base attack is added separately in combat.");
         Font bundledFont = (Font)FindRuntimeType("UiFont").GetProperty("Regular").GetValue(null);
         Assert.That(title.font, Is.SameAs(bundledFont));
         Assert.That(title.verticalOverflow, Is.EqualTo(VerticalWrapMode.Overflow));
@@ -156,7 +156,7 @@ public sealed class InventoryItemDetailPlayModeTests : InputTestFixture
         yield return null;
         MonoBehaviour potionSlot = FindSlotHolding(potion);
         Assert.That(potionSlot, Is.Not.Null, "The upper-chest potion must occupy a normal backpack slot.");
-        MonoBehaviour heroHealth = FindBehaviour("HeroHealth");
+        MonoBehaviour heroHealth = FindBehaviour("Role");
         Assert.That(heroHealth, Is.Not.Null);
         float maximumHealth = ReadProperty<float>(heroHealth, "MaximumHealth");
         heroHealth.GetType().GetMethod("ApplyDamage").Invoke(heroHealth, new object[] { 40f, null });

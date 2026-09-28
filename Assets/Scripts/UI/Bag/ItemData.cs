@@ -11,7 +11,7 @@ public sealed class ItemData : ScriptableObject
     public ItemType type;
 
     [Header("Equipment")]
-    [Tooltip("Weapon: the hero's base attack while worn (replaces the bare-handed 10).")]
+    [Tooltip("Weapon: attack added to the Hero's base attack while equipped. Forge bonuses are added separately.")]
     public float attackBonus;
     [Tooltip("Armor: the hero's flat damage reduction while worn (replaces the bare 2).")]
     public float defenseBonus;
@@ -122,7 +122,7 @@ public static class ItemDisplay
         {
             ItemType.Weapon => item.attackBonus + level * WeaponAttackPerLevel,
             ItemType.Armor => item.defenseBonus + level * ArmorDefensePerLevel,
-            ItemType.GreenRune => HeroHealth.GetGreenRuneHps(level),
+            ItemType.GreenRune => Role.GetGreenRuneHps(level),
             _ => 0f
         };
     }
@@ -135,7 +135,7 @@ public static class ItemDisplay
         {
             ItemType.Weapon => WeaponAttackPerLevel,
             ItemType.Armor => ArmorDefensePerLevel,
-            ItemType.GreenRune => HeroHealth.GreenRuneHpsPerForgeLevel,
+            ItemType.GreenRune => Role.GreenRuneHpsPerForgeLevel,
             _ => 0f
         };
     }

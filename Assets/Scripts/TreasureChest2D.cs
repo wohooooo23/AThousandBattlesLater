@@ -187,7 +187,7 @@ public sealed class TreasureChest2D : MonoBehaviour
 
     private static bool IsPlayer(Collider2D other)
     {
-        CombatHealth health = other != null ? other.GetComponentInParent<CombatHealth>() : null;
+        IDamageable health = other != null ? other.GetComponentInParent<IDamageable>() : null;
         return health != null && health.Faction == CombatFaction.Player;
     }
 }

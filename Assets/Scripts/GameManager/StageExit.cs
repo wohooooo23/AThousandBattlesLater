@@ -64,7 +64,7 @@ public sealed class StageExit : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!isUnlocked || isLoading || other.GetComponentInParent<HeroHealth>() == null)
+        if (!isUnlocked || isLoading || other.GetComponentInParent<Role>() == null)
             return;
 
         isLoading = true;

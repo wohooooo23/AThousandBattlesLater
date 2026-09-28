@@ -80,11 +80,11 @@ namespace RetroForge
                 hpCtrl = hpBar.GetComponent<HPBarController>();
             }
 
-            // Wire HeroHealth → HPBar
-            HeroHealth hh = hero.GetComponent<HeroHealth>();
+            // Wire Role → HPBar
+            Role hh = hero.GetComponent<Role>();
             if (hh != null && hpCtrl != null)
             {
-                var hf = typeof(HeroHealth).GetField("healthBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var hf = typeof(Role).GetField("healthBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (hf != null) hf.SetValue(hh, hpCtrl);
             }
 

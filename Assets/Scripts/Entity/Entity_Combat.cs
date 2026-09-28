@@ -9,7 +9,7 @@ public enum EntityAttackMode
     ForwardFan
 }
 
-/// <summary>Animation-event melee attack shared by the player and ordinary enemies.</summary>
+/// <summary>Animation-event melee attack for ordinary enemies. Role owns player melee.</summary>
 public sealed class Entity_Combat : MonoBehaviour
 {
     private static readonly Color WarningRangeColor = new Color(0.34f, 0.015f, 0.02f, 0.82f);
@@ -40,8 +40,7 @@ public sealed class Entity_Combat : MonoBehaviour
     private GameObject activeWarning;
     private GameObject activeStrike;
     private float damageMultiplier = 1f;
-    // 1 for the player; the mob scales for an enemy. Resolved once from the owner's faction, so the
-    // shared melee code never scales the hero.
+    // Mob difficulty scales are resolved from the owning enemy's faction.
     private float difficultyDamageScale = 1f;
     private float difficultyWindupScale = 1f;
 
@@ -267,7 +266,7 @@ public sealed class Entity_Combat : MonoBehaviour
     private Vector2 AimDirection(IDamageable owner)
     {
         CombatFaction opposite = owner.Faction == CombatFaction.Player ? CombatFaction.Enemy : CombatFaction.Player;
-        CombatHealth target = CombatHealth.FindClosest(transform.position, opposite);
+        IDamageable target = CombatTargets.FindClosest(transform.position, opposite);
         if (target != null)
         {
             Vector2 offset = (Vector2)target.transform.position - (Vector2)transform.position;

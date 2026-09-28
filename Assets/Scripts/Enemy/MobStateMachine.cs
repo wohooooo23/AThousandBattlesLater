@@ -201,9 +201,9 @@ public sealed class MobStateMachine : MonoBehaviour
     private Transform ResolveTarget()
     {
         // Use the same faction registry as every other attack instead of relying on a scene tag.
-        // The merged Hero prefab is identified by CombatHealth, so Flying Eyes keep acquiring it
+        // Role and enemy health register in CombatTargets, so Flying Eyes keep acquiring the Hero
         // even when a scene or prefab merge changes the GameObject tag.
-        CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player, detectionRange);
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, detectionRange);
         return player != null ? player.transform : null;
     }
 

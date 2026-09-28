@@ -13,7 +13,9 @@ public sealed class Enemy_Health : Entity_Health
     /// and lands on this hook — TakeDamage was being bypassed, so the Orc never aggroed when hit.
     /// Reacting here makes it spot the hero instantly, even when struck from behind.
     ///
-    /// No hit-stun: taking damage must NOT push back the attack cooldown. Calling
+    /// Legacy ground mobs retain their no-stun behavior. FlyingEyeController handles interruptible
+    /// Hurt separately, without restarting an existing Hurt animation. For Orcs, taking damage
+    /// must not push back the attack cooldown. Calling
     /// RecordAttackCompleted() here meant every hit reset nextAttackTime, so sustained player
     /// damage locked the enemy out of attacking entirely. The damage flash (Entity_VFX) remains
     /// the hit feedback.
@@ -22,6 +24,7 @@ public sealed class Enemy_Health : Entity_Health
     {
         base.OnDamaged(amount, source);
         GetComponent<MobStateMachine>()?.NotifyHurt();
+        GetComponent<FlyingEyeController>()?.NotifyHurt();
         if (source == null)
             return;
 

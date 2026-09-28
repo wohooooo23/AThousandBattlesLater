@@ -23,7 +23,7 @@ public sealed class StoryEncounterTrigger2D : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (triggered || other.GetComponentInParent<HeroHealth>() == null)
+        if (triggered || other.GetComponentInParent<Role>() == null)
             return;
         triggered = storyController.PlayFirstEncounter();
         if (triggered)

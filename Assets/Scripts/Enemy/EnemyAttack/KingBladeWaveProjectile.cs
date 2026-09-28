@@ -84,7 +84,7 @@ public sealed class KingBladeWaveProjectile : MonoBehaviour
         if (consumed || other.isTrigger)
             return;
 
-        CombatHealth health = other.GetComponentInParent<CombatHealth>();
+        IDamageable health = other.GetComponentInParent<IDamageable>();
         if (health != null && health.Faction == CombatFaction.Player)
         {
             consumed = true;

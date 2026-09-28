@@ -202,13 +202,8 @@ GameObject:
   - component: {fileID: 5502900474537347459}
   - component: {fileID: 2409211609458095408}
   - component: {fileID: 561269963823900133}
-  - component: {fileID: 7840154124746744241}
   - component: {fileID: 3084903917094400325}
-  - component: {fileID: 3883366657667944747}
   - component: {fileID: 7686061946284160798}
-  - component: {fileID: 6477363684065305827}
-  - component: {fileID: 5961062955091991579}
-  - component: {fileID: 314437009800313056}
   m_Layer: 9
   m_Name: Hero
   m_TagString: Untagged
@@ -282,6 +277,24 @@ MonoBehaviour:
   throwCooldown: 0.2
   maxJumpCount: 2
   jumpCountRemaining: 2
+  damage: 25
+  targetCheck: {fileID: 5488081957506498799}
+  targetCheckRad: 7.5
+  maximumHealth: 100
+  healthBar: {fileID: 0}
+  defeatedOverlay: {fileID: 0}
+  attackClips:
+  - {fileID: 8300000, guid: ba865747da8116a4ca9ebcfd9cd4383b, type: 3}
+  - {fileID: 8300000, guid: 1a726792654aff043a035d0b6ede19c1, type: 3}
+  - {fileID: 8300000, guid: 920f5d4a6ae328843b5d529a8b35e33d, type: 3}
+  attackVolume: 0.9
+  kunaiItem: {fileID: 11400000, guid: 3595f1d2f8b204749b86c359f124e8cd, type: 2}
+  projectilePrefab: {fileID: 1968398644555766817, guid: 0d7e79db46301ce448ff075a5e3b4173, type: 3}
+  projectileSpeed: 60
+  kunaiDamage: 30
+  spawnPoint: {fileID: 0}
+  dropCheckDistance: 0.2
+  dropDuration: 0.5
 --- !u!50 &2409211609458095408
 Rigidbody2D:
   serializedVersion: 5
@@ -346,29 +359,6 @@ CapsuleCollider2D:
   m_Offset: {x: 0.017000005, y: 0.02540338}
   m_Size: {x: 0.44, y: 1.0991933}
   m_Direction: 0
---- !u!114 &7840154124746744241
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6288944824303020976}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d41c47fa174e3c04ca7144e5dd221a71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Entity_Combat
-  damage: 25
-  targetCheck: {fileID: 5488081957506498799}
-  targetCheckRad: 7.5
-  attackMode: 0
-  radialSlashRadius: 7
-  radialWarningDuration: 0.65
-  radialSlashDuration: 0.22
-  fanRadius: 3.6
-  fanHalfAngle: 45
-  fanWarningDuration: 0.65
-  fanStrikeDuration: 0.24
 --- !u!114 &3084903917094400325
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -384,22 +374,6 @@ MonoBehaviour:
   targetRenderer: {fileID: 1575188162153482315}
   onDamageMaterial: {fileID: 2100000, guid: 2e35bf61486ea9c40abcf0483684c6cc, type: 2}
   onDamageVFXDuration: 0.2
---- !u!114 &3883366657667944747
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6288944824303020976}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 365cd585292341e38f26b703cdd57dd4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HeroHealth
-  maximumHealth: 100
-  worldHealthBar: {fileID: 0}
-  healthBar: {fileID: 0}
-  defeatedOverlay: {fileID: 0}
 --- !u!82 &7686061946284160798
 AudioSource:
   m_ObjectHideFlags: 0
@@ -497,57 +471,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &6477363684065305827
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6288944824303020976}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be604971074e1c343b09fcdc0d9d0355, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HeroAttackAudio
-  clips:
-  - {fileID: 8300000, guid: ba865747da8116a4ca9ebcfd9cd4383b, type: 3}
-  - {fileID: 8300000, guid: 1a726792654aff043a035d0b6ede19c1, type: 3}
-  - {fileID: 8300000, guid: 920f5d4a6ae328843b5d529a8b35e33d, type: 3}
-  volume: 0.9
---- !u!114 &5961062955091991579
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6288944824303020976}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: adb803b50c70b8046a23e6fa3bc36657, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HeroKunaiThrow
-  kunaiItem: {fileID: 11400000, guid: 3595f1d2f8b204749b86c359f124e8cd, type: 2}
-  projectilePrefab: {fileID: 1968398644555766817, guid: 0d7e79db46301ce448ff075a5e3b4173, type: 3}
-  projectileSpeed: 60
-  damage: 30
-  spawnPoint: {fileID: 0}
---- !u!114 &314437009800313056
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6288944824303020976}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a5c72eb02e1ea8e4c84b7d2ed0c4497b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerDropThrough
-  checkDistance: 0.2
-  excludeMask:
-    serializedVersion: 2
-    m_Bits: 512
-  dropDuration: 0.5
 --- !u!1 &6422578271653281506
 GameObject:
   m_ObjectHideFlags: 0

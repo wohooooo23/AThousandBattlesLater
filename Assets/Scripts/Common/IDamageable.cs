@@ -9,6 +9,7 @@ public enum CombatFaction
 /// <summary>Shared contract used by the player, Orc mobs and the boss.</summary>
 public interface IDamageable
 {
+    Transform transform { get; }
     CombatFaction Faction { get; }
     bool IsDead { get; }
     float CurrentHealth { get; }

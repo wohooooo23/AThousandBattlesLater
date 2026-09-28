@@ -55,7 +55,7 @@ public sealed class BossStateMachine : MonoBehaviour
 
     private void Start()
     {
-        CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player);
         if (player != null)
             hero = player.transform;
         SwitchTo(State.Idle, true);

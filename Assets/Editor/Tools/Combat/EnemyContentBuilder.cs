@@ -99,6 +99,11 @@ public static class EnemyContentBuilder
 
     private static void BuildMobPrefab(MobDefinition mob, float maximumHealth, int coinReward)
     {
+        if (mob.name == "FlyingEye")
+        {
+            FlyingEyeAnimatorBuilder.EnsurePrefab();
+            return;
+        }
         string speciesFolder = EnemyRoot + "/Mobs/" + mob.name;
         string spriteFolder = speciesFolder + "/Sprites/";
         string prefabPath = speciesFolder + "/Mob_" + mob.name + ".prefab";
@@ -155,28 +160,7 @@ public static class EnemyContentBuilder
             machineData.FindProperty("flying").boolValue = mob.flying;
 
             MobAttackBehaviour attack = null;
-            if (mob.name == "FlyingEye")
-            {
-                FlyingEyeRangedAttack ranged = root.AddComponent<FlyingEyeRangedAttack>();
-                SerializedObject rangedData = new SerializedObject(ranged);
-                rangedData.FindProperty("visual").objectReferenceValue = animator;
-                rangedData.FindProperty("projectilePrefab").objectReferenceValue = EnsureFlyingEyeProjectile();
-                rangedData.FindProperty("attackRange").floatValue = FlyingEyeAttackRange;
-                rangedData.FindProperty("preferredDistance").floatValue = FlyingEyePreferredDistance;
-                rangedData.FindProperty("windupDuration").floatValue = MobAttackWindup;
-                rangedData.FindProperty("cooldown").floatValue = MobAttackCooldown;
-                rangedData.FindProperty("projectileSpeed").floatValue = FlyingEyeProjectileSpeed;
-                rangedData.FindProperty("damage").floatValue = CombatBalance.EnemyDamagePerHit;
-                rangedData.FindProperty("warningDiameter").floatValue = FlyingEyeWarningDiameter;
-                rangedData.ApplyModifiedPropertiesWithoutUndo();
-
-                attack = ranged;
-                machineData.FindProperty("detectionRange").floatValue = FlyingEyeDetectionRange;
-                machineData.FindProperty("patrolRange").floatValue = 10f;
-                machineData.FindProperty("patrolSpeed").floatValue = 5f;
-                machineData.FindProperty("chaseSpeed").floatValue = 8f;
-            }
-            else if (mob.name == "Mushroom")
+            if (mob.name == "Mushroom")
             {
                 MushroomPoisonAttack melee = root.AddComponent<MushroomPoisonAttack>();
                 SerializedObject data = new SerializedObject(melee);
@@ -229,16 +213,10 @@ public static class EnemyContentBuilder
         }
     }
 
-    // Flying Eye ranged-attack tuning. DemoSceneBuilder re-applies the same values when it authors
-    // scene instances; these keep a standalone catalogue rebuild valid on its own.
+    // Legacy ground-mob tuning and Flying Eye projectile construction defaults.
     private const float MobAttackWindup = 0.95f;
     private const float MobAttackCooldown = 1.35f;
-    private const float FlyingEyeAttackRange = 38f;
-    private const float FlyingEyePreferredDistance = 24f;
-    private const float FlyingEyeDetectionRange = 48f;
-    private const float FlyingEyeProjectileSpeed = 22f;
     private const float FlyingEyeProjectileScale = 1.75f;
-    private const float FlyingEyeWarningDiameter = 7.5f;
     private const float GroundMobDetectionRange = 12f;
     private const float MushroomRadius = 5f;
     private const float MushroomPoisonDamage = 5f;
@@ -249,7 +227,7 @@ public static class EnemyContentBuilder
     /// Returns the Flying Eye projectile prefab, creating it when absent. FlyingEyeRangedAttack
     /// throws at Awake without it, so the reference can never be left empty.
     /// </summary>
-    private static GameObject EnsureFlyingEyeProjectile()
+    public static GameObject EnsureFlyingEyeProjectile()
     {
         GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(FlyingEyeProjectilePath);
         if (existing != null)
@@ -349,6 +327,11 @@ public static class EnemyContentBuilder
         {
             string path = EnemyRoot + "/Mobs/" + mob.name + "/Mob_" + mob.name + ".prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (mob.name == "FlyingEye")
+            {
+                FlyingEyeAnimatorBuilder.ValidateRoot(prefab);
+                continue;
+            }
             MobStateMachine machine = prefab.GetComponent<MobStateMachine>();
             MobSpriteAnimator animator = prefab.GetComponentInChildren<MobSpriteAnimator>(true);
             Enemy_Health health = prefab.GetComponent<Enemy_Health>();
@@ -357,7 +340,7 @@ public static class EnemyContentBuilder
             // Entity_Health resolves the flash with GetComponent, so it only works from the root.
             if (prefab.GetComponent<Entity_VFX>() == null)
                 throw new InvalidOperationException(mob.name + " is missing the root Entity_VFX hit flash.");
-            bool shouldAttack = mob.name == "FlyingEye" || mob.name == "Mushroom" || mob.name == "Skeleton";
+            bool shouldAttack = mob.name == "Mushroom" || mob.name == "Skeleton";
             if (machine.HasAttackLogic != shouldAttack)
                 throw new InvalidOperationException(mob.name + (shouldAttack
                     ? " is missing its designed ranged attack logic."

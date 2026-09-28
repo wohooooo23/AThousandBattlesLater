@@ -59,7 +59,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
 
     private void Start()
     {
-        CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player);
         hero = player != null ? player.transform : null;
         ResolveArenaBounds();
         RefreshSurfaces();
@@ -214,7 +214,7 @@ public sealed class EnemyPlatformNavigator : MonoBehaviour
             return false;
         if (hero == null)
         {
-            CombatHealth player = CombatHealth.FindClosest(transform.position, CombatFaction.Player);
+            IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player);
             hero = player != null ? player.transform : null;
         }
         if (hero == null)

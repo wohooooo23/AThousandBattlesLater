@@ -31,7 +31,7 @@ public sealed class StoryPromptTrigger2D : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.GetComponentInParent<HeroHealth>() == null)
+        if (other.GetComponentInParent<Role>() == null)
             return;
         storyController.ShowChestTutorial(beat);
         GetComponent<BoxCollider2D>().enabled = false;

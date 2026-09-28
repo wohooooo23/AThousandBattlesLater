@@ -322,10 +322,7 @@ public class ForgeSystemController : MonoBehaviour
     /// </summary>
     public int GetWeaponATK()
     {
-        ItemData weapon = RunEquipment.Weapon;
-        float value = weapon != null
-            ? ItemDisplay.PrimaryStatValue(weapon, mEquipLevels[0])
-            : PlayerProgression.UnarmedAttack;
+        float value = PlayerProgression.Instance != null ? PlayerProgression.Instance.WeaponAttack : 0f;
         return Mathf.RoundToInt(value);
     }
 
@@ -488,6 +485,8 @@ public class ForgeSystemController : MonoBehaviour
         }
 
         float currentValue = ItemDisplay.PrimaryStatValue(mForgeItem, mForgeLevel);
+        if (mForgeItem.type == ItemType.Weapon && PlayerProgression.Instance != null)
+            currentValue = PlayerProgression.Instance.GetWeaponAttackAtForgeLevel(mForgeLevel);
         float gain = ItemDisplay.ForgeStatPerLevel(mForgeItem);
         string statName = ItemDisplay.PrimaryStatLabel(mForgeItem);
         statBeforeText.text = ItemDisplay.FormatStat(currentValue) + " " + statName;

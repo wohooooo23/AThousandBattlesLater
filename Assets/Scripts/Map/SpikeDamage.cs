@@ -12,7 +12,7 @@ using UnityEngine;
 /// whether its Collider2D is a solid the hero stands on or a trigger the hero walks through.
 ///
 /// The cadence is shared across every spike (static), so overlapping spike tiles still drain exactly
-/// one hit per second rather than stacking at the seams. Damage routes through HeroHealth.ApplyDamage,
+/// one hit per second rather than stacking at the seams. Damage routes through Role.ApplyDamage,
 /// which already ignores hits while dead or the match is over and drives the hit flash and health bar;
 /// Time.time is scaled, so the cadence does not advance while a menu or cutscene has paused the game.
 /// </summary>
@@ -32,7 +32,7 @@ public sealed class SpikeHazard2D : MonoBehaviour
     // The hero colliders currently resting on this spike. A set (not a counter) so duplicate or
     // unbalanced callbacks can never leave the spike thinking it is still touched after the hero left.
     private readonly HashSet<Collider2D> touchingColliders = new HashSet<Collider2D>();
-    private HeroHealth hero;
+    private Role hero;
 
     private void OnTriggerEnter2D(Collider2D other) => BeginContact(other);
     private void OnTriggerExit2D(Collider2D other) => EndContact(other);
@@ -58,7 +58,7 @@ public sealed class SpikeHazard2D : MonoBehaviour
 
     private void BeginContact(Collider2D other)
     {
-        HeroHealth touched = other.GetComponentInParent<HeroHealth>();
+        Role touched = other.GetComponentInParent<Role>();
         if (touched == null)
             return;
         hero = touched;
