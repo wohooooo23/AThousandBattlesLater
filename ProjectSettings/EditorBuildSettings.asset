@@ -17,4 +17,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Help.unity
     guid: 79aeef064dd141c488742ecbd5b3ccab
+  - enabled: 1
+    path: Assets/Scenes/WfcRoom20x20.unity
+    guid: 670fe3fcc91c4794bad76807dd3c08d3
+  - enabled: 1
+    path: Assets/Scenes/WfcDungeon.unity
+    guid: c65766a0f8b29644ab9b177bc7e144d4
   m_configObjects: {}

@@ -29,3 +29,26 @@ Items observed while migrating the campaign Bosses to Unity Animator and improvi
 - [x] Update the eye assertions that depended on the old 0.95-second windup and 1.35-second cooldown. Release now follows frame seven (0.5 seconds Normal/0.3 Hard); the saved prefab cooldown is 2 seconds before difficulty scaling. The ground-mob smoke test now respects their existing no-stun behavior and implemented Mushroom/Skeleton attacks.
 - [ ] Remove unused legacy flying/Hurt branches from MobStateMachine once all remaining users and historical fixtures are migrated; FlyingEyeController no longer uses that component.
 - [ ] Consolidate damage-notification routing in Enemy_Health. It currently probes separate Orc, legacy Mob and Flying Eye controllers; a common reaction interface would simplify later species migrations.
+
+## Random-map research follow-up
+
+- [x] Add an isolated 20x20 WFC room scene with seeded direct generation, platform compatibility constraints, protected jump corridors, separated rectangle walls and a non-combat Boss-door exit. Preserve the authored campaign scenes.
+- [ ] Extract reusable map data, room placement, spawn placement, camera bounds and minimap setup from DemoSceneBuilder before integrating generated rooms with the campaign. Its room targets and ability-chest coordinates are currently authored for the fixed campaign maps; keep those campaign presets as a separate input.
+- [ ] Make surface/spawn validation use real collider shapes, actor bounds and tile semantics. FindFullMapSurfaceSpawn currently treats every occupied cell in a collider-equipped Tilemap as a candidate floor and uses caller-supplied clearance dimensions; generated Spike/invisible-wall cells and one-way platforms need distinct rules.
+- [x] Extend generation-time module compatibility and endpoint/clearance constraints to branching rooms, double-jump/dash gates and effective Hero profiles in the separate WfcDungeon scene. Per the direct-output requirement, do not add a post-generation reachability filter; verify new constraint contracts with offline physics tests. BossLandingGraph remains Boss-specific, not the generated-map pipeline.
+- [ ] Review Role.ApplyRuneMovementStats: crimsonEquipped currently tests RunEquipment.Rune != null, so any equipped rune activates the Crimson movement/jump/dash multipliers. Generated-map reachability must not depend on an unintended equipment bonus; identify the intended rune before deriving movement profiles.
+- [x] Make Role.ResetToIdlePose safe before Role.Start: Awake creates states but StateMachine.Change assumes an existing current state. ResetToIdlePose now initializes the first state when necessary.
+- [x] Make Hero ground-state input transitions exclusive: Hero_idleState/Hero_moveState continue after the base Update changes to a jump/attack state, so same-frame input can overwrite that transition. Ground/air subclasses now stop after a base transition; attack-to-jump returns immediately as well. Dungeon tests exercise simultaneous movement/jump input.
+- [x] Preserve the small WFC regression scene and add a separate multi-room library of independently tested platform/room modules, including entry/exit contracts and per-ability clearance. Add decorative wall sides/bottoms and responsive camera framing when supporting room sizes beyond the initial 20x20 scene.
+
+
+## Multi-room generation follow-up
+
+- [x] Add an isolated multi-room scene, effective Hero traversal snapshot, mandatory ability modules, tree branches, explicit wall edge palette, white smooth walls, room-bound Orc/Flying Eye populations, owned attack cleanup and campaign camera follow.
+- [ ] Include kunai hover and its inventory/animation interruption rules in a future traversal contract. Explicitly excluded from this iteration at the user's request; no generation restriction is imposed on carried kunai.
+- [ ] Expand the action-module library and visual room variety. The first multi-room implementation constructs the main chain before room WFC; required challenge shapes are parameterized templates, not unrestricted learned tile patterns.
+- [ ] Consolidate opt-in generated ground probing with the campaign probes after campaign-specific collision regression. The generated version rejects rays originating inside one-way platforms, preventing false landing/jump resets during upward passage; existing campaign grounding remains unchanged.
+- [ ] Replace per-frame optional enemy-bound component lookups with cached optional references if profiling shows a measurable cost at higher densities.
+- [ ] Extend parameter/physics coverage whenever movement states change: current dash exclusivity uses gravity-preserving dash and conservative air/combat speed; new vertical boosts or gravity changes require updated domains before enabling them in generated challenges.
+
+- [x] Avoid merging vertically adjacent platform tiles into a solid staircase side. Generated dungeons now retain separate thin one-way landing colliders; the 20x20 reference keeps its existing collider setup.

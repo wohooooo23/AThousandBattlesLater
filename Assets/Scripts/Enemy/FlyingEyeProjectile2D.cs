@@ -20,6 +20,7 @@ public sealed class FlyingEyeProjectile2D : MonoBehaviour
     public void Launch(Transform source, Vector2 direction, float speed, float attackDamage)
     {
         owner = source;
+        GeneratedMapContent.Adopt(source, gameObject);
         IDamageable sourceHealth = source != null ? source.GetComponentInParent<IDamageable>() : null;
         ownerFaction = sourceHealth != null ? sourceHealth.Faction : CombatFaction.Enemy;
         damage = Mathf.Max(0f, attackDamage);

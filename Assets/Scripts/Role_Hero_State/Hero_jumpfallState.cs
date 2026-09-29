@@ -25,13 +25,16 @@ public class Hero_jumpfallState:Hero_jumpState
     public override void Update()
     {
         base.Update();
+        if (stateMachine.currentState != this) return;
         if(role.isgrounded)
         {
             stateMachine.Change(role.idleState);
+            return;
         }
-        if(role.iswall && Mathf.Approximately(role.HorizontalInput, role.facingside))
+        if(role.CanClimbWall && Mathf.Approximately(role.HorizontalInput, role.facingside))
         {
             stateMachine.Change(role.wallslideState);
+            return;
         }
         
         if(role.JumpPressed)

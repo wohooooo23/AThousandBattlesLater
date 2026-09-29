@@ -34,7 +34,7 @@ public class Hero_wallslideState:RoleState
         {
             stateMachine.Change(role.walljumpState);
         }
-        else if(!role.iswall)
+        else if(!role.CanClimbWall)
         {
             stateMachine.Change(role.jumpfallState);
         }

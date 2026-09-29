@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 704ab1787296f2846aa44c33b68566b7, type: 3}
+  m_Name: Settings
+  m_EditorClassIdentifier: Assembly-CSharp::WfcRoomSettings
+  width: 20
+  height: 20
+  cellSize: 4.5
+  wallCount: 3
+  wallSeparation: 3
+  maximumPlatformShift: 3
+  attempts: 12
+  solverBudget: 2048
+  jumpSpeed: 64
+  airSpeed: 31.5
+  gravity: 147.15
+  actorSize: {x: 2.2, y: 5.496}
+  clearance: 0.25
+  groundFill: {fileID: 11400000, guid: 2cbe620733bb2c64e9630e9c61d6f54a, type: 2}
+  groundTop: {fileID: 11400000, guid: 3fd148f7465198744afd19caeaab1af2, type: 2}
+  platformLeft: {fileID: 11400000, guid: 8f1e2286c0c97d0469b34a7933d1118f, type: 2}
+  platformMiddle: {fileID: 11400000, guid: e485e8d3d469c1849bb9f7fff21c53e4, type: 2}
+  platformRight: {fileID: 11400000, guid: 4b65970c970f1ab40b4a2826af463fe0, type: 2}
+  background: {fileID: 11400000, guid: 3182de1b7181aba44a612d1eaf1d8064, type: 2}
+  bossDoor: {fileID: -7341407202210888751, guid: 306efe4ebdeeacc4fa53bdaeb6a7d8ce, type: 3}

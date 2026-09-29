@@ -51,6 +51,7 @@ public sealed class FlyingEyeRangedAttack : MobAttackBehaviour
     {
         if (!CanAttack || aimedTarget == null || Vector2.Distance(transform.position, aimedTarget.position) > attackRange)
             return false;
+        if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(aimedTarget)) return false;
         target = aimedTarget;
         if (!HasLivingTarget)
             return false;
@@ -59,6 +60,7 @@ public sealed class FlyingEyeRangedAttack : MobAttackBehaviour
         SceneArt.EnsureSprites();
         warning = SceneArt.CreateDisc("Flying Eye Shot Warning", transform.position, warningDiameter,
             new Color(0.85f, 0.04f, 0.04f, 0.38f), 28);
+        GeneratedMapContent.Adopt(transform, warning);
         fill = SceneArt.CreateChildSprite(warning.transform, "Windup Fill", SceneArt.CircleSprite,
             new Color(1f, 0.08f, 0.08f, 0.72f), 29).transform;
         fill.localScale = Vector3.zero;
@@ -85,6 +87,7 @@ public sealed class FlyingEyeRangedAttack : MobAttackBehaviour
     {
         if (!attacking || released || owner.IsDead || controller.CurrentState != MobState.Attack || !HasLivingTarget)
             return;
+        if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(target)) { released = true; ClearWarning(); return; }
         released = true;
         ClearWarning();
         Vector2 direction = ((Vector2)target.position - (Vector2)transform.position).normalized;

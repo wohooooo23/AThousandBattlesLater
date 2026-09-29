@@ -9,9 +9,12 @@ public sealed class GameManager : MonoBehaviour
     public static bool MatchIsOver { get; private set; }
 
     public static void MarkMatchOver() => MatchIsOver = true;
+    public static void ResetMatch() => MatchIsOver = false;
 
     public static void RestartActiveScene()
     {
+        if (WfcDungeonGenerator.Active != null && WfcDungeonGenerator.Active.Layout != null)
+        { WfcDungeonGenerator.Active.Retry(); return; }
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 

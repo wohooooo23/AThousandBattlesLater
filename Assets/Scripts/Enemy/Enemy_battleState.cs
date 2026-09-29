@@ -25,7 +25,7 @@ public sealed class Enemy_battleState : EnemyState
             lastSeenTime = Time.time;
         }
 
-        if (role == null || Time.time > lastSeenTime + enemy.battleDuration)
+        if (role == null || (enemy.GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(role)) || Time.time > lastSeenTime + enemy.battleDuration)
         {
             stateMachine.Change(enemy.idleState);
             return;

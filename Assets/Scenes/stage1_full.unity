@@ -3275,21 +3275,17 @@ PrefabInstance:
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-      propertyPath: healthBar
-      value: 
-      objectReference: {fileID: 1940986362}
-    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-      propertyPath: maximumHealth
-      value: 200
+      propertyPath: damage
+      value: 2000
       objectReference: {fileID: 0}
-    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-      propertyPath: defeatedOverlay
-      value: 
-      objectReference: {fileID: 79885186}
     - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: dashspeed
       value: 70
       objectReference: {fileID: 0}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+      propertyPath: healthBar
+      value: 
+      objectReference: {fileID: 1940986362}
     - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: jumpForce
       value: 54
@@ -3311,9 +3307,21 @@ PrefabInstance:
       value: 1.3
       objectReference: {fileID: 0}
     - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+      propertyPath: maximumHealth
+      value: 200
+      objectReference: {fileID: 0}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: grounddistance
       value: 2.8
       objectReference: {fileID: 0}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+      propertyPath: targetCheckRad
+      value: 3.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
+      propertyPath: defeatedOverlay
+      value: 
+      objectReference: {fileID: 79885186}
     - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: walljumpforce.y
       value: 46
@@ -3389,14 +3397,6 @@ PrefabInstance:
     - target: {fileID: 7162464420519927723, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-      propertyPath: damage
-      value: 2000
-      objectReference: {fileID: 0}
-    - target: {fileID: 5502900474537347459, guid: 15ff1ce6bac855145b7c1537c8a6bfad, type: 3}
-      propertyPath: targetCheckRad
-      value: 3.5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -7889,7 +7889,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1046162212
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17900,7 +17900,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2136941015
 Transform:
   m_ObjectHideFlags: 0

@@ -16,6 +16,7 @@ public class Hero_moveState : Hero_groundState
     public override void Update()
     {
         base.Update();
+        if (stateMachine.currentState != this) return;
         float Input_rot = role.HorizontalInput;
         if (Input_rot==0)
         {

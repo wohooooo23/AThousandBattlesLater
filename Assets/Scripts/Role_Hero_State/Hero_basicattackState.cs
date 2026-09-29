@@ -49,6 +49,7 @@ public sealed class Hero_basicattackState : RoleState
             if(role.CanJump())
             {
                 stateMachine.Change(role.jumpstartState);
+                return;
             }
         }
 

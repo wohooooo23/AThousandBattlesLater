@@ -96,6 +96,7 @@ public sealed class FlyingEyeController : Entity
     {
         IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, detectionRange);
         Target = player != null ? player.transform : null;
+        if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(Target)) Target = null;
         stateMachine.currentState?.Update(); // Flying actors deliberately skip Entity's ground/wall probes.
     }
 

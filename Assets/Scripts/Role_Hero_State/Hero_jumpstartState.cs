@@ -22,6 +22,7 @@ public class Hero_jumpstartState:Hero_jumpState
     public override void Update()
     {
         base.Update();
+        if (stateMachine.currentState != this) return;
         if (role.rb.linearVelocity.y<0)
         {
             stateMachine.Change(role.jumpfallState);

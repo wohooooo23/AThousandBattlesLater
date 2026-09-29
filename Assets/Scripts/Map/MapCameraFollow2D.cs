@@ -23,6 +23,9 @@ public sealed class MapCameraFollow2D : MonoBehaviour
     public Vector2 LevelMax => levelMax;
     public float ViewSize => orthographicSize;
 
+    public void Configure(Transform actor, Vector2 minimum, Vector2 maximum)
+    { target = actor; levelMin = minimum; levelMax = maximum; SnapToTarget(); }
+
     private void Awake()
     {
         mapCamera = GetComponent<Camera>();

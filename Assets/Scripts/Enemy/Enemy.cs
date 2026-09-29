@@ -38,7 +38,7 @@ public class Enemy : Entity
     public bool RoleDetection()
     {
         IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, roleCheckDistance);
-        if (player == null)
+        if (player == null || (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(player.transform)))
             return false;
         float horizontal = player.transform.position.x - transform.position.x;
         if (Role == null && requireFacingForInitialDetection && Mathf.Abs(horizontal) > 0.25f && Mathf.Sign(horizontal) != facingside)

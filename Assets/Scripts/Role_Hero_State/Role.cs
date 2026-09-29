@@ -306,7 +306,8 @@ public sealed class Role : Entity, IDamageable
             return;
         bool previous = stateMachine.canChangeState;
         stateMachine.canChangeState = true;
-        stateMachine.Change(idleState);
+        if (stateMachine.currentState == null) stateMachine.Init(idleState);
+        else stateMachine.Change(idleState);
         stateMachine.canChangeState = previous;
         Change_Vec(0f, rb != null ? rb.linearVelocity.y : 0f);
         if (animator != null)
@@ -419,6 +420,29 @@ public sealed class Role : Entity, IDamageable
         isDead = false;
         currentHealth = maximumHealth;
         UpdateHealthDisplay();
+    }
+
+    public void ApplyTraversalProfile(TraversalProfile profile)
+    {
+        ResetToIdlePose(); // Exit any gravity-suspending throw before applying the captured contract.
+        speed = profile.GroundSpeed; jumpspeeddec = profile.AirSpeed / profile.GroundSpeed; jumpForce = profile.JumpSpeed;
+        baseMoveSpeed = speed / (RunEquipment.Rune != null ? CrimsonMoveMultiplier : 1);
+        baseJumpForce = jumpForce / (RunEquipment.Rune != null ? CrimsonJumpMultiplier : 1);
+        dashspeed = profile.DashSpeed; dashcooldown = profile.DashCooldown; dashduration = profile.DashDuration;
+        baseDashSpeed = dashspeed / (RunEquipment.Rune != null ? CrimsonDashMultiplier : 1);
+        walljumpforce = profile.WallJump; wallJumpInputLockDuration = profile.WallLock; wallSlideMaximumFallSpeed = profile.WallFall;
+        rb.gravityScale = profile.Gravity / Mathf.Abs(Physics2D.gravity.y);
+        SetMaxJumpCount(profile.Jumps); SetDashUnlocked(profile.Dash);
+    }
+
+    public void ResetForGeneratedMap()
+    {
+        if (dropRoutine != null) { StopCoroutine(dropRoutine); dropRoutine = null; }
+        if (queuedAttack != null) { StopCoroutine(queuedAttack); queuedAttack = null; }
+        RestoreFullHealth(); GameManager.ResetMatch(); defeatedOverlay.SetActive(false);
+        RestorePlatformCollision(); rb.simulated = true; rb.linearVelocity = Vector2.zero;
+        foreach (SpriteRenderer renderer in GetComponentsInChildren<SpriteRenderer>()) renderer.color = Color.white;
+        lastDashTime = -Mathf.Infinity; SetControlEnabled(true); ResetToIdlePose(); ResetJumpCount();
     }
 
     public bool RestoreHealth(float amount)

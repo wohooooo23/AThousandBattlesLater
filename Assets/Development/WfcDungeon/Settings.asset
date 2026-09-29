@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80c299e828db68b4a90dd3613b749565, type: 3}
+  m_Name: Settings
+  m_EditorClassIdentifier: Assembly-CSharp::WfcDungeonSettings
+  width: 120
+  height: 80
+  cellSize: 4.5
+  enemyDensity: 1
+  solverBudget: 4096
+  art: {fileID: 11400000, guid: 6751877b82589c34496bf6667972792c, type: 2}
+  wallTiles:
+  - {fileID: 11400000, guid: 6c2f543a6cf9d0a4ca73ee84c89a4529, type: 2}
+  - {fileID: 11400000, guid: f1d41aaff9171d640bfbd4b4dbfbeda6, type: 2}
+  - {fileID: 11400000, guid: b9892361b66f4254ab6751519bbd8f5c, type: 2}
+  - {fileID: 11400000, guid: 5a560a0abebe84d4d9e03f4cc72e2ae2, type: 2}
+  - {fileID: 11400000, guid: d1dc7d484000bbd4ebc9f6466011bee3, type: 2}
+  - {fileID: 11400000, guid: 3c6b8217087a60442843604d209fa5a8, type: 2}
+  - {fileID: 11400000, guid: 39d2b70676282de41b5d835c9dba4f3b, type: 2}
+  - {fileID: 11400000, guid: 7809231edd7c2d44d8eaeab61c25d36c, type: 2}
+  - {fileID: 11400000, guid: 9d0fb1ba560a7bc428c3eaeda5d51cfa, type: 2}
+  orcPrefab: {fileID: 4227865167630211472, guid: a88e7cc32b7a1984d977179709730e95, type: 3}
+  eyePrefab: {fileID: 1070820740835900666, guid: 5d932d95a8f44774a8c9c6cb1520f0e3, type: 3}
+  wallMaterial: {fileID: 2100000, guid: 7446aa6ee66441c4e9af414dfb86261e, type: 2}

@@ -27,20 +27,24 @@ public class Hero_groundState:RoleState
             if (role.CanJump())
             {
                 stateMachine.Change(role.jumpstartState);
+                return;
             }
         }
         if (role.rb.linearVelocity.y<0&&!role.isgrounded)
         {
             stateMachine.Change(role.jumpfallState);
+                return;
         }
         if (role.AttackPressed)
         {
             stateMachine.Change(role.basicattackState);
+                return;
         }
         // I throws a kunai — only when one is in the bag, so an empty bag simply does nothing.
         if (role.ThrowPressed && role.CanThrowKunai())
         {
             stateMachine.Change(role.throwState);
+                return;
         }
 
 

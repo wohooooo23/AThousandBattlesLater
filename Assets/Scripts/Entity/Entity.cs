@@ -20,6 +20,22 @@ public class Entity : MonoBehaviour
 
     public bool isgrounded { get; private set; }
     public bool iswall { get; private set; }
+    public bool CanClimbWall { get; private set; }
+    [SerializeField] private bool generatedGrounding;
+    private readonly RaycastHit2D[] wallProbeHits = new RaycastHit2D[12];
+
+    public void ConfigureGeneratedProbes()
+    {
+        var capsule = GetComponent<CapsuleCollider2D>();
+        if (capsule == null) return;
+        groundLayer = 1 << 6;
+        generatedGrounding = true;
+        var probe = new GameObject("Generated Ground Probe").transform;
+        probe.SetParent(transform, false);
+        probe.localPosition = new Vector3(0, capsule.offset.y - capsule.size.y * .5f + .02f, 0);
+        groundcheck = probe; grounddistance = .24f;
+        walldistance = capsule.size.x * Mathf.Abs(transform.lossyScale.x) * .5f + .3f;
+    }
 
     private Collider2D entityCollider;
 
@@ -134,20 +150,32 @@ public class Entity : MonoBehaviour
 
 private void HandleCollision()//检测角色与地面、墙的碰撞
     {
-        isgrounded=Physics2D.Raycast(groundcheck.position,Vector2.down,grounddistance,groundLayer);
-
-        if (wallcheck2 == null)
-        {
-            iswall=Physics2D.Raycast(wallcheck1.position,Vector2.right*facingside,walldistance,groundLayer);
-        }
-        else
-        {
-            iswall=Physics2D.Raycast(wallcheck1.position,Vector2.right*facingside,walldistance,groundLayer)
-        && Physics2D.Raycast(wallcheck2.position,Vector2.right*facingside,walldistance,groundLayer);
-        }
-        
-    }
-    protected virtual void OnDrawGizmos()//绘制射线，用于调试角色与地面、墙的碰撞检测
+        isgrounded = groundcheck != null && Physics2D.Raycast(groundcheck.position, Vector2.down, grounddistance, groundLayer);
+        if (generatedGrounding && entityCollider != null)
+        {
+            Bounds bounds = entityCollider.bounds;
+            RaycastHit2D floor = Physics2D.Raycast(new Vector2(bounds.center.x, bounds.min.y + .1f), Vector2.down, .24f, groundLayer);
+            isgrounded = rb != null && rb.linearVelocity.y <= .1f && floor.collider != null && floor.distance > .001f && floor.normal.y > .5f;
+        }
+        RaycastHit2D first = WallProbe(wallcheck1);
+        RaycastHit2D second = wallcheck2 != null ? WallProbe(wallcheck2) : first;
+        iswall = first.collider != null && second.collider != null;
+        CanClimbWall = iswall && TraversalSurface.CanClimb(first.collider) && TraversalSurface.CanClimb(second.collider);
+    }
+    private RaycastHit2D WallProbe(Transform probe)
+    {
+        if (probe == null) return default;
+        var filter = new ContactFilter2D(); filter.SetLayerMask(groundLayer); filter.useTriggers = Physics2D.queriesHitTriggers;
+        int count = Physics2D.Raycast(probe.position, Vector2.right * facingside, filter, wallProbeHits, walldistance);
+        for (int i = 0; i < count; i++)
+        {
+            var hit = wallProbeHits[i];
+            if (hit.collider.GetComponent<TraversalSurface>() is { kind: TraversalSurfaceKind.OneWayPlatform }) continue;
+            return hit;
+        }
+        return default;
+    }
+    protected virtual void OnDrawGizmos()//绘制射线，用于调试角色与地面、墙的碰撞检测
     {
         Gizmos.color=Color.red;
         Gizmos.DrawLine(groundcheck.position,groundcheck.position+new Vector3(0,-grounddistance));
