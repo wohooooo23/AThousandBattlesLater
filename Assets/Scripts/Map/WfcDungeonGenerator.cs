@@ -15,7 +15,9 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     public Role hero;
     public Camera mapCamera;
     public MapCameraFollow2D follow;
-    public int seed = 20260928;
+    public int seed;
+    [Tooltip("New maps use a UTC timestamp. Disable to enter a reproducible seed manually.")]
+    public bool timestampSeed = true;
     public static WfcDungeonGenerator Active { get; private set; }
     public WfcDungeonLayout Layout { get; private set; }
     public GeneratedMapContent Content { get; private set; }
@@ -28,6 +30,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     public double CollisionMilliseconds { get; private set; }
     public double MonsterMilliseconds { get; private set; }
     private bool overview, panel = true;
+    private Vector2 settingsScroll;
     private string widthText, heightText, seedText, densityText, speedText, jumpText, multiplierText;
     private bool randomSize;
     private bool doubleJump, dash;
@@ -43,7 +46,8 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         // Role.Start and progression initialization finish before capturing effective values.
         yield return null;
         foreach (Transform child in transform) if (child.GetComponent<GeneratedMapContent>() != null) Destroy(child.gameObject);
-        widthText = settings.width.ToString(); heightText = settings.height.ToString(); seedText = seed.ToString();
+        if (timestampSeed) seed = WfcDungeonSeed.Next();
+        widthText = (settings.singleRoom ? WfcDungeonSettings.NormalizeRoomWidth(settings.width) : settings.width).ToString(); heightText = settings.height.ToString(); seedText = seed.ToString();
         densityText = settings.enemyDensity.ToString(CultureInfo.InvariantCulture);
         speedText = hero.speed.ToString(CultureInfo.InvariantCulture); jumpText = hero.jumpForce.ToString(CultureInfo.InvariantCulture);
         if (settings.singleRoom) { hero.SetMaxJumpCount(2); hero.SetDashUnlocked(true); }
@@ -63,13 +67,10 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         if (editing != nextEditing) { editing = nextEditing; hero.SetControlEnabled(!editing && !Busy && !hero.IsDead); }
         if (editing) return;
         if (k.tabKey.wasPressedThisFrame) SetOverview(!overview);
-        if (Busy || Layout == null) return;
-        if (k.f5Key.wasPressedThisFrame)
-        {
-            int nextSeed = unchecked(seed + 1);
-            var size = settings.singleRoom && randomSize ? settings.SizeForSeed(nextSeed, true) : new Vector2Int(Layout.Width, Layout.Height);
-            StartCoroutine(GenerateConfigured(size.x, size.y, nextSeed, Layout.Profile, lastDensity, Layout.RouteMultiplier, settings.singleRoom));
-        }
+        if (Busy) return;
+        // F5 must also work after the very first generation failed (Layout is null).
+        if (k.f5Key.wasPressedThisFrame && widthText != null) { ApplyFields(true); return; }
+        if (Layout == null) return;
         if (k.f6Key.wasPressedThisFrame) Retry();
         if (k.homeKey.wasPressedThisFrame && !hero.IsDead) Respawn();
         int current = -1;
@@ -90,6 +91,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     public IEnumerator GenerateConfigured(int width, int height, int nextSeed, TraversalProfile profile, float density, float multiplier, bool singleRoom)
     {
         if (Busy) yield break;
+        if (singleRoom) width = WfcDungeonSettings.NormalizeRoomWidth(width);
         Busy = true;
         bool simulated = hero.GetComponent<Rigidbody2D>().simulated;
         hero.SetControlEnabled(false);
@@ -101,7 +103,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         var request = Instantiate(settings);
         request.singleRoom = singleRoom; request.routeMultiplier = multiplier;
         try { next = WfcDungeonLayout.Generate(request, width, height, nextSeed, profile, density); }
-        catch (Exception error) { Status = error.Message; }
+        catch (Exception error) { Status = $"Attempt {width} x {height}, seed {nextSeed}: {error.Message}"; }
         Destroy(request);
         SolveMilliseconds = watch.Elapsed.TotalMilliseconds;
         if (next == null) { if (Content != null) Content.gameObject.SetActive(true); hero.GetComponent<Rigidbody2D>().simulated = simulated; hero.SetControlEnabled(!hero.IsDead); Busy = false; yield break; }
@@ -142,6 +144,19 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         BuildMilliseconds = watch.Elapsed.TotalMilliseconds;
         Status = $"{width} x {height} | {next.Rooms.Count} rooms | {next.Spawns.Count} enemies\nSolve {SolveMilliseconds:F1} ms / build {BuildMilliseconds:F1} ms\nTiles {TileMilliseconds:F1} / collision {CollisionMilliseconds:F1} / actors {MonsterMilliseconds:F1} ms";
         if (next.Landings.Count > 0) Status += $"\nRoute {next.ActualRouteLength:F2} / {next.TargetRouteLength:F2} cells | direct {next.DirectDistance:F2} x {next.RouteMultiplier:F2}";
+        if (singleRoom)
+        {
+            int turns = 0, dips = 0; float lastDirection = 0;
+            foreach (var action in next.Rooms[0].Actions)
+            {
+                float direction = Mathf.Sign(action.Exit.x - action.Entry.x);
+                if (lastDirection != 0 && direction != lastDirection) turns++;
+                lastDirection = direction;
+                if (action.Exit.y < action.Entry.y - .05f) dips++;
+            }
+            Status += $"\nGenerator r{WfcWindingRoomLayout.Revision} | seed {seed} | {next.Landings.Count} platforms";
+            Status += $"\n{turns} turns / {dips} descents" + (dips == 0 ? " (compact route fallback)" : "");
+        }
         RefreshFields(); Busy = false;
         Debug.Log($"[WFC Dungeon] {next.ReproductionId} | {Status}");
     }
@@ -313,18 +328,24 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     private void OnGUI()
     {
         if (!Application.isPlaying) return;
-        if (!panel) { GUI.Label(new Rect(12, 12, 600, 30), "F1 settings | Tab overview | F5 next seed | F6 retry | Home spawn"); return; }
-        GUILayout.BeginArea(new Rect(12, 12, 370, 650), GUI.skin.box);
+        if (!panel) { GUI.Label(new Rect(12, 12, 600, 30), "F1 settings | Tab overview | F5 timestamp map | F6 retry | Home spawn"); return; }
+        GUILayout.BeginArea(new Rect(12, 12, Mathf.Min(390, Screen.width - 24), Mathf.Min(700, Screen.height - 24)), GUI.skin.box);
+        settingsScroll = GUILayout.BeginScrollView(settingsScroll);
         GUILayout.Label("WFC DUNGEON"); GUILayout.Label(Status);
         GUILayout.Label($"HP {hero.CurrentHealth:F0}/{hero.MaximumHealth:F0}" + (hero.IsDead ? "   R: retry this map" : ""));
         if (widthText != null)
         {
             GUI.enabled = !Busy;
-            widthText = Field("Width", widthText); heightText = Field("Height", heightText); seedText = Field("Seed", seedText); densityText = Field("Enemy density", densityText);
+            widthText = Field("Width", widthText); heightText = Field("Height", heightText);
+            timestampSeed = GUILayout.Toggle(timestampSeed, "Use current UTC timestamp for new maps");
+            GUI.enabled = !Busy && !timestampSeed;
+            seedText = Field("Seed", seedText);
+            GUI.enabled = !Busy;
+            densityText = Field("Enemy density", densityText);
             speedText = Field("Move speed", speedText); jumpText = Field("Jump velocity", jumpText);
             if (settings.singleRoom)
             {
-                randomSize = GUILayout.Toggle(randomSize, "Seeded random size (50-150 x 50-100)");
+                randomSize = GUILayout.Toggle(randomSize, "Seeded random size (100-150 x 50-100)");
                 multiplierText = Field("Route multiplier", multiplierText);
                 GUILayout.Label("Double jump + dash + wall jump unlocked");
             }
@@ -332,13 +353,14 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             if (GUILayout.Button("Apply and regenerate")) ApplyFields();
             if (GUILayout.Button("Repeat current map")) Retry();
             GUI.enabled = true;
-            GUILayout.Label("Ordinary walls: wall jump allowed\nTab: overview / follow camera\nF1: hide settings\nF5: next seed | F6: retry\nHome: return to spawn");
+            GUILayout.Label("Ordinary walls: wall jump allowed\nTab: overview / follow camera\nF1: hide settings\nF5: timestamp map | F6: retry\nHome: return to spawn");
         }
+        GUILayout.EndScrollView();
         GUILayout.EndArea();
         textFocused = GUI.GetNameOfFocusedControl().StartsWith("DungeonField");
     }
     private static string Field(string name, string value) { GUILayout.BeginHorizontal(); GUILayout.Label(name, GUILayout.Width(110)); GUI.SetNextControlName("DungeonField" + name); value = GUILayout.TextField(value ?? ""); GUILayout.EndHorizontal(); return value; }
-    private void ApplyFields()
+    private void ApplyFields(bool forceTimestamp = false)
     {
         try
         {
@@ -348,7 +370,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
                 settings.singleRoom || doubleJump ? 2 : 1, settings.singleRoom || dash, old.DashSpeed, old.DashDuration, old.DashCooldown, old.WallJump, old.WallLock, old.WallFall,
                 Mathf.Max(old.CombatAirSpeed * speed / old.GroundSpeed, old.CombatAirSpeed));
             GUI.FocusControl(null); editing = false;
-            int nextSeed = int.Parse(seedText);
+            int nextSeed = timestampSeed || forceTimestamp ? WfcDungeonSeed.Next() : int.Parse(seedText, CultureInfo.InvariantCulture);
             var size = settings.singleRoom && randomSize ? settings.SizeForSeed(nextSeed, true) : new Vector2Int(int.Parse(widthText), int.Parse(heightText));
             StartCoroutine(GenerateConfigured(size.x, size.y, nextSeed, next, float.Parse(densityText, CultureInfo.InvariantCulture),
                 settings.singleRoom ? float.Parse(multiplierText, CultureInfo.InvariantCulture) : settings.routeMultiplier, settings.singleRoom));
