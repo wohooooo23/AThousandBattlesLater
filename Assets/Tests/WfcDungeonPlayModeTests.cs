@@ -35,6 +35,9 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
         hero = GameObject.Find("Hero").GetComponent("Role"); body = hero.GetComponent<Rigidbody2D>();
         yield return Ready();
         Assert.That(Get<object>(generator, "Layout"), Is.Not.Null, Get<string>(generator, "Status"));
+        var initial = Get<object>(generator, "Layout");
+        yield return (IEnumerator)Call(generator, "GenerateConfigured", 120, 80, 20260928, Field<object>(initial, "Profile"), 1f, 2f, false);
+        yield return Ready();
         foreach (var actor in Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include))
             if (actor != null && actor.GetType().Name == "GeneratedEnemyBounds") actor.gameObject.SetActive(false);
     }
@@ -58,7 +61,7 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
         object profile = Field<object>(Get<object>(generator, "Layout"), "Profile");
         foreach (var size in new[] { new Vector2Int(96, 52), new Vector2Int(127, 83), new Vector2Int(256, 256) })
         {
-            yield return (IEnumerator)Call(generator, "Generate", size.x, size.y, 17, profile, 1f);
+            yield return (IEnumerator)Call(generator, "GenerateConfigured", size.x, size.y, 17, profile, 1f, 2f, false);
             yield return Ready();
             var layout = Get<object>(generator, "Layout");
             Assert.That(Field<int>(layout, "Width"), Is.EqualTo(size.x), Get<string>(generator, "Status"));
@@ -192,7 +195,7 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
     {
         object layout = Get<object>(generator, "Layout");
         string signature = (string)Call(layout, "Signature");
-        var routine = (IEnumerator)Call(generator, "Generate", 40, 40, 99, Field<object>(layout, "Profile"), 1f);
+        var routine = (IEnumerator)Call(generator, "GenerateConfigured", 40, 40, 99, Field<object>(layout, "Profile"), 1f, 2f, false);
         yield return routine;
         Assert.That(Get<object>(generator, "Layout"), Is.SameAs(layout));
         Assert.That(body.simulated, Is.True);

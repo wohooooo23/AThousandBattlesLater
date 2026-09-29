@@ -52,3 +52,12 @@ Items observed while migrating the campaign Bosses to Unity Animator and improvi
 - [ ] Extend parameter/physics coverage whenever movement states change: current dash exclusivity uses gravity-preserving dash and conservative air/combat speed; new vertical boosts or gravity changes require updated domains before enabling them in generated challenges.
 
 - [x] Avoid merging vertically adjacent platform tiles into a solid staircase side. Generated dungeons now retain separate thin one-way landing colliders; the 20x20 reference keeps its existing collider setup.
+
+
+## Single-room follow-up
+
+- [x] Replace the default room grid with one seeded 50-150 by 50-100 winding room, a configurable fixed route-length multiplier, large action-budget jumps, fractional ledges and ordinary walls only. Retain the multi-room solver as an explicit reference mode.
+- [ ] Extend the route grammar with descending loops, authored combat arenas and more campaign-like boundary protrusions. Keep every new module's action and clearance constraints explicit; do not add runtime post-generation reachability repair.
+- [ ] Add more art variants for isolated single-cell exterior borders: the nine-part palette can express a rectangle, but a one-cell-thick shell shares opposing edge conditions. Dedicated thin-border art would avoid choosing one edge priority.
+- [ ] Consolidate duplicated standalone test-scene setup and reflection-based Hero input helpers. Existing multi-room tests must explicitly request that retained mode now that WfcDungeon defaults to one room.
+- [ ] Broaden movement-contract fixtures for non-default gravity, fixed timestep, jump/dash durations and body scale before treating arbitrary equipment profiles as supported. Report incompatible profiles rather than silently weakening jump utilization.

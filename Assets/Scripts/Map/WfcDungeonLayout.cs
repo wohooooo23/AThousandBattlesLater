@@ -60,13 +60,14 @@ public readonly struct DungeonSpawn
 /// <summary>Room graph and local module WFC. The graph is a tree by construction; no finished-map path search.</summary>
 public sealed class WfcDungeonLayout
 {
-    public const int Version = 1;
+    public const int Version = 2;
     public int Width, Height, Seed, Observations;
     // Settings describe the interior; the solid outer shell adds one cell per side.
     public int GridWidth => Width + 2;
     public int GridHeight => Height + 2;
     public float CellSize;
     public float Density;
+    public float RouteMultiplier, DirectDistance, TargetRouteLength, ActualRouteLength, PhysicsStep;
     public TraversalProfile Profile;
     public DungeonCell[,] Cells;
     public readonly List<DungeonRoom> Rooms = new();
@@ -74,7 +75,7 @@ public sealed class WfcDungeonLayout
     public readonly List<DungeonSpawn> Spawns = new();
     public readonly List<DungeonLanding> Landings = new();
     public Vector2 Spawn, Exit;
-    public string ReproductionId => FormattableString.Invariant($"v{Version}:{Seed}:{Width}x{Height}:cell={CellSize}:density={Density}:{Profile.Signature}");
+    public string ReproductionId => FormattableString.Invariant($"v{Version}:{Seed}:{Width}x{Height}:cell={CellSize}:density={Density}:route={RouteMultiplier}:dt={PhysicsStep}:{Profile.Signature}");
     private int rise, platformWidth;
     private System.Random random;
 

@@ -23,6 +23,7 @@ public static class WfcDungeonBuilder
         Directory.CreateDirectory(Folder); AssetDatabase.Refresh();
         var settings = AssetDatabase.LoadAssetAtPath<WfcDungeonSettings>(Folder + "/Settings.asset");
         if (settings == null) { settings = ScriptableObject.CreateInstance<WfcDungeonSettings>(); AssetDatabase.CreateAsset(settings, Folder + "/Settings.asset"); }
+        settings.singleRoom = true; settings.randomizeRoomSize = true; settings.routeMultiplier = 2;
         settings.art = AssetDatabase.LoadAssetAtPath<WfcRoomSettings>(WfcRoomBuilder.AssetFolder + "/Settings.asset");
         settings.wallMaterial = AssetDatabase.LoadAssetAtPath<Material>(Folder + "/Walls.mat");
         if (settings.wallMaterial == null)
@@ -77,6 +78,10 @@ public static class WfcDungeonBuilder
         if (!EditorBuildSettings.scenes.Any(s => s.path == ScenePath)) EditorBuildSettings.scenes = EditorBuildSettings.scenes.Concat(new[] { new EditorBuildSettingsScene(ScenePath, true) }).ToArray();
         AssetDatabase.SaveAssets();
         VerifyDomains(settings, hero); Capture(camera);
+        camera.orthographicSize = 28;
+        camera.transform.position = generator.RootPosition(generator.Layout.Rooms[0].Route[2]) + new Vector3(0, 6, -10);
+        Capture(camera, "WfcDungeonDetail");
+        generator.SetOverview(true);
         Debug.Log("[WFC Dungeon] Built " + ScenePath);
     }
     private static void VerifyDomains(WfcDungeonSettings settings, Role hero)
@@ -90,11 +95,11 @@ public static class WfcDungeonBuilder
                 {
                     var profile = new TraversalProfile(p.GroundSpeed, p.AirSpeed, p.JumpSpeed, p.Gravity, p.Size, jumps, dash,
                         p.DashSpeed, p.DashDuration, p.DashCooldown, p.WallJump, p.WallLock, p.WallFall);
-                    var layout = WfcDungeonLayout.Generate(settings, size.x, size.y, seed, profile, 1);
+                    var layout = WfcDungeonLayout.GenerateMultiRoom(settings, size.x, size.y, seed, profile, 1);
                     if (layout.Connections.Count != layout.Rooms.Count - 1) throw new InvalidOperationException("Room graph must be a tree.");
                     if (layout.Rooms.Count(r => r.Kind == DungeonRoomKind.DoubleJump) != (jumps > 1 ? 1 : 0) ||
                         layout.Rooms.Count(r => r.Kind == DungeonRoomKind.Dash) != (dash ? 1 : 0)) throw new InvalidOperationException("Missing mandatory ability module.");
-                    if (layout.Signature() != WfcDungeonLayout.Generate(settings, size.x, size.y, seed, profile, 1).Signature()) throw new InvalidOperationException("Nondeterministic layout.");
+                    if (layout.Signature() != WfcDungeonLayout.GenerateMultiRoom(settings, size.x, size.y, seed, profile, 1).Signature()) throw new InvalidOperationException("Nondeterministic layout.");
                     maps++;
                 }
         foreach (float speed in new[] { .8f, 1.2f }) foreach (float jump in new[] { .9f, 1.1f })
@@ -102,16 +107,40 @@ public static class WfcDungeonBuilder
             {
                 var profile = new TraversalProfile(p.GroundSpeed * speed, p.AirSpeed * speed, p.JumpSpeed * jump,
                     p.Gravity, p.Size * size, 2, true, p.DashSpeed, p.DashDuration, p.DashCooldown, p.WallJump, p.WallLock, p.WallFall);
-                WfcDungeonLayout.Generate(settings, 256, 256, 23, profile, 1); maps++;
+                WfcDungeonLayout.GenerateMultiRoom(settings, 256, 256, 23, profile, 1); maps++;
             }
-        Debug.Log($"[WFC Dungeon] Offline {maps} layouts, four ability combinations, three sizes plus movement/body variations; {watch.ElapsedMilliseconds} ms.");
+        foreach (var size in new[] { new Vector2Int(50, 50), new Vector2Int(50, 100), new Vector2Int(150, 50), new Vector2Int(150, 100), new Vector2Int(97, 73) })
+            for (int seed = 0; seed < 12; seed++)
+            {
+                var a = WfcWindingRoomLayout.Generate(settings, size.x, size.y, seed, p, 1);
+                var b = WfcWindingRoomLayout.Generate(settings, size.x, size.y, seed, p, 1);
+                if (a.Signature() != b.Signature() || Mathf.Abs(a.ActualRouteLength - a.TargetRouteLength) > .1f)
+                    throw new InvalidOperationException("Winding route length/determinism contract failed.");
+                if (a.Rooms.Count != 1 || a.Cells.Cast<DungeonCell>().Any(c => c == DungeonCell.Smooth))
+                    throw new InvalidOperationException("Single room must contain only ordinary walls.");
+                var budget = new WindingTraversalBudget(p, Time.fixedDeltaTime);
+                foreach (var action in a.Rooms[0].Actions)
+                {
+                    float utilization = action.Kind == DungeonActionKind.DoubleJump
+                        ? (action.Exit.y - action.Entry.y) * a.CellSize / budget.DoubleHeight
+                        : (Mathf.Abs(action.Exit.x - action.Entry.x) - action.LandingWidth) * a.CellSize / budget.FlatDistance;
+                    if (utilization < .75f || utilization > .9001f)
+                        throw new InvalidOperationException("Jump utilization outside 75-90%.");
+                    if (a.Rooms[0].Decorations.Any(w => action.Clearance.Overlaps(new Rect(w.position, w.size))))
+                        throw new InvalidOperationException("Solid rectangle blocks a reserved action envelope.");
+                    if (a.Spawns.Any(s => action.Clearance.Overlaps(s.Patrol)))
+                        throw new InvalidOperationException("Enemy patrol overlaps a required action envelope.");
+                }
+                maps++;
+            }
+        Debug.Log($"[WFC Dungeon] Offline {maps} layouts: 152 retained multi-room domains plus 60 single-room size/seed/length/action/clearance checks; {watch.ElapsedMilliseconds} ms.");
     }
-    private static void Capture(Camera camera)
+    private static void Capture(Camera camera, string name = "WfcDungeon")
     {
         var target = new RenderTexture(1600, 1000, 24); camera.targetTexture = target; camera.Render();
         var previous = RenderTexture.active; RenderTexture.active = target;
         var image = new Texture2D(1600, 1000, TextureFormat.RGB24, false); image.ReadPixels(new Rect(0, 0, 1600, 1000), 0, 0); image.Apply();
-        Directory.CreateDirectory("Logs"); File.WriteAllBytes("Logs/WfcDungeon.png", image.EncodeToPNG());
+        Directory.CreateDirectory("Logs"); File.WriteAllBytes("Logs/" + name + ".png", image.EncodeToPNG());
         camera.targetTexture = null; RenderTexture.active = previous; UnityEngine.Object.DestroyImmediate(image); UnityEngine.Object.DestroyImmediate(target);
     }
 }

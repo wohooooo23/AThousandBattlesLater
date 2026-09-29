@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80c299e828db68b4a90dd3613b749565, type: 3}
   m_Name: Settings
   m_EditorClassIdentifier: Assembly-CSharp::WfcDungeonSettings
+  singleRoom: 1
+  randomizeRoomSize: 1
+  routeMultiplier: 2
   width: 120
   height: 80
   cellSize: 4.5

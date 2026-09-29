@@ -28,7 +28,8 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     public double CollisionMilliseconds { get; private set; }
     public double MonsterMilliseconds { get; private set; }
     private bool overview, panel = true;
-    private string widthText, heightText, seedText, densityText, speedText, jumpText;
+    private string widthText, heightText, seedText, densityText, speedText, jumpText, multiplierText;
+    private bool randomSize;
     private bool doubleJump, dash;
     private bool editing, textFocused;
     private float lastDensity;
@@ -45,10 +46,13 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         widthText = settings.width.ToString(); heightText = settings.height.ToString(); seedText = seed.ToString();
         densityText = settings.enemyDensity.ToString(CultureInfo.InvariantCulture);
         speedText = hero.speed.ToString(CultureInfo.InvariantCulture); jumpText = hero.jumpForce.ToString(CultureInfo.InvariantCulture);
+        if (settings.singleRoom) { hero.SetMaxJumpCount(2); hero.SetDashUnlocked(true); }
         doubleJump = hero.MaxJumpCount > 1; dash = hero.DashUnlocked;
+        randomSize = settings.randomizeRoomSize; multiplierText = settings.routeMultiplier.ToString(CultureInfo.InvariantCulture);
         TraversalProfile profile = null;
         try { profile = TraversalProfile.Capture(hero); } catch (Exception error) { Status = error.Message; }
-        if (profile != null) yield return Generate(settings.width, settings.height, seed, profile, settings.enemyDensity);
+        var size = settings.SizeForSeed(seed);
+        if (profile != null) yield return Generate(size.x, size.y, seed, profile, settings.enemyDensity);
     }
     private void Update()
     {
@@ -60,7 +64,12 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         if (editing) return;
         if (k.tabKey.wasPressedThisFrame) SetOverview(!overview);
         if (Busy || Layout == null) return;
-        if (k.f5Key.wasPressedThisFrame) StartCoroutine(Generate(Layout.Width, Layout.Height, unchecked(seed + 1), Layout.Profile, lastDensity));
+        if (k.f5Key.wasPressedThisFrame)
+        {
+            int nextSeed = unchecked(seed + 1);
+            var size = settings.singleRoom && randomSize ? settings.SizeForSeed(nextSeed, true) : new Vector2Int(Layout.Width, Layout.Height);
+            StartCoroutine(GenerateConfigured(size.x, size.y, nextSeed, Layout.Profile, lastDensity, Layout.RouteMultiplier, settings.singleRoom));
+        }
         if (k.f6Key.wasPressedThisFrame) Retry();
         if (k.homeKey.wasPressedThisFrame && !hero.IsDead) Respawn();
         int current = -1;
@@ -74,9 +83,11 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     }
     public void Retry()
     {
-        if (!Busy && Layout != null) StartCoroutine(Generate(Layout.Width, Layout.Height, seed, Layout.Profile, lastDensity));
+        if (!Busy && Layout != null) StartCoroutine(GenerateConfigured(Layout.Width, Layout.Height, seed, Layout.Profile, lastDensity, Layout.RouteMultiplier, Layout.Landings.Count > 0));
     }
     public IEnumerator Generate(int width, int height, int nextSeed, TraversalProfile profile, float density)
+        => GenerateConfigured(width, height, nextSeed, profile, density, settings.routeMultiplier, settings.singleRoom);
+    public IEnumerator GenerateConfigured(int width, int height, int nextSeed, TraversalProfile profile, float density, float multiplier, bool singleRoom)
     {
         if (Busy) yield break;
         Busy = true;
@@ -87,8 +98,11 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         if (Content != null) Content.gameObject.SetActive(false);
         WfcDungeonLayout next = null;
         var watch = Stopwatch.StartNew();
-        try { next = WfcDungeonLayout.Generate(settings, width, height, nextSeed, profile, density); }
+        var request = Instantiate(settings);
+        request.singleRoom = singleRoom; request.routeMultiplier = multiplier;
+        try { next = WfcDungeonLayout.Generate(request, width, height, nextSeed, profile, density); }
         catch (Exception error) { Status = error.Message; }
+        Destroy(request);
         SolveMilliseconds = watch.Elapsed.TotalMilliseconds;
         if (next == null) { if (Content != null) Content.gameObject.SetActive(true); hero.GetComponent<Rigidbody2D>().simulated = simulated; hero.SetControlEnabled(!hero.IsDead); Busy = false; yield break; }
         var staging = new GameObject("Generated Dungeon - staging", typeof(GeneratedMapContent));
@@ -127,12 +141,14 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         Respawn();
         BuildMilliseconds = watch.Elapsed.TotalMilliseconds;
         Status = $"{width} x {height} | {next.Rooms.Count} rooms | {next.Spawns.Count} enemies\nSolve {SolveMilliseconds:F1} ms / build {BuildMilliseconds:F1} ms\nTiles {TileMilliseconds:F1} / collision {CollisionMilliseconds:F1} / actors {MonsterMilliseconds:F1} ms";
+        if (next.Landings.Count > 0) Status += $"\nRoute {next.ActualRouteLength:F2} / {next.TargetRouteLength:F2} cells | direct {next.DirectDistance:F2} x {next.RouteMultiplier:F2}";
         RefreshFields(); Busy = false;
         Debug.Log($"[WFC Dungeon] {next.ReproductionId} | {Status}");
     }
     public void BuildPreview()
     {
-        var next = WfcDungeonLayout.Generate(settings, settings.width, settings.height, seed, TraversalProfile.Capture(hero), settings.enemyDensity);
+        var size = settings.SizeForSeed(seed);
+        var next = WfcDungeonLayout.Generate(settings, size.x, size.y, seed, TraversalProfile.Capture(hero), settings.enemyDensity);
         var root = new GameObject("Generated Dungeon Preview", typeof(GeneratedMapContent)); root.transform.SetParent(transform);
         foreach (var room in next.Rooms) BuildRoom(root.transform, next, room);
         Content = root.GetComponent<GeneratedMapContent>(); Layout = next;
@@ -148,13 +164,13 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         grid.transform.SetParent(root, false); grid.transform.localScale = Vector3.one * settings.cellSize;
         var background = MakeMap("Background", grid.transform, -20, null);
         var walls = MakeMap("Walls", grid.transform, 0, TraversalSurfaceKind.Wall);
-        var smooth = MakeMap("White smooth walls", grid.transform, 0, TraversalSurfaceKind.SmoothWall);
+        var smooth = map.Landings.Count > 0 ? null : MakeMap("White smooth walls", grid.transform, 0, TraversalSurfaceKind.SmoothWall);
         var platforms = MakeMap("Platforms", grid.transform, 1, TraversalSurfaceKind.OneWayPlatform);
         walls.GetComponent<TilemapRenderer>().sharedMaterial = settings.wallMaterial;
-        smooth.GetComponent<TilemapRenderer>().sharedMaterial = settings.wallMaterial;
+        if (smooth != null) smooth.GetComponent<TilemapRenderer>().sharedMaterial = settings.wallMaterial;
         background.color = new Color(.52f, .56f, .64f);
         // Same sprite and material palette; ordinary walls are tinted, smooth surfaces remain white.
-        walls.color = new Color(.52f, .56f, .62f); smooth.color = Color.white;
+        walls.color = new Color(.52f, .56f, .62f); if (smooth != null) smooth.color = Color.white;
         RectInt b = room.Bounds;
         var back = new TileBase[b.width * b.height]; var solid = new TileBase[back.Length]; var white = new TileBase[back.Length]; var ledges = new TileBase[back.Length];
         foreach (Vector2Int p in b.allPositionsWithin)
@@ -172,10 +188,21 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             }
         }
         var bounds = new BoundsInt(b.x, b.y, 0, b.width, b.height, 1);
-        background.SetTilesBlock(bounds, back); walls.SetTilesBlock(bounds, solid); smooth.SetTilesBlock(bounds, white); platforms.SetTilesBlock(bounds, ledges);
+        background.SetTilesBlock(bounds, back); walls.SetTilesBlock(bounds, solid); if (smooth != null) smooth.SetTilesBlock(bounds, white); platforms.SetTilesBlock(bounds, ledges);
+        foreach (var landing in map.Landings)
+        {
+            int left = Mathf.FloorToInt(landing.Left), row = Mathf.FloorToInt(landing.Top - 1);
+            for (int i = 0; i < landing.Width; i++)
+            {
+                var pos = new Vector3Int(left + i, row, 0);
+                platforms.SetTile(pos, i == 0 ? settings.art.platformLeft : i == landing.Width - 1 ? settings.art.platformRight : settings.art.platformMiddle);
+                platforms.SetTileFlags(pos, TileFlags.None);
+                platforms.SetTransformMatrix(pos, Matrix4x4.Translate(new Vector3(landing.Left - left, landing.Top - 1 - row, 0)));
+            }
+        }
         TileMilliseconds += timing.Elapsed.TotalMilliseconds; timing.Restart();
         foreach (var tilemap in new[] { walls, smooth })
-        { tilemap.GetComponent<TilemapCollider2D>().ProcessTilemapChanges(); tilemap.GetComponent<CompositeCollider2D>().GenerateGeometry(); }
+        { if (tilemap == null) continue; tilemap.GetComponent<TilemapCollider2D>().ProcessTilemapChanges(); tilemap.GetComponent<CompositeCollider2D>().GenerateGeometry(); }
         BuildPlatformColliders(platforms, map, b);
         CollisionMilliseconds += timing.Elapsed.TotalMilliseconds; timing.Restart();
         var actors = new GameObject($"Room {room.Id} actors"); actors.transform.SetParent(root, false); actors.SetActive(false);
@@ -219,6 +246,17 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         // Preserve every landing top independently. Grid-shaped tiles at successive
         // heights would merge into solid stair sides and obstruct upward passage.
         const float thickness = .02f;
+        if (map.Landings.Count > 0)
+        {
+            foreach (var landing in map.Landings)
+            {
+                var collider = visual.gameObject.AddComponent<BoxCollider2D>();
+                collider.size = new Vector2(landing.Width, thickness);
+                collider.offset = new Vector2(landing.Centre.x, landing.Top - thickness * .5f);
+                collider.usedByEffector = true;
+            }
+            return;
+        }
         for (int y = bounds.y; y < bounds.yMax; y++)
             for (int x = bounds.x; x < bounds.xMax; x++)
             {
@@ -270,12 +308,13 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         widthText = Layout.Width.ToString(); heightText = Layout.Height.ToString(); seedText = seed.ToString(); densityText = lastDensity.ToString(CultureInfo.InvariantCulture);
         speedText = Layout.Profile.GroundSpeed.ToString(CultureInfo.InvariantCulture); jumpText = Layout.Profile.JumpSpeed.ToString(CultureInfo.InvariantCulture);
         doubleJump = Layout.Profile.Jumps > 1; dash = Layout.Profile.Dash;
+        multiplierText = Layout.RouteMultiplier.ToString(CultureInfo.InvariantCulture);
     }
     private void OnGUI()
     {
         if (!Application.isPlaying) return;
         if (!panel) { GUI.Label(new Rect(12, 12, 600, 30), "F1 settings | Tab overview | F5 next seed | F6 retry | Home spawn"); return; }
-        GUILayout.BeginArea(new Rect(12, 12, 330, 560), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(12, 12, 370, 650), GUI.skin.box);
         GUILayout.Label("WFC DUNGEON"); GUILayout.Label(Status);
         GUILayout.Label($"HP {hero.CurrentHealth:F0}/{hero.MaximumHealth:F0}" + (hero.IsDead ? "   R: retry this map" : ""));
         if (widthText != null)
@@ -283,11 +322,17 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             GUI.enabled = !Busy;
             widthText = Field("Width", widthText); heightText = Field("Height", heightText); seedText = Field("Seed", seedText); densityText = Field("Enemy density", densityText);
             speedText = Field("Move speed", speedText); jumpText = Field("Jump velocity", jumpText);
-            doubleJump = GUILayout.Toggle(doubleJump, "Double jump"); dash = GUILayout.Toggle(dash, "Dash");
+            if (settings.singleRoom)
+            {
+                randomSize = GUILayout.Toggle(randomSize, "Seeded random size (50-150 x 50-100)");
+                multiplierText = Field("Route multiplier", multiplierText);
+                GUILayout.Label("Double jump + dash + wall jump unlocked");
+            }
+            else { doubleJump = GUILayout.Toggle(doubleJump, "Double jump"); dash = GUILayout.Toggle(dash, "Dash"); }
             if (GUILayout.Button("Apply and regenerate")) ApplyFields();
             if (GUILayout.Button("Repeat current map")) Retry();
             GUI.enabled = true;
-            GUILayout.Label("White walls: solid, cannot wall-jump\nTab: overview / follow camera\nF1: hide settings\nF5: next seed | F6: retry\nHome: return to spawn");
+            GUILayout.Label("Ordinary walls: wall jump allowed\nTab: overview / follow camera\nF1: hide settings\nF5: next seed | F6: retry\nHome: return to spawn");
         }
         GUILayout.EndArea();
         textFocused = GUI.GetNameOfFocusedControl().StartsWith("DungeonField");
@@ -300,10 +345,13 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             var old = Layout != null ? Layout.Profile : TraversalProfile.Capture(hero);
             float speed = float.Parse(speedText, CultureInfo.InvariantCulture), jump = float.Parse(jumpText, CultureInfo.InvariantCulture);
             var next = new TraversalProfile(speed, speed * old.AirSpeed / old.GroundSpeed, jump, old.Gravity, old.Size,
-                doubleJump ? 2 : 1, dash, old.DashSpeed, old.DashDuration, old.DashCooldown, old.WallJump, old.WallLock, old.WallFall,
+                settings.singleRoom || doubleJump ? 2 : 1, settings.singleRoom || dash, old.DashSpeed, old.DashDuration, old.DashCooldown, old.WallJump, old.WallLock, old.WallFall,
                 Mathf.Max(old.CombatAirSpeed * speed / old.GroundSpeed, old.CombatAirSpeed));
             GUI.FocusControl(null); editing = false;
-            StartCoroutine(Generate(int.Parse(widthText), int.Parse(heightText), int.Parse(seedText), next, float.Parse(densityText, CultureInfo.InvariantCulture)));
+            int nextSeed = int.Parse(seedText);
+            var size = settings.singleRoom && randomSize ? settings.SizeForSeed(nextSeed, true) : new Vector2Int(int.Parse(widthText), int.Parse(heightText));
+            StartCoroutine(GenerateConfigured(size.x, size.y, nextSeed, next, float.Parse(densityText, CultureInfo.InvariantCulture),
+                settings.singleRoom ? float.Parse(multiplierText, CultureInfo.InvariantCulture) : settings.routeMultiplier, settings.singleRoom));
         }
         catch (Exception error) { Status = error.Message; }
     }

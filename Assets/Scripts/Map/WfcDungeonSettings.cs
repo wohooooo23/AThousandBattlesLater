@@ -7,9 +7,10 @@ public sealed class WfcDungeonSettings : ScriptableObject
     [Header("Current prototype: one winding room")]
     public bool singleRoom = true;
     public bool randomizeRoomSize = true;
-    public Vector2Int SizeForSeed(int seed)
+    [Min(1)] public float routeMultiplier = 2f;
+    public Vector2Int SizeForSeed(int seed, bool? randomOverride = null)
     {
-        if (!singleRoom || !randomizeRoomSize) return new Vector2Int(width, height);
+        if (!singleRoom || !(randomOverride ?? randomizeRoomSize)) return new Vector2Int(width, height);
         var random = new System.Random(seed ^ 0x57fc12);
         return new Vector2Int(random.Next(50, 151), random.Next(50, 101));
     }
