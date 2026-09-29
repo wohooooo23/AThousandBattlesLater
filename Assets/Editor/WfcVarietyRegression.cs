@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -78,6 +79,94 @@ public static class WfcVarietyRegression
             EditorUtility.ClearProgressBar();
             Object.Destroy(settings);
         }
+    }
+
+    [MenuItem("Tools/WFC Dungeon/Run Terrain Budget Regression")]
+    public static void RunTerrainBudgetRegression()
+    {
+        var generator = WfcDungeonGenerator.Active;
+        if (!Application.isPlaying || generator == null || generator.Busy || generator.Layout == null)
+        {
+            Debug.LogError("Open WfcDungeon, enter Play Mode and wait for a map before running terrain budget checks.");
+            return;
+        }
+        try
+        {
+            CheckTerrainBudgets(generator.Layout);
+            Debug.Log("[WFC terrain budget DATA regression] 4/4 passed: zero budget, tiny budget, " +
+                "sufficient budget and no-domain case. Scene content was not changed; " +
+                "runtime rollback and real-hero traversal still require PlayMode verification.");
+        }
+        catch (Exception error) { Debug.LogException(error); }
+    }
+
+    private static void CheckTerrainBudgets(WfcDungeonLayout source)
+    {
+        // Exercise the real terrain solver independently of route-domain generation.
+        var fillTerrain = typeof(WfcWindingRoomLayout).GetMethod("FillTerrain",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Require(fillTerrain != null, "FillTerrain test entry point was not found.");
+        void Fill(WfcDungeonLayout map, int limit) => fillTerrain.Invoke(null, new object[]
+        {
+            map, map.Rooms[0], new WindingTraversalBudget(map.Profile, Time.fixedDeltaTime),
+            limit, new System.Random(map.Seed)
+        });
+
+        foreach (int limit in new[] { 0, 1 })
+        {
+            var map = TerrainFixture(source, false);
+            string before = Fingerprint(map);
+            InvalidOperationException failure = null;
+            try { Fill(map, limit); }
+            catch (TargetInvocationException error) when (error.InnerException is InvalidOperationException)
+            { failure = (InvalidOperationException)error.InnerException; }
+            Require(failure != null, $"Terrain budget {limit} was silently accepted.");
+            Require(failure.Message.Contains("Terrain WFC failed: observation budget exhausted") &&
+                failure.Message.Contains($"Seed {map.Seed}") && failure.Message.Contains("150x100") &&
+                failure.Message.Contains($"solverBudget {limit}") &&
+                failure.Message.Contains($"observations {limit + 1}"),
+                "Terrain exhaustion error is missing diagnostic context.");
+            Require(map.Observations == 7 + limit + 1, "Failed terrain work was not counted exactly once.");
+            Require(Fingerprint(map) == before, "An incomplete terrain solve mutated geometry or enemy spawns.");
+        }
+
+        var complete = TerrainFixture(source, false);
+        Fill(complete, 4096);
+        Require(complete.Observations > 7 && complete.Rooms[0].Decorations.Count > 0,
+            "Successful fixture did not exercise a nonempty terrain solve; inspect the captured profile.");
+        Require(complete.Landings.Count == 1 + complete.Rooms[0].Decorations.Count * 2,
+            "Completed wall modules did not commit their two attached shelves.");
+
+        // Optional means a genuinely empty domain list is legitimate, not that failure is ignored.
+        var noDomains = TerrainFixture(source, true);
+        string emptyBefore = Fingerprint(noDomains);
+        Fill(noDomains, 0);
+        Require(noDomains.Observations == 7 && Fingerprint(noDomains) == emptyBefore,
+            "The no-domain case should not spend solver budget or mutate the fixture.");
+    }
+
+    private static WfcDungeonLayout TerrainFixture(WfcDungeonLayout source, bool reserveAll)
+    {
+        // A synthetic data fixture, not a claim that this one-step route is traversable.
+        var map = new WfcDungeonLayout
+        {
+            Width = 150, Height = 100, Seed = 20260953, CellSize = source.CellSize,
+            Profile = source.Profile, Density = 0, PhysicsStep = Time.fixedDeltaTime,
+            Cells = new DungeonCell[152, 102], Spawn = new Vector2(4, 1),
+            Exit = new Vector2(147, 96), Observations = 7
+        };
+        var room = new DungeonRoom { Id = 0, Main = true, Bounds = new RectInt(0, 0, 152, 102) };
+        map.Rooms.Add(room);
+        var landing = new DungeonLanding(8, 8, 8);
+        map.Landings.Add(landing);
+        room.Route.Add(map.Spawn); room.Route.Add(landing.Centre);
+        room.Actions.Add(new DungeonAction(DungeonActionKind.DoubleJump, map.Spawn, landing.Centre,
+            landing.Width, reserveAll ? new Rect(0, 0, 152, 102) : new Rect(1, 1, 20, 25)));
+        for (int x = 0; x < map.GridWidth; x++)
+        { map.Cells[x, 0] = DungeonCell.Wall; map.Cells[x, map.GridHeight - 1] = DungeonCell.Wall; }
+        for (int y = 0; y < map.GridHeight; y++)
+        { map.Cells[0, y] = DungeonCell.Wall; map.Cells[map.GridWidth - 1, y] = DungeonCell.Wall; }
+        return map;
     }
 
     private static void Check(WfcDungeonLayout map)

@@ -341,7 +341,8 @@ public static class WfcWindingRoomLayout
                 }
                 if (choices.Count > 1) domains.Add(choices);
             }
-        // Empty is always an admissible value. Optional terrain must not invalidate a valid route.
+        // Empty is a valid selected value; an unfinished solve is not a valid map.
+        // Let the generator transaction report failure and retain the previous complete map.
         if (domains.Count > 0)
         {
             var neighbours = Enumerable.Range(0, domains.Count).Select(i => Enumerable.Range(0, domains.Count)
@@ -350,18 +351,25 @@ public static class WfcWindingRoomLayout
             var solver = new WfcConstraintSolver<TerrainOption>(domains.ToArray(), neighbours,
                 (_, a, _, b) => a.Empty || b.Empty || !Expand(a.Footprint, 2).Overlaps(b.Footprint),
                 a => a.Empty ? 1 : 5, map.Seed ^ 0x1724, solverBudget);
-            if (solver.Solve(out var terrain))
+            bool solved = solver.Solve(out var terrain);
+            map.Observations += solver.Observations;
+            if (!solved)
             {
-                map.Observations += solver.Observations;
-                foreach (var module in terrain)
-                {
-                    if (module.Empty) continue;
-                    room.Decorations.Add(module.Wall);
-                    foreach (var cell in module.Wall.allPositionsWithin) map.Cells[cell.x, cell.y] = DungeonCell.Wall;
-                    map.Landings.AddRange(module.Shelves);
-                }
+                string reason = solver.Observations > solverBudget
+                    ? "observation budget exhausted"
+                    : "no consistent terrain assignment";
+                throw new InvalidOperationException(
+                    $"Terrain WFC failed: {reason}. Seed {map.Seed}, {map.Width}x{map.Height}, " +
+                    $"domains {domains.Count}, solverBudget {solverBudget}, observations {solver.Observations}. " +
+                    "Generation aborted before applying optional terrain. Increase solverBudget or try another seed.");
             }
-            // If the optional solve exhausts its budget, keep the already-valid primary route.
+            foreach (var module in terrain)
+            {
+                if (module.Empty) continue;
+                room.Decorations.Add(module.Wall);
+                foreach (var cell in module.Wall.allPositionsWithin) map.Cells[cell.x, cell.y] = DungeonCell.Wall;
+                map.Landings.AddRange(module.Shelves);
+            }
         }
         int ground = Mathf.RoundToInt(map.Width * map.Height / 2000f * 2 * map.Density), flying = Mathf.RoundToInt(ground * .5f);
         // Platforms now participate in enemy placement, not only isolated solid wall tops.
