@@ -45,6 +45,11 @@ public class Enemy_attackState : EnemyState
     public override void Update()
     {
         base.Update();
+        if (enemy.GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(enemy.Role))
+        {
+            stateMachine.Change(enemy.idleState);
+            return;
+        }
 
         if (windupRemaining > 0f)
         {

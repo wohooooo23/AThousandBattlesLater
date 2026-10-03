@@ -40,7 +40,8 @@ public sealed class FlyingEyeController : Entity
     public float HurtDuration => hurtClip.length;
     public float DeathDuration => deathClip.length;
     public float ReleaseTime { get; private set; }
-    public bool TargetInRange => Target != null && Vector2.Distance(transform.position, Target.position) <= detectionRange;
+    public bool TargetInRange => Target != null && (GetComponent<GeneratedEnemyBounds>() is { } bounds
+        ? bounds.AllowsTarget(Target) : Vector2.Distance(transform.position, Target.position) <= detectionRange);
 
     protected override void Awake()
     {
@@ -72,6 +73,9 @@ public sealed class FlyingEyeController : Entity
     {
         if (idle == null || health.IsDead)
             return;
+        // Rebase after the staged map moves to the origin, and after room reactivation.
+        if (GetComponent<GeneratedEnemyBounds>() is { } bounds)
+        { spawnPosition = bounds.Home; patrolRange = Mathf.Max(.5f, bounds.WorldArea.width * .35f); Target = null; }
         ResetParameters();
         stateMachine.Init(idle);
     }
@@ -94,7 +98,9 @@ public sealed class FlyingEyeController : Entity
 
     protected override void Update()
     {
-        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, detectionRange);
+        var generated = GetComponent<GeneratedEnemyBounds>();
+        float search = generated != null && generated.SearchRadius > 0 ? generated.SearchRadius : detectionRange;
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, search);
         Target = player != null ? player.transform : null;
         if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(Target)) Target = null;
         stateMachine.currentState?.Update(); // Flying actors deliberately skip Entity's ground/wall probes.

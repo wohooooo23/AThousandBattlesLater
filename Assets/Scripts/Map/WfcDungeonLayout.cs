@@ -75,7 +75,9 @@ public sealed class WfcDungeonLayout
     public readonly List<DungeonSpawn> Spawns = new();
     public readonly List<DungeonLanding> Landings = new();
     public Vector2 Spawn, Exit;
-    public string ReproductionId => FormattableString.Invariant($"v{Version}:{Seed}:{Width}x{Height}:cell={CellSize}:density={Density}:route={RouteMultiplier}:dt={PhysicsStep}:{Profile.Signature}");
+    public WfcEncounterPlan Encounters;
+    public string ReproductionId => FormattableString.Invariant($"v{Version}:{Seed}:{Width}x{Height}:cell={CellSize}:density={Density}:route={RouteMultiplier}:dt={PhysicsStep}:{Profile.Signature}") +
+        (Encounters == null ? "" : $":winding-r{WfcWindingRoomLayout.Revision}");
     private int rise, platformWidth;
     private System.Random random;
 
@@ -407,6 +409,7 @@ public sealed class WfcDungeonLayout
         for (int y = 0; y < GridHeight; y++) for (int x = 0; x < GridWidth; x++) text.Append((char)('0' + (byte)Cells[x, y]));
         foreach (var s in Spawns) text.Append($"|{s.Room}:{s.Flying}:{s.Feet}");
         foreach (var p in Landings) text.Append(FormattableString.Invariant($"|P:{p.Left:R}:{p.Top:R}:{p.Width}"));
+        if (Encounters != null) text.Append(Encounters.Signature());
         return text.ToString();
     }
 }

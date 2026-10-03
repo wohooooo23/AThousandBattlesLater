@@ -10,7 +10,8 @@ using UnityEngine;
 /// </summary>
 public static class WfcWindingRoomLayout
 {
-    public const int Revision = 3;
+    public const int Revision = 4;
+    public const float MinimumShelfGap = 3.25f;
 
     private sealed class RouteOption
     {
@@ -19,6 +20,7 @@ public static class WfcWindingRoomLayout
         public readonly List<DungeonLanding> Landings = new();
         public readonly List<DungeonAction> Actions = new();
         public int Bends;
+        public bool Spacious;
     }
     // Collapse walls and their attached shelves as ONE domain value, not separate passes.
     private sealed class TerrainOption
@@ -43,16 +45,25 @@ public static class WfcWindingRoomLayout
         var map = new WfcDungeonLayout { Width = width, Height = height, Seed = seed, CellSize = settings.cellSize,
             Profile = profile, Density = density, RouteMultiplier = settings.routeMultiplier, PhysicsStep = Time.fixedDeltaTime,
             Cells = new DungeonCell[width + 2, height + 2], Spawn = new Vector2(4, 1), Exit = new Vector2(width - 3, height - 4) };
+        map.Encounters = new WfcEncounterPlan { SafeCentre = map.Spawn };
         map.DirectDistance = Vector2.Distance(map.Spawn, map.Exit);
         map.TargetRouteLength = map.DirectDistance * map.RouteMultiplier;
         var random = new System.Random(seed);
         int platformWidth = Mathf.Max(3, Mathf.CeilToInt((profile.Size.x + 5f) / map.CellSize));
-        var routes = MakeRoutes(map, budget, platformWidth, random, settings.solverBudget);
+        var routes = MakeRoutes(map, budget, platformWidth, random, settings.solverBudget, false);
+        routes.AddRange(MakeRoutes(map, budget, platformWidth, new System.Random(seed), settings.solverBudget, true));
+        // Never remove a required landing after generation. Choose the sparsest complete valid contract.
+        if (routes.Count > 0)
+        {
+            int fewest = routes.Min(r => r.Landings.Count);
+            routes = routes.Where(r => r.Landings.Count == fewest).ToList();
+        }
         if (routes.Count == 0) throw new InvalidOperationException($"No fixed-length route domain: {width}×{height}, multiplier {map.RouteMultiplier:F2}, target {map.TargetRouteLength:F1} cells, seed {seed}. Try a lower multiplier or a larger height; movement and landing clearance are never silently relaxed.");
         var routeSolver = new WfcConstraintSolver<RouteOption>(new[] { routes }, new[] { Array.Empty<int>() }, (_, _, _, _) => true,
-            r => r.Bends >= 4 ? 3 : 1, seed, settings.solverBudget);
+            r => (r.Spacious ? 8.0 : 1.0) * (r.Bends >= 4 ? 3.0 : 1.0), seed, settings.solverBudget);
         if (!routeSolver.Solve(out var chosen)) throw new InvalidOperationException("Route WFC budget exhausted.");
         map.Observations += routeSolver.Observations;
+        map.Encounters.SpaciousRoute = chosen[0].Spacious;
         var room = new DungeonRoom { Id = 0, Main = true, Kind = DungeonRoomKind.Traverse, Bounds = new RectInt(0, 0, map.GridWidth, map.GridHeight) };
         map.Rooms.Add(room);
         room.Route.AddRange(chosen[0].Points);
@@ -62,16 +73,17 @@ public static class WfcWindingRoomLayout
         for (int x = 0; x < map.GridWidth; x++) { map.Cells[x, 0] = DungeonCell.Wall; map.Cells[x, map.GridHeight - 1] = DungeonCell.Wall; }
         for (int y = 0; y < map.GridHeight; y++) { map.Cells[0, y] = DungeonCell.Wall; map.Cells[map.GridWidth - 1, y] = DungeonCell.Wall; }
         FillTerrain(map, room, budget, settings.solverBudget, random);
+        WfcEncounterPlanner.Generate(map, room, settings);
         return map;
     }
 
-    private static List<RouteOption> MakeRoutes(WfcDungeonLayout map, WindingTraversalBudget budget, int platformWidth, System.Random random, int solverBudget)
+    private static List<RouteOption> MakeRoutes(WfcDungeonLayout map, WindingTraversalBudget budget, int platformWidth, System.Random random, int solverBudget, bool spacious)
     {
         var options = new List<RouteOption>();
         float cell = map.CellSize, h = budget.DoubleHeight / cell, dy = map.Exit.y - map.Spawn.y;
         for (int variant = 0; variant < 192 && options.Count < 12; variant++)
         {
-            float[] rises = MakeVerticalSteps(dy, h, random, variant);
+            float[] rises = MakeVerticalSteps(dy, h, random, variant, spacious);
             if (rises == null) continue;
             int count = rises.Length;
             int legs = (variant < 160 ? new[] { 5, 7, 5, 9 } : new[] { 3, 5, 7, 9 })[variant % 4];
@@ -81,8 +93,8 @@ public static class WfcWindingRoomLayout
             int offset = random.Next(legs);
             for (int i = 0; i < count % legs; i++) counts[(offset + i) % legs]++;
             float spread = .08f * ((variant / 4) % 4);
-            bool useDash = variant % 3 == 0;
-            float flat = useDash ? budget.FlatDistance / cell * (.78f + (float)random.NextDouble() * .11f) + platformWidth
+            bool useDash = spacious ? variant % 4 != 3 : variant % 3 == 0;
+            float flat = useDash ? budget.FlatDistance / cell * ((spacious ? .83f : .78f) + (float)random.NextDouble() * (spacious ? .06f : .11f)) + platformWidth
                 : budget.HighJumpDistance(0) / cell * (.78f + (float)random.NextDouble() * .10f);
             if (useDash)
             {
@@ -135,7 +147,7 @@ public static class WfcWindingRoomLayout
                     for (int iteration = 0; iteration < 30; iteration++)
                     { float mid = (low + high) * .5f; if (Length(mid) < map.TargetRouteLength) low = mid; else high = mid; }
                     float amplitude = (low + high) * .5f;
-                    var route = new RouteOption { Bends = legs - 1 }; route.Points.Add(map.Spawn);
+                    var route = new RouteOption { Bends = legs - 1, Spacious = spacious }; route.Points.Add(map.Spawn);
                     int index = 0;
                     for (int i = 0; i < legs; i++)
                     {
@@ -177,18 +189,19 @@ public static class WfcWindingRoomLayout
         return options;
     }
 
-    private static float[] MakeVerticalSteps(float dy, float h, System.Random random, int variant)
+    private static float[] MakeVerticalSteps(float dy, float h, System.Random random, int variant, bool spacious)
     {
         // Signed vertical travel fixes the old empty integer interval for some heights.
-        // Upward challenges still use 77--86% of double-jump height; dips add vertical travel.
-        int dips = variant < 160 ? 1 + variant % 3 : 0;
-        float minDrop = .30f * h * dips, maxDrop = .75f * h * dips;
-        int minimum = Mathf.Max(3, Mathf.CeilToInt((dy + minDrop) / (h * .86f)));
-        int maximum = Mathf.Min(96, Mathf.FloorToInt((dy + maxDrop) / (h * .77f)));
+        // Spacious candidates use 83--89%; the original 77--86% contracts remain available for compact fits.
+        int dips = variant < 160 ? 1 + variant % (spacious ? 2 : 3) : 0;
+        float lowerRise = spacious ? .83f : .77f, upperRise = spacious ? .89f : .86f;
+        float minDrop = (spacious ? .45f : .30f) * h * dips, maxDrop = .75f * h * dips;
+        int minimum = Mathf.Max(3, Mathf.CeilToInt((dy + minDrop) / (h * upperRise)));
+        int maximum = Mathf.Min(96, Mathf.FloorToInt((dy + maxDrop) / (h * lowerRise)));
         if (minimum > maximum) return null;
         int upCount = random.Next(minimum, maximum + 1);
-        float low = Mathf.Max(minDrop, upCount * h * .77f - dy);
-        float high = Mathf.Min(maxDrop, upCount * h * .86f - dy);
+        float low = Mathf.Max(minDrop, upCount * h * lowerRise - dy);
+        float high = Mathf.Min(maxDrop, upCount * h * upperRise - dy);
         if (low > high) return null;
         float drop = dips == 0 ? 0 : Mathf.Lerp(low, high, (float)random.NextDouble());
         var ups = Enumerable.Repeat((dy + drop) / upCount, upCount).ToArray();
@@ -197,8 +210,8 @@ public static class WfcWindingRoomLayout
             int a = random.Next(upCount), b = random.Next(upCount);
             if (a == b) continue;
             float transfer = ((float)random.NextDouble() - .5f) * h * .08f;
-            if (ups[a] + transfer > h * .77f && ups[a] + transfer < h * .86f &&
-                ups[b] - transfer > h * .77f && ups[b] - transfer < h * .86f)
+            if (ups[a] + transfer > h * lowerRise && ups[a] + transfer < h * upperRise &&
+                ups[b] - transfer > h * lowerRise && ups[b] - transfer < h * upperRise)
             { ups[a] += transfer; ups[b] -= transfer; }
         }
         var steps = new List<float>();
@@ -244,7 +257,7 @@ public static class WfcWindingRoomLayout
             {
                 float left = Mathf.Clamp(point.x - width * .5f, 1, map.Width + 1 - width);
                 var landing = new DungeonLanding(left, point.y, width);
-                if (VisualOverlap(route.Landings, landing) || BlocksFlight(map, budget, route.Actions, landing)) continue;
+                if (VisualOverlap(route.Landings, landing) || (route.Spacious && route.Landings.Any(p => ShelfGap(p, landing) < MinimumShelfGap)) || BlocksFlight(map, budget, route.Actions, landing)) continue;
                 route.Landings.Add(landing);
                 var action = route.Actions[i - 1];
                 route.Actions[i - 1] = new DungeonAction(action.Kind, action.Entry, action.Exit, width, action.Clearance);
@@ -294,6 +307,13 @@ public static class WfcWindingRoomLayout
             if (shelf.Left < x + margin && shelf.Left + shelf.Width > x - margin) return true;
         }
         return false;
+    }
+
+    public static float ShelfGap(DungeonLanding a, DungeonLanding b)
+    {
+        float dx = Mathf.Max(0, Mathf.Max(a.Left, b.Left) - Mathf.Min(a.Left + a.Width, b.Left + b.Width));
+        float dy = Mathf.Abs(a.Top - b.Top);
+        return Mathf.Sqrt(dx * dx + dy * dy);
     }
 
     private static Rect Expand(Rect r, float amount) => new Rect(r.x - amount, r.y - amount, r.width + 2 * amount, r.height + 2 * amount);
@@ -363,51 +383,28 @@ public static class WfcWindingRoomLayout
                     $"domains {domains.Count}, solverBudget {solverBudget}, observations {solver.Observations}. " +
                     "Generation aborted before applying optional terrain. Increase solverBudget or try another seed.");
             }
-            foreach (var module in terrain)
+            // Retain a spatially spread subset of complete old modules. Shapes, caps, wings,
+            // compatibility, WFC weights and flight checks above are deliberately unchanged.
+            var modules = terrain.Where(m => !m.Empty).ToList();
+            int retain = Mathf.CeilToInt(modules.Count * WfcEncounterPlanner.TerrainRetention);
+            if (map.Encounters != null) map.Encounters.TerrainCandidates = modules.Count;
+            var retained = new List<TerrainOption>();
+            var thinning = new System.Random(map.Seed ^ 0x54731);
+            while (retained.Count < retain)
             {
-                if (module.Empty) continue;
+                var next = retained.Count == 0 ? modules[thinning.Next(modules.Count)] : modules
+                    .OrderByDescending(m => retained.Min(r => Vector2.SqrMagnitude(m.Footprint.center - r.Footprint.center))).First();
+                retained.Add(next); modules.Remove(next);
+            }
+            if (map.Encounters != null) map.Encounters.TerrainRetained = retained.Count;
+            foreach (var module in retained)
+            {
                 room.Decorations.Add(module.Wall);
                 foreach (var cell in module.Wall.allPositionsWithin) map.Cells[cell.x, cell.y] = DungeonCell.Wall;
                 map.Landings.AddRange(module.Shelves);
             }
         }
-        int ground = Mathf.RoundToInt(map.Width * map.Height / 2000f * 2 * map.Density), flying = Mathf.RoundToInt(ground * .5f);
-        // Platforms now participate in enemy placement, not only isolated solid wall tops.
-        var surfaces = map.Landings.Concat(room.Decorations.Select(w => new DungeonLanding(w.x, w.yMax, w.width)))
-            .OrderBy(_ => random.Next()).ToArray();
-        foreach (var surface in surfaces)
-        {
-            if (ground <= 0) break;
-            int begin = Mathf.CeilToInt(surface.Left + .75f), end = Mathf.FloorToInt(surface.Left + surface.Width - .75f);
-            int start = -1;
-            for (int x = begin; x <= end; x++)
-            {
-                var cellBay = new Rect(x, surface.Top, 1, head);
-                bool clear = x < end && !Reserved(cellBay) && !Occupied(map, cellBay) && !map.Spawns.Any(s => s.Patrol.Overlaps(cellBay));
-                if (clear) { if (start < 0) start = x; continue; }
-                if (start >= 0 && x - start >= 3)
-                {
-                    var bay = new Rect(start + .25f, surface.Top, x - start - .5f, head);
-                    map.Spawns.Add(new DungeonSpawn(0, false, new Vector2(bay.center.x, bay.y), bay)); ground--; break;
-                }
-                start = -1;
-            }
-        }
-        for (int attempt = 0; attempt < 200 && flying > 0; attempt++)
-        {
-            var bay = new Rect(random.Next(4, map.Width - 9), random.Next(5, map.Height - 8), 7, 5);
-            if (Reserved(bay) || Occupied(map, bay) || map.Spawns.Any(s => s.Patrol.Overlaps(bay))) continue;
-            map.Spawns.Add(new DungeonSpawn(0, true, bay.center, bay)); flying--;
-        }
+        // Encounter sites, not scattered singleton spawns, are added in a separate pass.
     }
 
-    private static bool Occupied(WfcDungeonLayout map, Rect area)
-    {
-        if (area.xMin < 1 || area.yMin < 1 || area.xMax > map.Width + 1 || area.yMax > map.Height + 1) return true;
-        for (int x = Mathf.FloorToInt(area.xMin); x < Mathf.CeilToInt(area.xMax); x++)
-            for (int y = Mathf.FloorToInt(area.yMin); y < Mathf.CeilToInt(area.yMax); y++)
-                if (map.Cells[x, y] != DungeonCell.Empty) return true;
-        return map.Landings.Any(p => p.Top > area.yMin + .05f && p.Top < area.yMax &&
-            p.Left < area.xMax && p.Left + p.Width > area.xMin);
-    }
 }

@@ -157,6 +157,15 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             Status += $"\nGenerator r{WfcWindingRoomLayout.Revision} | seed {seed} | {next.Landings.Count} platforms";
             Status += $"\n{turns} turns / {dips} descents" + (dips == 0 ? " (compact route fallback)" : "");
         }
+        if (next.Encounters != null)
+        {
+            var encounters = next.Encounters;
+            Status += $"\nCamps {encounters.Settlements.Count}/{encounters.RequestedCount} | spawn safe radius {encounters.SafeRadius:F0} cells";
+            Status += $"\nOld wall modules {encounters.TerrainRetained}/{encounters.TerrainCandidates} | camp foundations {encounters.Foundations.Count}";
+            Status += encounters.SpaciousRoute ? "\nSpacious platform fit" : "\nCompact platform fit (fewest valid landings)";
+            foreach (string warning in encounters.Warnings) Status += "\nWARNING: " + warning;
+            if (encounters.Warnings.Count > 0) Debug.LogWarning($"[WFC Encounters] seed {next.Seed}: " + string.Join("; ", encounters.Warnings));
+        }
         RefreshFields(); Busy = false;
         Debug.Log($"[WFC Dungeon] {next.ReproductionId} | {Status}");
     }
@@ -170,6 +179,8 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         foreach (var renderer in root.GetComponentsInChildren<TilemapRenderer>()) renderer.enabled = true;
         CreateDoor(root.transform, next);
         hero.transform.position = RootPosition(next.Spawn);
+        if (next.Encounters != null && next.Encounters.Warnings.Count > 0)
+            Debug.LogWarning($"[WFC Preview] seed {next.Seed}: " + string.Join("; ", next.Encounters.Warnings));
         follow.Configure(hero.transform, Vector2.zero, new Vector2(next.GridWidth, next.GridHeight) * settings.cellSize);
     }
     private GameObject BuildRoom(Transform root, WfcDungeonLayout map, DungeonRoom room)
@@ -221,16 +232,26 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         BuildPlatformColliders(platforms, map, b);
         CollisionMilliseconds += timing.Elapsed.TotalMilliseconds; timing.Restart();
         var actors = new GameObject($"Room {room.Id} actors"); actors.transform.SetParent(root, false); actors.SetActive(false);
-        foreach (var spawn in map.Spawns)
+        for (int spawnIndex = 0; spawnIndex < map.Spawns.Count; spawnIndex++)
         {
+            var spawn = map.Spawns[spawnIndex];
             if (spawn.Room != room.Id) continue;
             var prefab = spawn.Flying ? settings.eyePrefab : settings.orcPrefab;
-            var instance = Instantiate(prefab, actors.transform); instance.transform.localScale = Vector3.one * 5;
-            var collider = instance.GetComponent<Collider2D>();
-            float offset = collider is CapsuleCollider2D capsule ? (capsule.size.y * .5f - capsule.offset.y) * 5 : 2;
-            instance.transform.localPosition = new Vector3(spawn.Feet.x * settings.cellSize, spawn.Feet.y * settings.cellSize + (spawn.Flying ? 0 : offset + .08f), 0);
-            var leash = instance.AddComponent<GeneratedEnemyBounds>(); leash.flying = spawn.Flying;
-            leash.area = new Rect(spawn.Patrol.position * settings.cellSize, spawn.Patrol.size * settings.cellSize);
+            WfcEnemyGeometry.Measure(prefab, out var bodySize, out var bodyOffset);
+            if (!spawn.Flying && prefab.GetComponent<Collider2D>().isTrigger)
+                throw new InvalidOperationException("Orc needs a non-trigger body collider for physical floor support.");
+            if (bodySize.x + .12f >= spawn.Patrol.width * map.CellSize ||
+                (spawn.Flying && bodySize.y + .12f >= spawn.Patrol.height * map.CellSize))
+                throw new InvalidOperationException($"Enemy collider does not fit spawn {spawnIndex}, seed {map.Seed}.");
+            var instance = Instantiate(prefab, actors.transform);
+            instance.transform.localScale = Vector3.one * WfcEnemyGeometry.ActorScale;
+            Vector2 centre = spawn.Feet * map.CellSize;
+            if (!spawn.Flying) centre.y += bodySize.y * .5f + .06f;
+            instance.transform.localPosition = centre - bodyOffset;
+            var leash = instance.GetComponent<GeneratedEnemyBounds>() ?? instance.AddComponent<GeneratedEnemyBounds>();
+            DungeonEnemyPolicy? policy = map.Encounters != null && map.Encounters.SpawnPolicies.TryGetValue(spawnIndex, out var entry)
+                ? entry : (DungeonEnemyPolicy?)null;
+            leash.Configure(root, spawn.Patrol, spawn.Flying, map.CellSize, map.Encounters, policy);
             if (!spawn.Flying && instance.GetComponent<Entity>() is { } entity) entity.ConfigureGeneratedProbes();
         }
         MonsterMilliseconds += timing.Elapsed.TotalMilliseconds;

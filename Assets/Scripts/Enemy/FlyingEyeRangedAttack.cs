@@ -35,7 +35,8 @@ public sealed class FlyingEyeRangedAttack : MobAttackBehaviour
         !attacking && Time.time >= nextAttackTime;
     public GameObject ProjectilePrefab => projectilePrefab;
     public bool HasLivingTarget => target != null && target.gameObject.activeInHierarchy &&
-        target.GetComponentInParent<IDamageable>() is { IsDead: false } && !GameManager.MatchIsOver;
+        target.GetComponentInParent<IDamageable>() is { IsDead: false } && !GameManager.MatchIsOver &&
+        (!(GetComponent<GeneratedEnemyBounds>() is { } bounds) || bounds.AllowsTarget(target));
 
     private void Awake()
     {

@@ -37,9 +37,11 @@ public class Enemy : Entity
 
     public bool RoleDetection()
     {
-        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, roleCheckDistance);
-        if (player == null || (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(player.transform)))
-            return false;
+        var generated = GetComponent<GeneratedEnemyBounds>();
+        float search = generated != null && generated.SearchRadius > 0 ? generated.SearchRadius : roleCheckDistance;
+        IDamageable player = CombatTargets.FindClosest(transform.position, CombatFaction.Player, search);
+        if (player == null || (generated != null && !generated.AllowsTarget(player.transform)))
+        { if (generated != null) Role = null; return false; }
         float horizontal = player.transform.position.x - transform.position.x;
         if (Role == null && requireFacingForInitialDetection && Mathf.Abs(horizontal) > 0.25f && Mathf.Sign(horizontal) != facingside)
             return false;
@@ -54,13 +56,16 @@ public class Enemy : Entity
         IDamageable sourceHealth = source != null ? source.GetComponentInParent<IDamageable>() : null;
         if (sourceHealth == null || sourceHealth.Faction != CombatFaction.Player)
             return;
-        Role = sourceHealth is Component component ? component.transform : source;
+        Transform proposed = sourceHealth is Component component ? component.transform : source;
+        if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(proposed)) return;
+        Role = proposed;
         if (stateMachine.currentState != battleState && stateMachine.currentState != attackState)
             stateMachine.Change(battleState);
     }
 
     public Transform GetRole()
     {
+        if (Role != null && GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(Role)) Role = null;
         if (Role == null)
             RoleDetection();
         return Role;
