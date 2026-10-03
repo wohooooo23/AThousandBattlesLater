@@ -56,6 +56,11 @@ Items observed while migrating the campaign Bosses to Unity Animator and improvi
 
 ## Single-room follow-up
 
+- [x] Review C1: retain Flying Eye detectionRange alongside generated camp/safe-zone/visibility restrictions, including cached-target decisions; 11/11 eye Play Mode tests passed on 2026-10-03.
+
+- [ ] Audit A1 (`35663da`, retained by `1c96487`): validate horizontal jump/dash utilization using the final launch and landing shelf edges after variable widths are selected; centre spacing and a fixed 3.25-cell gap do not preserve the 75% movement-budget requirement. See `COMMIT_AUDIT.md`.
+- [ ] Audit A2: update `WfcDungeonBuilder.VerifyDomains` for horizontal double jumps, descents, current 100-cell minimum width and encounter-platform rules. Synchronize real-Hero fixtures and document current test results separately from the 2026-09-29 baseline.
+
 - [x] Replace the default room grid with one seeded 50-150 by 50-100 winding room, a configurable fixed route-length multiplier, large action-budget jumps, fractional ledges and ordinary walls only. Retain the multi-room solver as an explicit reference mode.
 - [ ] Extend the route grammar with descending loops, authored combat arenas and more campaign-like boundary protrusions. Keep every new module's action and clearance constraints explicit; do not add runtime post-generation reachability repair.
 - [ ] Add more art variants for isolated single-cell exterior borders: the nine-part palette can express a rectangle, but a one-cell-thick shell shares opposing edge conditions. Dedicated thin-border art would avoid choosing one edge priority.

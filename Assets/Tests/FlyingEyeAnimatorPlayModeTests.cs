@@ -112,6 +112,47 @@ public sealed class FlyingEyeAnimatorPlayModeTests
         yield return Animated("Idle");
     }
 
+    [UnityTest]
+    public IEnumerator GeneratedCampRestrictsDetectionWithoutExtendingIt()
+    {
+        Spawn();
+        Field(controller, "idleDuration", 30f);
+        var root = new GameObject("Test camp");
+        root.transform.position = eye.transform.position;
+        var bounds = eye.AddComponent(Runtime("GeneratedEnemyBounds"));
+        object plan = Activator.CreateInstance(Runtime("WfcEncounterPlan"));
+        plan.GetType().GetField("SafeCentre").SetValue(plan, new Vector2(-200, -200));
+        object policy = Activator.CreateInstance(Runtime("DungeonEnemyPolicy"), 0, Vector2.zero, 100f);
+        Call(bounds, "Configure", root.transform, new Rect(-100, -100, 200, 200), true, 1f, plan, policy);
+
+        Target(2070); // Inside the camp, but beyond detectionRange (48).
+        Assert.That((bool)Call(bounds, "AllowsTarget", hero.transform), Is.True);
+        // Exercise the property independently of acquisition (e.g. a previously cached target).
+        controller.GetType().GetProperty("Target").GetSetMethod(true).Invoke(controller, new object[] { hero.transform });
+        Assert.That(Property<bool>(controller, "TargetInRange"), Is.False);
+        yield return null;
+        Assert.That(Property<Transform>(controller, "Target"), Is.Null);
+        Assert.That(State, Is.EqualTo("Idle"));
+        Assert.That(Warning, Is.False);
+        Assert.That(Shots, Is.Empty);
+
+        Target(2042); // Inside both ranges, outside attack range: chase normally.
+        yield return Animated("Chase");
+        Assert.That(Property<bool>(controller, "TargetInRange"), Is.True);
+
+        policy = Activator.CreateInstance(Runtime("DungeonEnemyPolicy"), 0, Vector2.zero, 15f);
+        Call(bounds, "Configure", root.transform, new Rect(-100, -100, 200, 200), true, 1f, plan, policy);
+        Target(2020); // Close to the eye, but outside its settlement.
+        Assert.That((bool)Call(bounds, "AllowsTarget", hero.transform), Is.False);
+        Assert.That(Property<bool>(controller, "TargetInRange"), Is.False);
+        yield return Animated("Idle");
+        Assert.That(Warning, Is.False);
+        Assert.That(Shots, Is.Empty);
+        Target(2010);
+        yield return Animated("Attack");
+        Object.Destroy(root);
+    }
+
     [UnityTest] public IEnumerator NormalAttackReleasesOnSeventhFrameAndEndsBeforeCooldown() => AttackTiming("Normal", .5f, 2f, 20f);
     [UnityTest] public IEnumerator HardAttackScalesTheEntireClipDamageAndCooldown() => AttackTiming("Hard", .3f, 1.3f, 28f);
 

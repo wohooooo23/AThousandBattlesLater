@@ -1,6 +1,16 @@
 # A Thousand Battles Later
 
-Unity 6000.5.2f1 2D action platformer. The enabled build scenes are `StartMenu`, `stage1_full`, `stage2_full`, and `Help` (in that order). Open the project with the version recorded in `ProjectSettings/ProjectVersion.txt`; editor-generated `Library`, `Temp`, and `Logs` are local data.
+## Handoff and latest audit
+
+See [中文交接文档](HANDOFF.md) and [近期提交审计](COMMIT_AUDIT.md), updated for `1c96487` (2026-10-03). The current single-room generator uses widths **100–150**, timestamp seeds for new maps, descending route segments, variable-width platforms and separated enemy settlements. The single-room walkthrough and **32/32 tests / 212 layouts** recorded later in this README describe the **2026-09-29 baseline**, not verification of these later commits. Use the handoff and audit for the current status and outstanding validation work.
+
+Unity 6000.5.2f1 2D action platformer. The enabled build scenes are `StartMenu`, `stage1_full`, `stage2_full`, `Help`, `WfcRoom20x20`, and `WfcDungeon` (in that order). Open the project with the version recorded in `ProjectSettings/ProjectVersion.txt`; editor-generated `Library`, `Temp`, and `Logs` are local data.
+
+### Review follow-up · 2026-10-03
+
+Generated Flying Eyes now acquire targets within their own `detectionRange`, then require the settlement's region, spawn safety and line-of-sight rules. `TargetInRange` also checks both distance and region for cached targets. The perception pipeline is `CombatTargets` → distance-limited acquisition → generated-region filter → Idle/Patrol/Chase/Attack state decision → Animator parameters → release event → region-limited projectile and damage. A larger settlement cannot enlarge an eye's authored perception range.
+
+Unity 6000.5.2f1 ran **11/11 FlyingEyeAnimatorPlayModeTests successfully** (`Logs/review-eye-tests.xml`), including targets inside a camp but beyond detection, targets nearby but outside the camp, normal/hard release timing, Hurt, death and both campaign scenes. Sparse routes retain the latest candidate selection and compact fallback; horizontal gaps no longer have a universal 75% lower bound. The builder/route validation follow-up is still pending.
 
 ## Gameplay pipeline
 
