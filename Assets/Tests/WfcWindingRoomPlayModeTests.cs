@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -19,6 +20,7 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
     private Rigidbody2D body;
     private int capture;
     private string gapTrace;
+    private ScriptableObject startupSettings;
     public override void Setup()
     {
         base.Setup(); InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
@@ -29,7 +31,23 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
     {
         foreach (string type in new[] { "RunEquipment", "RunInventory", "RunProgress" })
             Type.GetType(type + ", Assembly-CSharp").GetMethod("Reset").Invoke(null, null);
-        Time.timeScale = 1; SceneManager.LoadScene("WfcDungeon");
+        Time.timeScale = 1;
+        void Bootstrap(Scene scene, LoadSceneMode mode)
+        {
+            generator = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true))
+                .First(c => c.GetType().Name == "WfcDungeonGenerator");
+            startupSettings = Object.Instantiate((ScriptableObject)generator.GetType().GetField("settings").GetValue(generator));
+            startupSettings.GetType().GetField("randomizeRoomSize").SetValue(startupSettings, false);
+            startupSettings.GetType().GetField("width").SetValue(startupSettings, 120);
+            startupSettings.GetType().GetField("height").SetValue(startupSettings, 80);
+            startupSettings.GetType().GetField("enemyDensity").SetValue(startupSettings, 0f);
+            generator.GetType().GetField("settings").SetValue(generator, startupSettings);
+            generator.GetType().GetField("timestampSeed").SetValue(generator, false);
+            generator.GetType().GetField("seed").SetValue(generator, 3);
+        }
+        SceneManager.sceneLoaded += Bootstrap;
+        try { SceneManager.LoadScene("WfcDungeon"); yield return null; }
+        finally { SceneManager.sceneLoaded -= Bootstrap; }
         yield return null; yield return null;
         generator = GameObject.Find("WFC Dungeon").GetComponent("WfcDungeonGenerator");
         hero = GameObject.Find("Hero").GetComponent("Role"); body = hero.GetComponent<Rigidbody2D>();
@@ -44,6 +62,7 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         Time.captureFramerate = capture;
         Scene old = SceneManager.GetActiveScene(); SceneManager.SetActiveScene(SceneManager.CreateScene("Dungeon test cleanup"));
         yield return SceneManager.UnloadSceneAsync(old);
+        if (startupSettings != null) Object.Destroy(startupSettings);
     }
     private IEnumerator Ready()
     {
@@ -56,12 +75,14 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
     public IEnumerator RealHeroTraversesCompleteWindingRoutes()
     {
         object profile = Field<object>(Get<object>(generator, "Layout"), "Profile");
-        foreach (var request in new[] { new Vector3Int(50, 50, 3), new Vector3Int(150, 50, 11), new Vector3Int(83, 97, 17) })
+        foreach (var request in new[] { new Vector3Int(100, 50, 3), new Vector3Int(150, 50, 11), new Vector3Int(127, 97, 17) })
         {
             yield return (IEnumerator)Call(generator, "GenerateConfigured", request.x, request.y, request.z, profile, 0f, 2f, true);
             yield return Ready();
             var layout = Get<object>(generator, "Layout");
             Assert.That(Field<int>(layout, "Seed"), Is.EqualTo(request.z), Get<string>(generator, "Status"));
+            Assert.That(Field<int>(layout, "Width"), Is.EqualTo(request.x));
+            Assert.That(Field<int>(layout, "Height"), Is.EqualTo(request.y));
             var room = Rooms()[0];
             var actions = (IList)Field<object>(room, "Actions");
             var budget = Activator.CreateInstance(Type.GetType("WindingTraversalBudget, Assembly-CSharp"), profile, Time.fixedDeltaTime);
@@ -115,7 +136,7 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
     {
         var layout = Get<object>(generator, "Layout");
         Assert.That(Rooms().Count, Is.EqualTo(1));
-        Assert.That(Field<int>(layout, "Width"), Is.InRange(50, 150));
+        Assert.That(Field<int>(layout, "Width"), Is.InRange(100, 150));
         Assert.That(Field<int>(layout, "Height"), Is.InRange(50, 100));
         Assert.That(Field<float>(layout, "ActualRouteLength"), Is.EqualTo(Field<float>(layout, "TargetRouteLength")).Within(.1f));
         Assert.That(Field<float>(layout, "RouteMultiplier"), Is.EqualTo(2));
@@ -137,6 +158,129 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         Assert.That(Call(Get<object>(generator, "Layout"), "Signature"), Is.EqualTo(signature));
         Assert.That(owned == null, Is.True);
     }
+    [UnityTest]
+    public IEnumerator BuilderAndSparseDataContractsUseInitializedHero()
+    {
+        object layout = Get<object>(generator, "Layout");
+        object profile = Field<object>(layout, "Profile");
+        EditorCall("WfcDungeonBuilder", "VerifyDomains", startupSettings, profile);
+        EditorCall("WfcVarietyRegression", "CheckTerrainBudgets", layout);
+        EditorCall("WfcVarietyRegression", "Run");
+        EditorCall("WfcEncounterRegression", "Run");
+        EditorCall("WfcEncounterRegression", "RunSafety");
+        foreach (float density in new[] { 0f, 3f })
+        {
+            object map = Type.GetType("WfcWindingRoomLayout, Assembly-CSharp").GetMethod("Generate")
+                .Invoke(null, new object[] { startupSettings, 120, 80, 3, profile, density });
+            EditorCall("WfcVarietyRegression", "Check", map);
+            EditorCall("WfcEncounterRegression", "Check", map, startupSettings);
+            if (density == 0) Assert.That(((IList)Field<object>(map, "Spawns")).Count, Is.Zero);
+            else Assert.That(((IList)Field<object>(map, "Spawns")).Count, Is.GreaterThan(0));
+        }
+        yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator FinalShelfMetricsAndLegacyWidthNormalizationAreExplicit()
+    {
+        object profile = Field<object>(Get<object>(generator, "Layout"), "Profile");
+        var generate = Type.GetType("WfcWindingRoomLayout, Assembly-CSharp").GetMethod("Generate");
+        object small = generate.Invoke(null, new object[] { startupSettings, 50, 50, 3, profile, 0f });
+        object normalized = generate.Invoke(null, new object[] { startupSettings, 100, 50, 3, profile, 0f });
+        Assert.That(Field<int>(small, "Width"), Is.EqualTo(100));
+        Assert.That(Call(small, "Signature"), Is.EqualTo(Call(normalized, "Signature")));
+        var landings = (IList)Field<object>(normalized, "Landings");
+        var primaryActions = (IList)Field<object>(((IList)Field<object>(normalized, "Rooms"))[0], "Actions");
+        var metrics = (IList)EditorCall("WfcVarietyRegression", "MeasureActions", normalized);
+        Assert.That(Field<object>(metrics[0], "HorizontalGap"), Is.Null, "Continuous ground has no launch edge.");
+        for (int i = 1; i < metrics.Count; i++)
+        {
+            object from = landings[i - 1], to = landings[i];
+            float direction = Field<Vector2>(primaryActions[i], "Exit").x - Field<Vector2>(primaryActions[i], "Entry").x;
+            float gap = direction > 0 ? Field<float>(to, "Left") - Field<float>(from, "Left") - Field<int>(from, "Width")
+                : Field<float>(from, "Left") - Field<float>(to, "Left") - Field<int>(to, "Width");
+            Assert.That(Field<float>(metrics[i], "HorizontalGap"), Is.EqualTo(Mathf.Max(0, gap) * Field<float>(normalized, "CellSize")).Within(.001f));
+        }
+        // A missing primary landing must fail validation, rather than saving a partial preview.
+        while (landings.Count >= primaryActions.Count) landings.RemoveAt(landings.Count - 1);
+        var error = Assert.Throws<TargetInvocationException>(() => EditorCall("WfcVarietyRegression", "Check", normalized));
+        Assert.That(error.InnerException, Is.TypeOf<InvalidOperationException>());
+        yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator RealHeroDashAndVariableWidthGapUseTheDashBudget()
+    {
+        object profile = Field<object>(Get<object>(generator, "Layout"), "Profile");
+        object budget = Activator.CreateInstance(Type.GetType("WindingTraversalBudget, Assembly-CSharp"), profile, Time.fixedDeltaTime);
+        float cell = Cell(), distance = Field<float>(budget, "FlatDistance") * .85f + 3 * cell;
+        Type actionType = Type.GetType("DungeonAction, Assembly-CSharp"), kindType = Type.GetType("DungeonActionKind, Assembly-CSharp");
+        object Action(string kind, Vector2 from, Vector2 to, float width) => Activator.CreateInstance(actionType,
+            Enum.Parse(kindType, kind), from, to, width, new Rect());
+        Vector2 start = new Vector2(600, 600), end = start + Vector2.right * distance / cell;
+        object dash = Action("Dash", start, end, 11f);
+        object map = Activator.CreateInstance(Type.GetType("WfcDungeonLayout, Assembly-CSharp"));
+        void Set(string name, object value) => map.GetType().GetField(name).SetValue(map, value);
+        Vector2 spawn = start - Vector2.up * (Field<float>(budget, "DoubleHeight") * .8f / cell);
+        Set("Profile", profile); Set("CellSize", cell); Set("PhysicsStep", Time.fixedDeltaTime); Set("Spawn", spawn);
+        object room = Activator.CreateInstance(Type.GetType("DungeonRoom, Assembly-CSharp"));
+        ((IList)Field<object>(map, "Rooms")).Add(room);
+        var actions = (IList)Field<object>(room, "Actions");
+        actions.Add(Action("DoubleJump", spawn, start, 5f)); actions.Add(dash);
+        var shelves = (IList)Field<object>(map, "Landings");
+        Type shelfType = Type.GetType("DungeonLanding, Assembly-CSharp");
+        shelves.Add(Activator.CreateInstance(shelfType, start.x - 2.5f, start.y, 5));
+        shelves.Add(Activator.CreateInstance(shelfType, end.x - 5.5f, end.y, 11));
+        var metrics = (IList)EditorCall("WfcVarietyRegression", "MeasureActions", map);
+        Assert.That(Field<string>(metrics[1], "Direction"), Is.EqualTo("Dash"));
+        Assert.That(Field<float>(metrics[1], "HorizontalGap"), Is.EqualTo(distance - 8 * cell).Within(.001f));
+        Assert.That(Field<float>(metrics[1], "GapUtilization"), Is.LessThan(.75f), "A wide legal landing is not rejected by the obsolete lower bound.");
+        actions[1] = Action("Dash", start, end + Vector2.right * Field<float>(budget, "FlatDistance") / cell, 11f);
+        var error = Assert.Throws<TargetInvocationException>(() => EditorCall("WfcVarietyRegression", "MeasureActions", map));
+        Assert.That(error.InnerException.Message, Does.Contain("dash exceeds"));
+        actions[1] = dash;
+
+        var fixture = new GameObject("Isolated dash platforms");
+        try
+        {
+            foreach (object shelf in shelves)
+            {
+                var platform = new GameObject("One-way dash landing", typeof(BoxCollider2D), typeof(PlatformEffector2D));
+                platform.layer = 6; platform.transform.SetParent(fixture.transform);
+                var box = platform.GetComponent<BoxCollider2D>();
+                box.size = new Vector2(Field<int>(shelf, "Width") * cell, .02f * cell); box.usedByEffector = true;
+                platform.transform.position = new Vector3((Field<float>(shelf, "Left") + Field<int>(shelf, "Width") * .5f) * cell,
+                    Field<float>(shelf, "Top") * cell - box.size.y * .5f, 0);
+                platform.GetComponent<PlatformEffector2D>().useOneWay = true;
+            }
+            yield return Place(start);
+            yield return JumpAction(dash, budget);
+            Assert.That(Get<bool>(hero, "isgrounded"), Is.True);
+        }
+        finally { Object.Destroy(fixture); }
+    }
+
+    [UnityTest]
+    public IEnumerator InvalidPreviewCannotOverwriteSavedDungeonScene()
+    {
+        string path = Path.Combine(Application.dataPath, "Scenes/WfcDungeon.unity");
+        byte[] before = File.ReadAllBytes(path);
+        var property = generator.GetType().GetProperty("Layout");
+        object valid = property.GetValue(generator);
+        try
+        {
+            property.GetSetMethod(true).Invoke(generator, new object[] { null });
+            var error = Assert.Throws<TargetInvocationException>(() => EditorCall("WfcDungeonBuilder", "SaveValidatedScene", SceneManager.GetActiveScene(), generator));
+            Assert.That(error.InnerException, Is.TypeOf<InvalidOperationException>());
+            Assert.That(File.ReadAllBytes(path), Is.EqualTo(before));
+        }
+        finally { property.GetSetMethod(true).Invoke(generator, new[] { valid }); }
+        yield return null;
+    }
+
+    private static object EditorCall(string type, string method, params object[] args) =>
+        Type.GetType(type + ", Assembly-CSharp-Editor", true).GetMethod(method).Invoke(null, args);
+
     [UnityTest]
     public IEnumerator MultiplierIsTransactionalAndDeathRetryKeepsItsSnapshot()
     {

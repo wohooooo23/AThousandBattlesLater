@@ -100,7 +100,7 @@ public static class WfcVarietyRegression
         catch (Exception error) { Debug.LogException(error); }
     }
 
-    private static void CheckTerrainBudgets(WfcDungeonLayout source)
+    public static void CheckTerrainBudgets(WfcDungeonLayout source)
     {
         // Exercise the real terrain solver independently of route-domain generation.
         var fillTerrain = typeof(WfcWindingRoomLayout).GetMethod("FillTerrain",
@@ -169,7 +169,7 @@ public static class WfcVarietyRegression
         return map;
     }
 
-    private static void Check(WfcDungeonLayout map)
+    public static void Check(WfcDungeonLayout map)
     {
         Require(map.Width >= 100 && map.Width <= 150 && map.Height >= 50 && map.Height <= 100, "Map size is invalid.");
         Require(map.Rooms.Count == 1 && map.Cells.GetLength(0) == map.Width + 2 &&
@@ -181,17 +181,12 @@ public static class WfcVarietyRegression
         float measured = room.Actions.Sum(a => Vector2.Distance(a.Entry, a.Exit));
         Require(Mathf.Abs(measured - map.TargetRouteLength) < .1f &&
             Mathf.Abs(measured - map.ActualRouteLength) < .1f, "Fixed route-length contract failed.");
+        MeasureActions(map); // Validate movement contracts using the same rules as the builder.
         for (int i = 0; i < room.Actions.Count; i++)
         {
             var action = room.Actions[i];
             Require(action.Exit.x >= 1 && action.Exit.x <= map.Width + 1 &&
                 action.Exit.y >= 1 && action.Exit.y < map.Height + 1, "Route leaves interior.");
-            float rise = (action.Exit.y - action.Entry.y) * map.CellSize;
-            if (rise > .01f)
-            {
-                float utilization = rise / (2 * map.Profile.JumpHeight);
-                Require(utilization >= .75f && utilization <= .90f, "Upward jump utilization was relaxed.");
-            }
             var landing = map.Landings[i];
             Require(action.LandingWidth == landing.Width, "Action landing width does not match collider data.");
             Require(action.Exit.x >= landing.Left && action.Exit.x <= landing.Left + landing.Width &&
@@ -219,6 +214,86 @@ public static class WfcVarietyRegression
             Require(!room.Actions.Any(a => a.Clearance.Overlaps(new Rect(wall.position, wall.size))),
                 "Solid wall intrudes on the reserved jump corridor.");
         }
+    }
+
+    public readonly struct ActionMetrics
+    {
+        public readonly int Index;
+        public readonly string Direction;
+        public readonly float Rise, CentreDistance, Budget, HeightUtilization;
+        // The first action starts on continuous ground: there is no finite launch shelf edge.
+        public readonly float? HorizontalGap, GapUtilization;
+        public ActionMetrics(int index, string direction, float rise, float distance, float budget,
+            float heightUtilization, float? gap)
+        { Index = index; Direction = direction; Rise = rise; CentreDistance = distance; Budget = budget;
+            HeightUtilization = heightUtilization; HorizontalGap = gap; GapUtilization = gap / budget; }
+    }
+
+    /// <summary>Editor-only diagnostics. Does not filter, repair or change a generated map.</summary>
+    public static List<ActionMetrics> MeasureActions(WfcDungeonLayout map)
+    {
+        var actions = map.Rooms[0].Actions;
+        Require(map.Landings.Count >= actions.Count, "Missing primary landing.");
+        var budget = new WindingTraversalBudget(map.Profile, map.PhysicsStep);
+        float cell = map.CellSize;
+        int baseWidth = Mathf.Max(3, Mathf.CeilToInt((map.Profile.Size.x + 5f) / cell));
+        bool spacious = map.Encounters != null && map.Encounters.SpaciousRoute;
+        var result = new List<ActionMetrics>();
+        for (int i = 0; i < actions.Count; i++)
+        {
+            var a = actions[i];
+            float rise = (a.Exit.y - a.Entry.y) * cell;
+            float dx = Mathf.Abs(a.Exit.x - a.Entry.x) * cell;
+            float limit, height = rise / budget.DoubleHeight;
+            string direction;
+            if (a.Kind == DungeonActionKind.Dash)
+            {
+                direction = "Dash"; limit = budget.FlatDistance;
+                Require(Mathf.Abs(rise) < .01f, $"Action {i}: dash must be horizontal.");
+                // Match admission's minimum shelf budget; final shelves may be wider.
+                Require(dx - baseWidth * cell <= limit * .9001f,
+                    $"Action {i}: dash exceeds its movement budget.");
+                Require(dx + .01f >= budget.DashCount * map.Profile.DashSpeed * map.Profile.DashDuration + map.Profile.Size.x + 2f,
+                    $"Action {i}: no braking space for complete dashes.");
+            }
+            else
+            {
+                Require(a.Kind == DungeonActionKind.DoubleJump, $"Action {i}: unexpected winding action {a.Kind}.");
+                direction = rise > .01f ? "Up" : rise < -.01f ? "Down" : "Flat";
+                limit = budget.HighJumpDistance(rise);
+                Require(limit > 0 && dx <= limit + .01f, $"Action {i}: {direction} exceeds its movement budget.");
+                if (rise > .01f)
+                    Require(height >= (spacious ? .83f : .77f) - .0001f &&
+                        height <= (spacious ? .89f : .86f) + .0001f,
+                        $"Action {i}: upward height violates the selected route grammar.");
+            }
+            Require(float.IsFinite(dx + rise + limit), $"Action {i}: nonfinite movement values.");
+            Require(Vector2.Distance(a.Entry, i == 0 ? map.Spawn : actions[i - 1].Exit) < .001f,
+                $"Action {i}: disconnected action endpoints.");
+            var to = map.Landings[i];
+            float? gap = null;
+            if (i > 0)
+            {
+                var from = map.Landings[i - 1];
+                gap = Mathf.Max(0, Mathf.Max(from.Left, to.Left) -
+                    Mathf.Min(from.Left + from.Width, to.Left + to.Width)) * cell;
+            }
+            result.Add(new ActionMetrics(i, direction, rise, dx, limit, height, gap));
+        }
+        if (spacious)
+            for (int i = 0; i < actions.Count; i++)
+                for (int j = i + 1; j < actions.Count; j++)
+                    Require(WfcWindingRoomLayout.ShelfGap(map.Landings[i], map.Landings[j]) >=
+                        WfcWindingRoomLayout.MinimumShelfGap - .001f, "Spacious primary shelf spacing failed.");
+        return result;
+    }
+
+    public static string ActionReport(WfcDungeonLayout map)
+    {
+        var text = new StringBuilder();
+        foreach (var m in MeasureActions(map))
+            text.AppendLine(FormattableString.Invariant($"{map.Seed},{map.Width},{map.Height},{map.Encounters.SpaciousRoute},{m.Index},{m.Direction},{m.Rise:R},{m.CentreDistance:R},{m.Budget:R},{m.HeightUtilization:R},{m.HorizontalGap},{m.GapUtilization}"));
+        return text.ToString();
     }
 
     private static string Fingerprint(WfcDungeonLayout map)

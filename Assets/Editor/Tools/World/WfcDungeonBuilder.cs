@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -19,7 +20,6 @@ public static class WfcDungeonBuilder
         if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         var scene = EditorSceneManager.OpenScene(WfcRoomBuilder.ScenePath, Application.isBatchMode ? OpenSceneMode.Single : OpenSceneMode.Additive);
         SceneManager.SetActiveScene(scene);
-        EditorSceneManager.SaveScene(scene, ScenePath);
         Directory.CreateDirectory(Folder); AssetDatabase.Refresh();
         var settings = AssetDatabase.LoadAssetAtPath<WfcDungeonSettings>(Folder + "/Settings.asset");
         if (settings == null) { settings = ScriptableObject.CreateInstance<WfcDungeonSettings>(); AssetDatabase.CreateAsset(settings, Folder + "/Settings.asset"); }
@@ -73,20 +73,30 @@ public static class WfcDungeonBuilder
         serialized.FindProperty("notificationText").objectReferenceValue = notice;
         serialized.FindProperty("coinItem").objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemData>("Assets/Prefab/GoldCoin.asset");
         serialized.ApplyModifiedPropertiesWithoutUndo();
+        VerifyDomains(settings, TraversalProfile.Capture(hero));
         generator.BuildPreview(); generator.SetOverview(true);
-        EditorSceneManager.SaveScene(scene, ScenePath);
+        SaveValidatedScene(scene, generator);
         if (!EditorBuildSettings.scenes.Any(s => s.path == ScenePath)) EditorBuildSettings.scenes = EditorBuildSettings.scenes.Concat(new[] { new EditorBuildSettingsScene(ScenePath, true) }).ToArray();
         AssetDatabase.SaveAssets();
-        VerifyDomains(settings, hero); Capture(camera);
+        Capture(camera);
         camera.orthographicSize = 28;
         camera.transform.position = generator.RootPosition(generator.Layout.Rooms[0].Route[2]) + new Vector3(0, 6, -10);
         Capture(camera, "WfcDungeonDetail");
         generator.SetOverview(true);
         Debug.Log("[WFC Dungeon] Built " + ScenePath);
     }
-    private static void VerifyDomains(WfcDungeonSettings settings, Role hero)
+    public static void SaveValidatedScene(Scene scene, WfcDungeonGenerator generator)
     {
-        var p = TraversalProfile.Capture(hero);
+        if (generator.Layout == null || generator.Content == null)
+            throw new InvalidOperationException("A complete dungeon preview is required before saving.");
+        WfcVarietyRegression.Check(generator.Layout);
+        WfcEncounterRegression.Check(generator.Layout, generator.settings);
+        if (!EditorSceneManager.SaveScene(scene, ScenePath))
+            throw new IOException("Could not save the validated WFC Dungeon scene.");
+    }
+
+    public static void VerifyDomains(WfcDungeonSettings settings, TraversalProfile p)
+    {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         int maps = 0;
         foreach (var size in new[] { new Vector2Int(120, 80), new Vector2Int(127, 83), new Vector2Int(256, 256) })
@@ -109,31 +119,26 @@ public static class WfcDungeonBuilder
                     p.Gravity, p.Size * size, 2, true, p.DashSpeed, p.DashDuration, p.DashCooldown, p.WallJump, p.WallLock, p.WallFall);
                 WfcDungeonLayout.GenerateMultiRoom(settings, 256, 256, 23, profile, 1); maps++;
             }
-        foreach (var size in new[] { new Vector2Int(50, 50), new Vector2Int(50, 100), new Vector2Int(150, 50), new Vector2Int(150, 100), new Vector2Int(97, 73) })
+        var report = new StringBuilder("seed,width,height,spacious,action,direction,rise_world,centre_distance_world,budget_world,height_utilization,horizontal_gap_world,gap_utilization\n");
+        foreach (var size in new[] { new Vector2Int(100, 50), new Vector2Int(100, 100), new Vector2Int(150, 50), new Vector2Int(150, 100), new Vector2Int(127, 73) })
             for (int seed = 0; seed < 12; seed++)
             {
                 var a = WfcWindingRoomLayout.Generate(settings, size.x, size.y, seed, p, 1);
                 var b = WfcWindingRoomLayout.Generate(settings, size.x, size.y, seed, p, 1);
+                if (a.Width != size.x || a.Height != size.y)
+                    throw new InvalidOperationException("Explicit single-room dimensions changed.");
                 if (a.Signature() != b.Signature() || Mathf.Abs(a.ActualRouteLength - a.TargetRouteLength) > .1f)
                     throw new InvalidOperationException("Winding route length/determinism contract failed.");
                 if (a.Rooms.Count != 1 || a.Cells.Cast<DungeonCell>().Any(c => c == DungeonCell.Smooth))
                     throw new InvalidOperationException("Single room must contain only ordinary walls.");
-                var budget = new WindingTraversalBudget(p, Time.fixedDeltaTime);
-                foreach (var action in a.Rooms[0].Actions)
-                {
-                    float utilization = action.Kind == DungeonActionKind.DoubleJump
-                        ? (action.Exit.y - action.Entry.y) * a.CellSize / budget.DoubleHeight
-                        : (Mathf.Abs(action.Exit.x - action.Entry.x) - action.LandingWidth) * a.CellSize / budget.FlatDistance;
-                    if (utilization < .75f || utilization > .9001f)
-                        throw new InvalidOperationException("Jump utilization outside 75-90%.");
-                    if (a.Rooms[0].Decorations.Any(w => action.Clearance.Overlaps(new Rect(w.position, w.size))))
-                        throw new InvalidOperationException("Solid rectangle blocks a reserved action envelope.");
-                    if (a.Spawns.Any(s => action.Clearance.Overlaps(s.Patrol)))
-                        throw new InvalidOperationException("Enemy patrol overlaps a required action envelope.");
-                }
+                WfcVarietyRegression.Check(a);
+                WfcEncounterRegression.Check(a, settings);
+                report.Append(WfcVarietyRegression.ActionReport(a));
                 maps++;
             }
-        Debug.Log($"[WFC Dungeon] Offline {maps} layouts: 152 retained multi-room domains plus 60 single-room size/seed/length/action/clearance checks; {watch.ElapsedMilliseconds} ms.");
+        Directory.CreateDirectory("Logs");
+        File.WriteAllText("Logs/wfc-action-metrics.csv", report.ToString());
+        Debug.Log($"[WFC Dungeon] Offline {maps} layouts: 152 retained multi-room domains plus 60 single-room size/seed/length/action/clearance/encounter checks; {watch.ElapsedMilliseconds} ms. Final shelf gap diagnostics: Logs/wfc-action-metrics.csv.");
     }
     private static void Capture(Camera camera, string name = "WfcDungeon")
     {

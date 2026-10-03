@@ -19,6 +19,7 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
     private Rigidbody2D body;
     private int capture;
     private string gapTrace;
+    private ScriptableObject startupSettings;
     public override void Setup()
     {
         base.Setup(); InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
@@ -29,7 +30,23 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
     {
         foreach (string type in new[] { "RunEquipment", "RunInventory", "RunProgress" })
             Type.GetType(type + ", Assembly-CSharp").GetMethod("Reset").Invoke(null, null);
-        Time.timeScale = 1; SceneManager.LoadScene("WfcDungeon");
+        Time.timeScale = 1;
+        void Bootstrap(Scene scene, LoadSceneMode mode)
+        {
+            generator = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true))
+                .First(c => c.GetType().Name == "WfcDungeonGenerator");
+            startupSettings = Object.Instantiate((ScriptableObject)generator.GetType().GetField("settings").GetValue(generator));
+            startupSettings.GetType().GetField("randomizeRoomSize").SetValue(startupSettings, false);
+            startupSettings.GetType().GetField("width").SetValue(startupSettings, 120);
+            startupSettings.GetType().GetField("height").SetValue(startupSettings, 80);
+            startupSettings.GetType().GetField("enemyDensity").SetValue(startupSettings, 0f);
+            generator.GetType().GetField("settings").SetValue(generator, startupSettings);
+            generator.GetType().GetField("timestampSeed").SetValue(generator, false);
+            generator.GetType().GetField("seed").SetValue(generator, 3);
+        }
+        SceneManager.sceneLoaded += Bootstrap;
+        try { SceneManager.LoadScene("WfcDungeon"); yield return null; }
+        finally { SceneManager.sceneLoaded -= Bootstrap; }
         yield return null; yield return null;
         generator = GameObject.Find("WFC Dungeon").GetComponent("WfcDungeonGenerator");
         hero = GameObject.Find("Hero").GetComponent("Role"); body = hero.GetComponent<Rigidbody2D>();
@@ -47,6 +64,7 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
         Time.captureFramerate = capture;
         Scene old = SceneManager.GetActiveScene(); SceneManager.SetActiveScene(SceneManager.CreateScene("Dungeon test cleanup"));
         yield return SceneManager.UnloadSceneAsync(old);
+        if (startupSettings != null) Object.Destroy(startupSettings);
     }
     private IEnumerator Ready()
     {
@@ -172,8 +190,12 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
         Keys(Key.D, Key.Space); yield return null; Keys(Key.D);
         float stop = Time.time + 25; int direction = 1, wallJumps = 0; bool release = false;
         float targetY = ((Vector3)Call(generator, "RootPosition", end)).y;
+        var capsule = hero.GetComponent<CapsuleCollider2D>();
+        float clearTop = end.y * Cell() + .05f;
         float peak = body.position.y;
-        while (Time.time < stop && body.position.y < targetY - .15f)
+        // Root height can reach the target while the feet still hit the solid shaft lip.
+        // Complete the wall climb before replacing its inputs with the exit walk.
+        while (Time.time < stop && capsule.bounds.min.y < clearTop)
         {
             object state = Get<object>(Get<object>(hero, "stateMachine"), "currentState");
             if (state.GetType().Name == "Hero_wallslideState" && !release)
@@ -187,7 +209,7 @@ public sealed class WfcDungeonPlayModeTests : InputTestFixture
         }
         Keys();
         Assert.That(wallJumps, Is.GreaterThan(0));
-        Assert.That(body.position.y, Is.GreaterThan(targetY - .15f), $"Wall climb failed at {body.position}, peak={peak}, jumps={wallJumps}, state={Get<object>(Get<object>(hero, "stateMachine"), "currentState").GetType().Name}");
+        Assert.That(capsule.bounds.min.y, Is.GreaterThanOrEqualTo(clearTop), $"Wall climb failed at {body.position}, target={targetY}, peak={peak}, jumps={wallJumps}, state={Get<object>(Get<object>(hero, "stateMachine"), "currentState").GetType().Name}");
         yield return MoveTo(end, 4f, true);
     }
     [UnityTest]

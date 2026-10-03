@@ -58,11 +58,14 @@ Items observed while migrating the campaign Bosses to Unity Animator and improvi
 
 - [x] Review C1: retain Flying Eye detectionRange alongside generated camp/safe-zone/visibility restrictions, including cached-target decisions; 11/11 eye Play Mode tests passed on 2026-10-03.
 
-- [ ] Audit A1 (`35663da`, retained by `1c96487`): validate horizontal jump/dash utilization using the final launch and landing shelf edges after variable widths are selected; centre spacing and a fixed 3.25-cell gap do not preserve the 75% movement-budget requirement. See `COMMIT_AUDIT.md`.
-- [ ] Audit A2: update `WfcDungeonBuilder.VerifyDomains` for horizontal double jumps, descents, current 100-cell minimum width and encounter-platform rules. Synchronize real-Hero fixtures and document current test results separately from the 2026-09-29 baseline.
+- [x] Audit A1: retain the user-approved sparse/compact route design; remove the universal horizontal 75% promise and report actual final shelf-edge gaps separately from centre distance. The first jump from continuous ground has no artificial edge metric.
+- [x] Audit A2: share Up/Flat/Down/Dash validation between the builder and data regression; use explicit current sizes and supported settlement rules. Save the target scene only after validation and preview construction, and fix startup seeds before tests capture the Hero.
+- [x] Fix the wall-jump regression driver: root height did not guarantee foot clearance at the shaft lip. Check actual collider feet with a small collision margin before applying exit-walk inputs.
 
-- [x] Replace the default room grid with one seeded 50-150 by 50-100 winding room, a configurable fixed route-length multiplier, large action-budget jumps, fractional ledges and ordinary walls only. Retain the multi-room solver as an explicit reference mode.
-- [ ] Extend the route grammar with descending loops, authored combat arenas and more campaign-like boundary protrusions. Keep every new module's action and clearance constraints explicit; do not add runtime post-generation reachability repair.
+- [x] Replace the default room grid with one seeded 100–150 by 50–100 winding room, a configurable fixed route-length multiplier, sparse action-budget jumps, fractional ledges and ordinary walls only. Retain the multi-room solver as an explicit reference mode.
+- [x] Add descending route segments, variable-width platforms and separated enemy settlements with explicit action and clearance contracts.
+- [ ] Extend authored combat arenas and campaign-like boundary protrusions; do not add runtime post-generation reachability repair.
+- [ ] Make builder settings/material/tile changes transactional as well as scene saving. Failed dungeon validation now preserves the target scene, but shared assets can still become dirty before the validation gate.
 - [ ] Add more art variants for isolated single-cell exterior borders: the nine-part palette can express a rectangle, but a one-cell-thick shell shares opposing edge conditions. Dedicated thin-border art would avoid choosing one edge priority.
 - [ ] Consolidate duplicated standalone test-scene setup and reflection-based Hero input helpers. Existing multi-room tests must explicitly request that retained mode now that WfcDungeon defaults to one room.
 - [ ] Broaden movement-contract fixtures for non-default gravity, fixed timestep, jump/dash durations and body scale before treating arbitrary equipment profiles as supported. Report incompatible profiles rather than silently weakening jump utilization.
