@@ -289,6 +289,7 @@ public sealed class Entity_Combat : MonoBehaviour
             Vector2 toTarget = (Vector2)collider.transform.position - origin;
             if (toTarget.sqrMagnitude > 0.0001f && Vector2.Dot(toTarget.normalized, direction) < cosHalf)
                 continue;   // outside the fan's angular spread
+            if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(target.transform)) continue;
             target.ApplyDamage(Damage, transform);
         }
     }
@@ -393,6 +394,7 @@ public sealed class Entity_Combat : MonoBehaviour
             IDamageable target = collider != null ? collider.GetComponentInParent<IDamageable>() : null;
             if (target == null || target == owner || target.IsDead || target.Faction == owner.Faction || !hit.Add(target))
                 continue;
+            if (GetComponent<GeneratedEnemyBounds>() is { } bounds && !bounds.AllowsTarget(target.transform)) continue;
             target.ApplyDamage(Damage, transform);
         }
     }

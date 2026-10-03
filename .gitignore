@@ -3,6 +3,8 @@
 !/.gitignore
 !/README.md
 !/TODO.md
+!/HANDOFF.md
+!/COMMIT_AUDIT.md
 !/Assets/
 !/Packages/
 !/ProjectSettings/

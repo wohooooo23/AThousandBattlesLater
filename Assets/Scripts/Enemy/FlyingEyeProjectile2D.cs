@@ -11,6 +11,7 @@ public sealed class FlyingEyeProjectile2D : MonoBehaviour
     private Transform owner;
     private CombatFaction ownerFaction;
     private float damage;
+    private GeneratedTargetRegion generatedRegion;
 
     private void Awake()
     {
@@ -20,12 +21,21 @@ public sealed class FlyingEyeProjectile2D : MonoBehaviour
     public void Launch(Transform source, Vector2 direction, float speed, float attackDamage)
     {
         owner = source;
+        generatedRegion = source != null && source.GetComponent<GeneratedEnemyBounds>() is { } bounds
+            ? bounds.CaptureRegion() : default;
         GeneratedMapContent.Adopt(source, gameObject);
         IDamageable sourceHealth = source != null ? source.GetComponentInParent<IDamageable>() : null;
         ownerFaction = sourceHealth != null ? sourceHealth.Faction : CombatFaction.Enemy;
         damage = Mathf.Max(0f, attackDamage);
         body.linearVelocity = direction.normalized * Mathf.Max(0f, speed);
         Destroy(gameObject, lifetime);
+    }
+
+    private void FixedUpdate()
+    {
+        if (generatedRegion.Enabled && (!generatedRegion.Allows(body.position) ||
+            !generatedRegion.Allows(body.position + body.linearVelocity * Time.fixedDeltaTime)))
+            Destroy(gameObject);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -38,6 +48,7 @@ public sealed class FlyingEyeProjectile2D : MonoBehaviour
         {
             if (target.Faction == ownerFaction || target.IsDead)
                 return;
+            if (!generatedRegion.Allows(target.transform.position)) { Destroy(gameObject); return; }
             target.ApplyDamage(damage, owner != null ? owner : transform);
             Destroy(gameObject);
             return;
