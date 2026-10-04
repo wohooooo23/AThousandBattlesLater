@@ -55,7 +55,7 @@ public static class WfcEnemyGeometry
     public const float ActorScale = 5f;
     public static void Measure(GameObject prefab, out Vector2 size, out Vector2 offset)
     {
-        if (prefab == null) throw new InvalidOperationException("Encounter generation needs both Orc and Flying Eye prefabs.");
+        if (prefab == null) throw new InvalidOperationException("Encounter generation needs a configured prefab for every selected enemy species.");
         var collider = prefab.GetComponent<Collider2D>();
         if (collider is CapsuleCollider2D capsule) { size = capsule.size; offset = capsule.offset; }
         else if (collider is BoxCollider2D box) { size = box.size; offset = box.offset; }

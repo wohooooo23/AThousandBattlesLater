@@ -44,6 +44,10 @@ public static class WfcDungeonBuilder
         }
         settings.orcPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Enemy/Mobs/Orc/Mob_Orc.prefab");
         settings.eyePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Enemy/Mobs/FlyingEye/Mob_FlyingEye.prefab");
+        settings.mushroomPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(GroundMobAnimatorBuilder.PrefabPath("Mushroom"));
+        settings.skeletonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(GroundMobAnimatorBuilder.PrefabPath("Skeleton"));
+        GroundMobAnimatorBuilder.ValidateRoot(settings.mushroomPrefab);
+        GroundMobAnimatorBuilder.ValidateRoot(settings.skeletonPrefab);
         EditorUtility.SetDirty(settings);
         var old = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<WfcRoomGenerator>()).Single();
         UnityEngine.Object.DestroyImmediate(old.gameObject);
@@ -73,6 +77,7 @@ public static class WfcDungeonBuilder
         serialized.FindProperty("notificationText").objectReferenceValue = notice;
         serialized.FindProperty("coinItem").objectReferenceValue = AssetDatabase.LoadAssetAtPath<ItemData>("Assets/Prefab/GoldCoin.asset");
         serialized.ApplyModifiedPropertiesWithoutUndo();
+        WfcDungeonGameplayBuilder.Configure(scene, settings);
         VerifyDomains(settings, TraversalProfile.Capture(hero));
         generator.BuildPreview(); generator.SetOverview(true);
         SaveValidatedScene(scene, generator);
@@ -82,6 +87,18 @@ public static class WfcDungeonBuilder
         camera.orthographicSize = 28;
         camera.transform.position = generator.RootPosition(generator.Layout.Rooms[0].Route[2]) + new Vector3(0, 6, -10);
         Capture(camera, "WfcDungeonDetail");
+        if (generator.Layout.Branches.Count > 0)
+        {
+            camera.transform.position = generator.RootPosition(generator.Layout.Branches[0].Chest) + new Vector3(0, 6, -10);
+            Capture(camera, "WfcDungeonChest");
+        }
+        foreach (var kind in new[] { DungeonRouteWallKind.Wide, DungeonRouteWallKind.Tall })
+        {
+            var wall = generator.Layout.RouteWalls.First(w => w.RouteId == -1 && w.Kind == kind);
+            var focus = new Vector2(wall.Bounds.center.x, wall.Bounds.yMax);
+            camera.transform.position = generator.RootPosition(focus) + new Vector3(0, 2, -10);
+            Capture(camera, kind == DungeonRouteWallKind.Wide ? "WfcDungeonWallTop" : "WfcDungeonWallSide");
+        }
         generator.SetOverview(true);
         Debug.Log("[WFC Dungeon] Built " + ScenePath);
     }

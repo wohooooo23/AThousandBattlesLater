@@ -30,4 +30,5 @@ public class Entity_AniamtionTriggers : MonoBehaviour
     private void ThrowTrigger() => role?.FireKunai();
     private void FlyingEyeShotRelease() => flyingEye?.ReleaseShot();
     private void FlyingEyeStateComplete(string state) => flyingEye?.CompleteAnimation(state);
+    private void GroundMobStateComplete(string state) => (entity as GroundMobController)?.CompleteAnimation(state);
 }

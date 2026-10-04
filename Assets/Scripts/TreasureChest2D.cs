@@ -28,6 +28,9 @@ public sealed class TreasureChest2D : MonoBehaviour
     private readonly HashSet<Collider2D> playerColliders = new HashSet<Collider2D>();
     private bool isOpened;
     private AbilityUnlockOrb2D abilityOrb;
+    private DungeonChestState generatedState;
+    public DungeonChestState GeneratedState => generatedState;
+    public void ConfigureGenerated(DungeonChestState state) => generatedState = state;
 
     public bool IsOpened => isOpened;
     public bool IsPlayerInRange => playerColliders.Count > 0;
@@ -66,7 +69,8 @@ public sealed class TreasureChest2D : MonoBehaviour
     private void Update()
     {
         Keyboard keyboard = Keyboard.current;
-        if (!isOpened && IsPlayerInRange && keyboard != null && keyboard.fKey.wasPressedThisFrame)
+        if (!isOpened && IsPlayerInRange && Time.timeScale > 0 &&
+            !(WfcDungeonGenerator.Active != null && WfcDungeonGenerator.Active.InputBlocked) && keyboard != null && keyboard.fKey.wasPressedThisFrame)
             OpenChest();
     }
 
@@ -95,7 +99,8 @@ public sealed class TreasureChest2D : MonoBehaviour
     /// <summary>Opens once, plays the imported animation, and spawns normal ItemPickup objects.</summary>
     public bool OpenChest()
     {
-        if (isOpened || !IsPlayerInRange)
+        if (isOpened || !IsPlayerInRange || Time.timeScale <= 0 ||
+            (WfcDungeonGenerator.Active != null && WfcDungeonGenerator.Active.InputBlocked))
             return false;
 
         isOpened = true;
@@ -113,6 +118,7 @@ public sealed class TreasureChest2D : MonoBehaviour
 
     private bool HasNothingLeftToGive()
     {
+        if (generatedState != null) return generatedState.Complete;
         if (abilityOrb != null && !abilityOrb.IsCollected)
             return false;
         return RemainingDrops().Count == 0;
@@ -169,6 +175,22 @@ public sealed class TreasureChest2D : MonoBehaviour
 
     private void SpawnItems()
     {
+        if (generatedState != null)
+        {
+            for (int i = 0; i < generatedState.Recipe.drops.Length; i++)
+            {
+                if (generatedState.IsClaimed(i)) continue;
+                var drop = generatedState.Recipe.drops[i]; int index = i;
+                var item = Instantiate(drop.prefab, spawnPoint.position, Quaternion.identity);
+                GeneratedMapContent.Adopt(transform, item);
+                var pickup = item.GetComponent<ItemPickup>(); pickup.count = drop.count;
+                pickup.BlockPickupFor(dropPickupDelay);
+                pickup.Collected += () => generatedState.Claim(index);
+                // Contained pop: keep loot on the reserved chest platform, including narrow branches.
+                if (item.TryGetComponent<Rigidbody2D>(out var body)) body.AddForce(Vector2.up * upwardForce, ForceMode2D.Impulse);
+            }
+            return;
+        }
         foreach (GameObject prefab in RemainingDrops())
         {
             GameObject item = Instantiate(prefab, spawnPoint.position, Quaternion.identity);

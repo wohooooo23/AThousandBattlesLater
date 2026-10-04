@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac80e93e79d0f94a89f83fb1b6e331e, type: 3}
+  m_Name: Loot
+  m_EditorClassIdentifier: Assembly-CSharp::DungeonLootTable
+  chestPrefab: {fileID: 1547103578516529034, guid: 246a05733d1b7d443897c97d4ce14dd0, type: 3}
+  chestWidthCells: 1.5
+  chestBottomPadding: 0.18
+  recipes:
+  - id: claymore
+    priority: 100
+    equipment: 1
+    drops:
+    - prefab: {fileID: 1676762592637182984, guid: 7a24012fb04ed9e428379cb275c29e7d, type: 3}
+      count: 1
+  - id: plate
+    priority: 100
+    equipment: 1
+    drops:
+    - prefab: {fileID: 7022642100637090177, guid: cb3bc1e9db15f5d4bb2c3903b18ab432, type: 3}
+      count: 1
+  - id: crimson
+    priority: 100
+    equipment: 1
+    drops:
+    - prefab: {fileID: 147057834673666924, guid: be2260304f6c8914586124c34d7b32ac, type: 3}
+      count: 1
+  - id: green
+    priority: 50
+    equipment: 1
+    drops:
+    - prefab: {fileID: 1790540909130257937, guid: aceb8fe6673d0ee48ab859d943bcc0a9, type: 3}
+      count: 1
+  - id: supplies
+    priority: 0
+    equipment: 0
+    drops:
+    - prefab: {fileID: 7955216592684916568, guid: 42c7b9b9e1fa4f64e9860c0f15c8428f, type: 3}
+      count: 1
+    - prefab: {fileID: 4244863717274090076, guid: 891b7fa0f6e7ecc41852ca0de4393d45, type: 3}
+      count: 100
+    - prefab: {fileID: 3541132281857251897, guid: 14d10ca7c49e1be439dfba491e194a66, type: 3}
+      count: 16

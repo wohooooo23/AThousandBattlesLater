@@ -34,6 +34,15 @@ public sealed class WfcDungeonSettings : ScriptableObject
     public WfcRoomSettings art;
     [Tooltip("Bottom-left, bottom, bottom-right, left, centre, right, top-left, top, top-right")]
     public TileBase[] wallTiles = new TileBase[9];
-    public GameObject orcPrefab, eyePrefab;
+    public GameObject orcPrefab, eyePrefab, mushroomPrefab, skeletonPrefab;
+    public GameObject EnemyPrefab(DungeonEnemyKind species) => species switch
+    {
+        DungeonEnemyKind.Orc => orcPrefab,
+        DungeonEnemyKind.FlyingEye => eyePrefab,
+        DungeonEnemyKind.Mushroom => mushroomPrefab,
+        DungeonEnemyKind.Skeleton => skeletonPrefab,
+        _ => throw new System.ArgumentOutOfRangeException(nameof(species))
+    };
     public Material wallMaterial;
+    public DungeonLootTable loot;
 }

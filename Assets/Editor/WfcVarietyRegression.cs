@@ -134,8 +134,7 @@ public static class WfcVarietyRegression
         Fill(complete, 4096);
         Require(complete.Observations > 7 && complete.Rooms[0].Decorations.Count > 0,
             "Successful fixture did not exercise a nonempty terrain solve; inspect the captured profile.");
-        Require(complete.Landings.Count == 1 + complete.Rooms[0].Decorations.Count * 2,
-            "Completed wall modules did not commit their two attached shelves.");
+        Require(complete.Landings.Count == 1, "Optional walls added unplanned platform caps or wings.");
 
         // Optional means a genuinely empty domain list is legitimate, not that failure is ignored.
         var noDomains = TerrainFixture(source, true);
@@ -160,7 +159,7 @@ public static class WfcVarietyRegression
         var landing = new DungeonLanding(8, 8, 8);
         map.Landings.Add(landing);
         room.Route.Add(map.Spawn); room.Route.Add(landing.Centre);
-        room.Actions.Add(new DungeonAction(DungeonActionKind.DoubleJump, map.Spawn, landing.Centre,
+        room.Actions.Add(new DungeonAction(reserveAll ? DungeonActionKind.WallJump : DungeonActionKind.DoubleJump, map.Spawn, landing.Centre,
             landing.Width, reserveAll ? new Rect(0, 0, 152, 102) : new Rect(1, 1, 20, 25)));
         for (int x = 0; x < map.GridWidth; x++)
         { map.Cells[x, 0] = DungeonCell.Wall; map.Cells[x, map.GridHeight - 1] = DungeonCell.Wall; }
@@ -175,6 +174,7 @@ public static class WfcVarietyRegression
         Require(map.Rooms.Count == 1 && map.Cells.GetLength(0) == map.Width + 2 &&
             map.Cells.GetLength(1) == map.Height + 2, "Map shape changed unexpectedly.");
         var room = map.Rooms[0];
+        var budget = new WindingTraversalBudget(map.Profile, map.PhysicsStep);
         Require(room.Actions.Count == room.Route.Count - 1 && room.Actions.Count > 0, "Action/route mismatch.");
         Require(Vector2.Distance(room.Route[0], map.Spawn) < .001f &&
             Vector2.Distance(room.Route[room.Route.Count - 1], map.Exit) < .001f, "Endpoints changed.");
@@ -206,13 +206,42 @@ public static class WfcVarietyRegression
             }
         foreach (var wall in room.Decorations)
         {
-            Require(map.Landings.Any(p => Mathf.Abs(p.Top - wall.yMax) < .001f &&
-                p.Left < wall.x && p.Left + p.Width > wall.xMax), "Wall has no attached cap.");
-            Require(map.Landings.Any(p => p.Top > wall.y && p.Top < wall.yMax &&
-                (Mathf.Abs(p.Left - wall.xMax) < .001f || Mathf.Abs(p.Left + p.Width - wall.x) < .001f)),
-                "Wall has no attached side shelf.");
-            Require(!room.Actions.Any(a => a.Clearance.Overlaps(new Rect(wall.position, wall.size))),
+            Require(wall.width >= wall.height * 2 || wall.height >= wall.width * 2,
+                "Optional wall must be explicitly wide or tall.");
+            Require(!map.AllActions.Any(a => WfcWindingRoomLayout.SolidBlocks(map,budget,a,new Rect(wall.position, wall.size))),
                 "Solid wall intrudes on the reserved jump corridor.");
+        }
+        Require(map.Landings.Count == room.Actions.Count + map.Branches.Sum(b => b.Landings.Count) + map.AuxiliaryLandings.Count, "Unplanned shelves were appended to the route.");
+        Require(map.Branches.Count == map.TargetBranches, "Branch count differs from the size policy.");
+        Require(map.RouteWalls.Any(w => w.Kind == DungeonRouteWallKind.Wide) &&
+            map.RouteWalls.Any(w => w.Kind == DungeonRouteWallKind.Tall), "Route requires both wall types.");
+        WfcWallIntegrationRegression.Check(map);
+        foreach (var wall in map.RouteWalls)
+        {
+            var ownedActions=wall.RouteId==-1?room.Actions:wall.RouteId==-2?map.AuxiliaryActions:map.Branches[wall.RouteId].Actions;
+            Require(wall.ActionIndex >= 0 && wall.ActionIndex < ownedActions.Count, "Invalid route-wall owner.");
+            Rect r = wall.Bounds;
+            Require(r.xMin >= 1 && r.xMax <= map.Width + 1 && r.yMin >= 1 && r.yMax < map.Height,
+                "Route wall outside interior.");
+            if (wall.Kind == DungeonRouteWallKind.Wide)
+            {
+                var shelf = map.Landings.Single(p=>p.WallId==wall.Id && p.Support==DungeonSupportKind.WallTop);
+                Require(shelf.SolidTop && Mathf.Abs(shelf.Left - r.x) < .001f &&
+                    Mathf.Abs(shelf.Top - r.yMax) < .001f && Mathf.Abs(shelf.Width - r.width) < .001f,
+                    "Wide wall does not replace exactly one route support.");
+            }
+            else
+                Require(ownedActions[wall.ActionIndex].Kind == DungeonActionKind.WallJump &&
+                    r.height >= 2 * r.width && Mathf.Abs(wall.Side) == 1, "Tall wall is not a climb module.");
+            foreach(var action in map.AllActions)
+            {
+                if(wall.Kind==DungeonRouteWallKind.Tall && action.Equals(ownedActions[wall.ActionIndex]))
+                    Require(WfcWindingRoomLayout.ValidClimbContact(map,action,wall),"Invalid designated climb contact");
+                else Require(!WfcWindingRoomLayout.SolidBlocks(map,budget,action,r),$"Wall {wall.Id} blocks action {action.Entry}->{action.Exit}");
+            }
+            foreach (var shelf in map.Landings)
+                Require(!new Rect(shelf.Left, shelf.Top + .001f, shelf.Width, map.Profile.Size.y / map.CellSize + .3f).Overlaps(r),
+                    "Route wall intersects landing headroom.");
         }
     }
 
@@ -246,12 +275,22 @@ public static class WfcVarietyRegression
             float dx = Mathf.Abs(a.Exit.x - a.Entry.x) * cell;
             float limit, height = rise / budget.DoubleHeight;
             string direction;
-            if (a.Kind == DungeonActionKind.Dash)
+            if (a.Kind == DungeonActionKind.WallJump)
+            {
+                // Gap utilization describes horizontal approach, not vertical gain per wall cycle.
+                direction = "WallClimb"; limit = budget.HighJumpDistance(rise);
+                Require(budget.CanClimb && rise > 0, $"Action {i}: profile cannot repeat wall jumps.");
+                var wall = map.RouteWalls.SingleOrDefault(w => w.Kind == DungeonRouteWallKind.Tall && w.ActionIndex == i);
+                Require(wall != null && wall.Bounds.yMin < a.Entry.y && wall.Bounds.yMax > a.Exit.y,
+                    $"Action {i}: missing continuous climb face.");
+                Require(limit > 0 && dx <= limit + .01f, $"Action {i}: wall approach exceeds movement budget.");
+            }
+            else if (a.Kind == DungeonActionKind.Dash)
             {
                 direction = "Dash"; limit = budget.FlatDistance;
                 Require(Mathf.Abs(rise) < .01f, $"Action {i}: dash must be horizontal.");
                 // Match admission's minimum shelf budget; final shelves may be wider.
-                Require(dx - baseWidth * cell <= limit * .9001f,
+                Require(dx - baseWidth * cell <= limit * .9501f,
                     $"Action {i}: dash exceeds its movement budget.");
                 Require(dx + .01f >= budget.DashCount * map.Profile.DashSpeed * map.Profile.DashDuration + map.Profile.Size.x + 2f,
                     $"Action {i}: no braking space for complete dashes.");
@@ -263,8 +302,7 @@ public static class WfcVarietyRegression
                 limit = budget.HighJumpDistance(rise);
                 Require(limit > 0 && dx <= limit + .01f, $"Action {i}: {direction} exceeds its movement budget.");
                 if (rise > .01f)
-                    Require(height >= (spacious ? .83f : .77f) - .0001f &&
-                        height <= (spacious ? .89f : .86f) + .0001f,
+                    Require(height >= .88f - .0001f && height <= .95f + .0001f,
                         $"Action {i}: upward height violates the selected route grammar.");
             }
             Require(float.IsFinite(dx + rise + limit), $"Action {i}: nonfinite movement values.");
@@ -272,7 +310,7 @@ public static class WfcVarietyRegression
                 $"Action {i}: disconnected action endpoints.");
             var to = map.Landings[i];
             float? gap = null;
-            if (i > 0)
+            if (i > 0 && a.Entry.y > map.Spawn.y + .0001f)
             {
                 var from = map.Landings[i - 1];
                 gap = Mathf.Max(0, Mathf.Max(from.Left, to.Left) -

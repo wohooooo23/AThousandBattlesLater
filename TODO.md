@@ -1,5 +1,17 @@
 # Technical debt
 
+- [ ] Extend integrated wall candidate coverage for r8: 113×63, seed 10048, crimson rune, route multiplier 2.5, density 0 is feasible in r7 but currently rejected in r8. Overall retention is 1218/1219 (99.918%); keep the 40–60% integration and branch-count contracts when improving this case.
+
+- [ ] Broaden the fixed-length main-route grammar without weakening motion/clearance contracts: r7 independent validation found 41/360 parameter combinations with no baseline route domain (before branches). Keep explicit failure and old-map preservation; never add a runtime post-generation repair/search.
+
+- [x] Remove the obsolete compact-only raw platform-minimum assertion in r8. Runtime selects the fewest landings among complete wall/branch candidates; development validation now checks integrated support, wall ownership and every affected action.
+
+- [ ] Audit the legacy `Assets/Prefab/Coin.prefab`: its ItemPickup points to a missing ItemData GUID. Random maps now use a dedicated corrected `CoinPickup.prefab`; check campaign usages before changing the shared legacy asset.
+
+- [ ] Reconcile forge price comments with the actual `200 / 2` first-level calculation (100 coins); preserve current costs until a balance change is requested.
+- [ ] Define cancellation/resume behaviour when closing the existing forge panel during its animation; stopping its coroutine on deactivation can leave the internal busy flag set.
+- [ ] Extend the generated loot table from deterministic priority allocation to weighted recipes, preserving pickup claims and retry snapshots.
+
 Items observed while migrating the campaign Bosses to Unity Animator and improving their collision behavior. These are follow-up work, not changes to the current combat balance.
 
 - [ ] Remove the unused `BossSpriteAnimator` runtime class and references in recovery snapshots after the snapshots are archived or retired. The active Boss prefab and stage no longer use it.
@@ -23,7 +35,10 @@ Items observed while migrating the campaign Bosses to Unity Animator and improvi
 - [ ] Centralize Boss relocation and ground placement through the navigator. `BossTeleport` blink and `KingGroundCleavePattern` still move the root directly; future movement features should share one collision and landing policy.
 
 - [x] Migrate stage-one/two Flying Eyes to Orc-style Enter/Update/Exit classes and a parameter/Entry/Exit Animator on the preserved Visual; attack release/recovery now follows animation events and Hurt interrupts pending shots.
-- [ ] Migrate Goblin, Mushroom and Skeleton from MobStateMachine/MobSpriteAnimator to the Flying Eye/Orc EntityState and Visual Animator pattern, retaining each species' attack design and authored scene overrides.
+- [x] Migrate Mushroom and Skeleton to EntityState classes and Visual parameter/transition Animators; retain authored combat timing, no-stun rule, prefab IDs and scene overrides, and add both to generated mixed camps.
+- [ ] Migrate Goblin from MobStateMachine/MobSpriteAnimator to the same state/Animator pattern when its combat design is specified.
+- [x] Adopt Mushroom/Skeleton warnings, strikes and clouds into the generated map, guard generated damage by region/visibility, and release transient sector meshes/materials on cleanup.
+- [ ] Reconcile stage-two combat builder defaults with saved prefab tuning. The legacy builder still deliberately reapplies 0.8/0.42-second windups and shorter cooldowns, whereas current authored Mushroom/Skeleton prefabs use 1.6/0.8-second windups and 2/2.5-second cooldowns. Animator migration preserves saved values; do not run the rebalance builder merely to update animation assets.
 - [ ] Migrate Boss animation switching to the same parameter/transition architecture. Bosses currently use Unity clips but still select/sample cast states in code; their skill-owned release timing needs an explicit migration contract.
 - [ ] Reconcile broad campaign test and builder assumptions with current authored content: DemoSceneBuilder and FullMapStagePlayModeTests expect six first-stage eyes (the saved scene has seven), unified 20-coin rewards (the eye prefab currently saves 80), and older spawn/population layouts. Keep current authored counts, rewards and positions until the intended level tuning is decided.
 - [x] Update the eye assertions that depended on the old 0.95-second windup and 1.35-second cooldown. Release now follows frame seven (0.5 seconds Normal/0.3 Hard); the saved prefab cooldown is 2 seconds before difficulty scaling. The ground-mob smoke test now respects their existing no-stun behavior and implemented Mushroom/Skeleton attacks.
@@ -55,6 +70,9 @@ Items observed while migrating the campaign Bosses to Unity Animator and improvi
 
 
 ## Single-room follow-up
+
+- [x] Replace automatic wall caps/wings with jointly admitted wide top-support and tall side-climb route modules. Render solid-top landings once, preserve fractional geometry, and reserve climb corridors from barriers and camps.
+- [ ] Extend the current alternating-leg grammar with authored large hanging walls, underpasses and multi-bend obstacle groups matching the concept sketch more closely. Preserve fixed nominal length and pre-collapse motion constraints; ordinary walls still permit player shortcuts.
 
 - [x] Review C1: retain Flying Eye detectionRange alongside generated camp/safe-zone/visibility restrictions, including cached-target decisions; 11/11 eye Play Mode tests passed on 2026-10-03.
 

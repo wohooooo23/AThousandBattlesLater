@@ -13,6 +13,9 @@ public sealed class Role : Entity, IDamageable
     public const float CrimsonDashMultiplier = 1.3f;
     public const float GreenRuneBaseHps = 2f;
     public const float GreenRuneHpsPerForgeLevel = 2f;
+    // Traversal generation needs normal gravity, even during the throw's temporary hover.
+    public float TraversalGravityScale => stateMachine?.currentState == throwState && throwState != null
+        ? throwState.MovementGravityScale : rb.gravityScale;
 
     public Hero_idleState idleState { get; private set; }
     public Hero_moveState moveState { get; private set; }

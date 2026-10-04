@@ -8,6 +8,7 @@ public class ItemPickup : MonoBehaviour
 
     private float pickupEnabledAt;
     private bool collected;
+    public event System.Action Collected;
 
     public float PickupRemainingDelay => Mathf.Max(0f, pickupEnabledAt - Time.time);
 
@@ -40,6 +41,7 @@ public class ItemPickup : MonoBehaviour
 
         collected = true;
         RunInventory.Add(itemData, count);
+        Collected?.Invoke();
         Destroy(gameObject);
     }
 }

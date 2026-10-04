@@ -20,8 +20,7 @@ public sealed class MobAnimationFrames
 }
 
 /// <summary>
-/// Lightweight sprite-sheet animator shared by the four package mobs.
-/// Attack clips are imported and ready for later combat design, but the AI does not enter them yet.
+/// Legacy Goblin sprite-sheet player and source data for the ground-mob asset migration.
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public sealed class MobSpriteAnimator : MonoBehaviour

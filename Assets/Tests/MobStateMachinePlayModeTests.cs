@@ -27,14 +27,15 @@ public sealed class MobStateMachinePlayModeTests
             yield return null;
 
             bool isFlyingEye = path.Contains("FlyingEye");
-            MonoBehaviour machine = mob.GetComponent(isFlyingEye ? "FlyingEyeController" : "MobStateMachine") as MonoBehaviour;
+            bool isGroundMob = path.Contains("Mushroom") || path.Contains("Skeleton");
+            MonoBehaviour machine = mob.GetComponent(isFlyingEye ? "FlyingEyeController" : isGroundMob ? "GroundMobController" : "MobStateMachine") as MonoBehaviour;
             MonoBehaviour animator = FindBehaviourInChildren(mob, "MobSpriteAnimator");
             MonoBehaviour health = mob.GetComponent("Enemy_Health") as MonoBehaviour;
             Rigidbody2D body = mob.GetComponent<Rigidbody2D>();
             Collider2D hitbox = mob.GetComponent<Collider2D>();
 
             Assert.That(machine, Is.Not.Null, path + " state machine must be saved on the prefab.");
-            if (isFlyingEye)
+            if (isFlyingEye || isGroundMob)
             {
                 Assert.That(animator, Is.Null);
                 Assert.That(mob.transform.Find("Visual").GetComponent<Animator>().runtimeAnimatorController, Is.Not.Null);
@@ -47,7 +48,7 @@ public sealed class MobStateMachinePlayModeTests
             if (isFlyingEye)
                 Assert.That(mob.GetComponent("FlyingEyeRangedAttack"), Is.Not.Null,
                     path + " must save its ranged attack component on the prefab.");
-            if (!isFlyingEye)
+            if (!isFlyingEye && !isGroundMob)
             {
                 foreach (string clipName in new[] { "idle", "move", "hurt", "dead", "attackOne", "attackTwo" })
                     Assert.That(ReadFrames(animator, clipName), Is.Not.Empty, path + " clip " + clipName);
@@ -61,7 +62,7 @@ public sealed class MobStateMachinePlayModeTests
             float maximumHealth = ReadProperty<float>(health, "MaximumHealth");
             Assert.That((bool)applyDamage.Invoke(health, new object[] { maximumHealth, null }), Is.True);
             Assert.That(ReadProperty<object>(machine, "CurrentState").ToString(), Is.EqualTo("Dead"));
-            if (!isFlyingEye)
+            if (!isFlyingEye && !isGroundMob)
                 Assert.That(ReadProperty<object>(animator, "ActiveState").ToString(), Is.EqualTo("Dead"));
             Assert.That(body.simulated, Is.False);
             Assert.That(hitbox.enabled, Is.False);

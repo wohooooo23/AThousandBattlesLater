@@ -277,7 +277,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2146816319226236940}
   - component: {fileID: 5326541788745642132}
-  - component: {fileID: 6542400836766597120}
+  - component: {fileID: 545731806043270150}
+  - component: {fileID: 1502393156538639112}
   m_Layer: 0
   m_Name: Visual
   m_TagString: Untagged
@@ -360,7 +361,29 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
---- !u!114 &6542400836766597120
+--- !u!95 &545731806043270150
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2954685628457921772}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 3b3c8e238b596324c964ca77464da6f2, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1502393156538639112
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -369,65 +392,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 2954685628457921772}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2abb4ed45da126d4b848cf7ef7b903d7, type: 3}
+  m_Script: {fileID: 11500000, guid: d34edd545f8d30342aa1adee048ae0c7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MobSpriteAnimator
-  idle:
-    frames:
-    - {fileID: 4723107735738678597, guid: 1018b0ba13578bf459bd254ae1a2be99, type: 3}
-    - {fileID: -7385789195546760866, guid: 1018b0ba13578bf459bd254ae1a2be99, type: 3}
-    - {fileID: 3234629978573100161, guid: 1018b0ba13578bf459bd254ae1a2be99, type: 3}
-    - {fileID: 6373048116405451881, guid: 1018b0ba13578bf459bd254ae1a2be99, type: 3}
-    framesPerSecond: 8
-    loop: 1
-  move:
-    frames:
-    - {fileID: 4035959289877228764, guid: c5b15ca3a0987ac46b73e4a04e12eeb2, type: 3}
-    - {fileID: -982904232830982447, guid: c5b15ca3a0987ac46b73e4a04e12eeb2, type: 3}
-    - {fileID: -350908408369970039, guid: c5b15ca3a0987ac46b73e4a04e12eeb2, type: 3}
-    - {fileID: -5409570386352685021, guid: c5b15ca3a0987ac46b73e4a04e12eeb2, type: 3}
-    framesPerSecond: 12
-    loop: 1
-  hurt:
-    frames:
-    - {fileID: -7500690451134026123, guid: f7fb89b82e205ea4ba8a88cee4d3070b, type: 3}
-    - {fileID: -889859373511162655, guid: f7fb89b82e205ea4ba8a88cee4d3070b, type: 3}
-    - {fileID: -3088938797480143695, guid: f7fb89b82e205ea4ba8a88cee4d3070b, type: 3}
-    - {fileID: -9206091644520726168, guid: f7fb89b82e205ea4ba8a88cee4d3070b, type: 3}
-    framesPerSecond: 12
-    loop: 0
-  dead:
-    frames:
-    - {fileID: 6991849013916550155, guid: 29ba92ebaa6f6964083271810310d1ca, type: 3}
-    - {fileID: -276728812324164698, guid: 29ba92ebaa6f6964083271810310d1ca, type: 3}
-    - {fileID: 3156895337291164288, guid: 29ba92ebaa6f6964083271810310d1ca, type: 3}
-    - {fileID: 1400002288684528572, guid: 29ba92ebaa6f6964083271810310d1ca, type: 3}
-    framesPerSecond: 10
-    loop: 0
-  attackOne:
-    frames:
-    - {fileID: -7008412969330441016, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: -7763475090823894447, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: 302641331129538988, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: -6329420634031446844, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: -910092549403018386, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: 221524225039350300, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: 1290532464073988732, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    - {fileID: 4780903288873104255, guid: 5f19f67e94a2e2f4ba57d2b338387c11, type: 3}
-    framesPerSecond: 12
-    loop: 0
-  attackTwo:
-    frames:
-    - {fileID: 7441861488978599509, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: 8288915215451595207, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: 4668938655123782945, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: 5683539909772271658, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: 5764228812365489207, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: -1191510351576865934, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: -8937499057154260928, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    - {fileID: 5293088307283036655, guid: 267c7fb536f99514ea7c4e7236d4bdf8, type: 3}
-    framesPerSecond: 12
-    loop: 0
+  m_EditorClassIdentifier: Assembly-CSharp::Entity_AniamtionTriggers
 --- !u!1 &8926785359793046969
 GameObject:
   m_ObjectHideFlags: 0
@@ -555,19 +522,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 8926785359793046969}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37a9e165e3901e243a092ee69a783365, type: 3}
+  m_Script: {fileID: 11500000, guid: d19d890ee0914b3593c6fe7426b01a55, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MobStateMachine
-  visual: {fileID: 6542400836766597120}
-  flying: 0
+  m_EditorClassIdentifier: Assembly-CSharp::GroundMobController
+  facingside: 1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  grounddistance: 0.18
+  walldistance: 0.2
+  wallcheck1: {fileID: 0}
+  wallcheck2: {fileID: 0}
+  groundcheck: {fileID: 0}
+  generatedGrounding: 0
+  spriteRenderer: {fileID: 5326541788745642132}
+  attackBehaviour: {fileID: 1354518545973832986}
+  attackClip: {fileID: 7400000, guid: f56e3553b273d6c4cb14c3c7c3c2fe39, type: 2}
+  deathClip: {fileID: 7400000, guid: cf1337f367572784d8e52c22e9f72655, type: 2}
   patrolSpeed: 4
   chaseSpeed: 6
   patrolRange: 5
   detectionRange: 12
   stopDistance: 1.4
   idleDuration: 1.25
-  hurtDuration: 0.32
-  attackBehaviour: {fileID: 1354518545973832986}
 --- !u!114 &6087730927917684940
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -595,7 +572,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe823a7a14ca6204e81fd90c83feb4a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkeletonTripleSlashAttack
-  visual: {fileID: 6542400836766597120}
   radii:
   - 3.5
   - 5

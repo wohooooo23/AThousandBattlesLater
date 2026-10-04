@@ -37,7 +37,7 @@ public sealed class TraversalProfile
         Vector2 size = Vector2.Scale(capsule.size, new Vector2(Mathf.Abs(role.transform.lossyScale.x), Mathf.Abs(role.transform.lossyScale.y)));
         float duration = Application.isPlaying ? role.dashduration : role.dashAnimation != null ? Mathf.Max(.08f, role.dashAnimation.length) : .16f;
         return new TraversalProfile(role.speed, role.speed * role.jumpspeeddec, role.jumpForce,
-            Mathf.Abs(Physics2D.gravity.y * role.GetComponent<Rigidbody2D>().gravityScale), size,
+            Mathf.Abs(Physics2D.gravity.y * (Application.isPlaying ? role.TraversalGravityScale : role.GetComponent<Rigidbody2D>().gravityScale)), size,
             role.MaxJumpCount, role.DashUnlocked, role.dashspeed, duration, role.dashcooldown,
             role.walljumpforce, role.WallJumpInputLockDuration, role.WallSlideMaximumFallSpeed,
             Mathf.Max(role.speed * role.attackMoveMultiplier, role.attackspeed == null || role.attackspeed.Length == 0 ? 0 : Mathf.Max(role.attackspeed)));

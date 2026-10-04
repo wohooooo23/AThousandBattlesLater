@@ -3,13 +3,14 @@ using UnityEngine;
 
 /// <summary>Three consecutive forward sector slashes with increasing reach and replayed attack animation.</summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Enemy_Health), typeof(MobStateMachine))]
+[RequireComponent(typeof(Enemy_Health), typeof(GroundMobController))]
 public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
 {
     private static readonly Color WarningRangeColor = new Color(0.34f, 0.015f, 0.02f, 0.82f);
     private static readonly Color WarningProgressColor = new Color(1f, 0.22f, 0.24f, 0.9f);
     private static readonly Color StrikeColor = new Color(0.95f, 0.08f, 0.1f, 0.78f);
-    [SerializeField] private MobSpriteAnimator visual;
+    private GroundMobController controller;
+    private Enemy_Health ownerHealth;
     [SerializeField] private float[] radii = { 3.5f, 5f, 6.5f };
     [SerializeField, Range(20f, 180f)] private float sectorAngle = 105f;
     [SerializeField, Min(0.01f)] private float windupPerSlash = 0.42f;
@@ -24,11 +25,13 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
     public override float AttackRange => radii != null && radii.Length > 0 ? radii[radii.Length - 1] : 6.5f;
     public override float PreferredDistance => AttackRange * 0.55f;
     public override bool IsAttacking => routine != null;
-    public override bool CanAttack => !IsAttacking && Time.time >= nextAttackTime;
+    public override bool CanAttack => isActiveAndEnabled && controller != null && controller.isActiveAndEnabled &&
+        ownerHealth != null && !ownerHealth.IsDead && !GameManager.MatchIsOver && !IsAttacking && Time.time >= nextAttackTime;
 
     private void Awake()
     {
-        visual ??= GetComponentInChildren<MobSpriteAnimator>(true);
+        controller = GetComponent<GroundMobController>();
+        ownerHealth = GetComponent<Enemy_Health>();
         damage *= Difficulty.MobDamageScale;
         cooldown *= Difficulty.MobAttackIntervalScale;
         windupPerSlash *= Difficulty.MobWindupScale;
@@ -36,7 +39,7 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
 
     public override bool BeginAttack(Transform target)
     {
-        if (!CanAttack || target == null || Vector2.Distance(transform.position, target.position) > AttackRange)
+        if (!CanAttack || !controller.AllowsTarget(target) || GetComponent<Enemy_Health>().IsDead || Vector2.Distance(transform.position, target.position) > AttackRange)
             return false;
         routine = StartCoroutine(AttackSequence(target));
         return true;
@@ -57,10 +60,11 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
         {
             float radius = radii != null && slashIndex < radii.Length ? radii[slashIndex] : AttackRange;
             float facing = target != null && target.position.x < transform.position.x ? -1f : 1f;
-            visual?.Face(facing);
-            visual?.Play(MobAnimationState.AttackOne, true); // explicitly restart once per slash
+            controller.Face(facing);
+            controller.SetStrike(slashIndex + 1); // distinct Controller phase restarts the clip through transitions
             activeEffect = CreateSector("Skeleton Slash " + (slashIndex + 1) + " Warning", transform.position,
                 facing > 0f ? Vector2.right : Vector2.left, radius, sectorAngle, WarningRangeColor, 28);
+            GeneratedMapContent.Adopt(transform, activeEffect);
             GameObject fill = CreateSector("Countdown Fill", transform.position,
                 facing > 0f ? Vector2.right : Vector2.left, radius, sectorAngle, WarningProgressColor, 29);
             fill.transform.SetParent(activeEffect.transform, false);
@@ -83,19 +87,21 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
 
             Vector2 direction = facing > 0f ? Vector2.right : Vector2.left;
             DamagePlayerInSector(transform.position, direction, radius);
-            GameObject strike = CreateSector("Skeleton Slash " + (slashIndex + 1), transform.position,
+            activeEffect = CreateSector("Skeleton Slash " + (slashIndex + 1), transform.position,
                 direction, radius, sectorAngle, StrikeColor, 30);
+            GeneratedMapContent.Adopt(transform, activeEffect);
             const float strikeEffectDuration = 0.14f;
-            yield return FadeSector(strike, strikeEffectDuration);
+            yield return FadeSector(activeEffect, strikeEffectDuration);
+            activeEffect = null;
 
             // AttackOne contains the white slash frames. Do not switch state until every frame has
             // had time to render — especially after the third strike, which used to be cut short.
-            float animationDuration = visual != null ? visual.GetDuration(MobAnimationState.AttackOne) : 0f;
+            float animationDuration = controller.AttackAnimationDuration;
             float remainingAnimation = animationDuration - windupPerSlash - strikeEffectDuration;
             if (remainingAnimation > 0f)
                 yield return new WaitForSeconds(remainingAnimation);
 
-            visual?.Play(MobAnimationState.Idle, true);
+            controller.SetStrike(0);
             if (slashIndex < 2 && intervalBetweenSlashes > 0f)
                 yield return new WaitForSeconds(intervalBetweenSlashes);
         }
@@ -107,7 +113,7 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
     private void DamagePlayerInSector(Vector2 origin, Vector2 direction, float radius)
     {
         IDamageable target = CombatTargets.FindClosest(origin, CombatFaction.Player, radius);
-        if (target == null) return;
+        if (target == null || !controller.AllowsDamage(target.transform, origin)) return;
         Vector2 offset = (Vector2)target.transform.position - origin;
         if (offset.sqrMagnitude <= radius * radius && Vector2.Angle(direction, offset) <= sectorAngle * 0.5f)
             target.ApplyDamage(damage, transform);
@@ -146,6 +152,7 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
         renderer.material = new Material(Shader.Find("Sprites/Default")) { color = color };
         renderer.sortingLayerName = SceneArt.EffectSortingLayer;
         renderer.sortingOrder = sortingOrder;
+        effect.AddComponent<OwnedCombatMesh>().Initialize(mesh, renderer.sharedMaterial);
         return effect;
     }
 
@@ -153,9 +160,9 @@ public sealed class SkeletonTripleSlashAttack : MobAttackBehaviour
     {
         MeshRenderer renderer = effect != null ? effect.GetComponent<MeshRenderer>() : null;
         if (renderer == null) return;
-        Color color = renderer.material.color;
+        Color color = renderer.sharedMaterial.color;
         color.a = alpha;
-        renderer.material.color = color;
+        renderer.sharedMaterial.color = color;
     }
 
     private static IEnumerator FadeSector(GameObject effect, float duration)

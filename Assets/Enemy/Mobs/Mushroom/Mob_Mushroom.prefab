@@ -159,19 +159,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 2070476683772620297}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37a9e165e3901e243a092ee69a783365, type: 3}
+  m_Script: {fileID: 11500000, guid: d19d890ee0914b3593c6fe7426b01a55, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MobStateMachine
-  visual: {fileID: 2004324188194899058}
-  flying: 0
+  m_EditorClassIdentifier: Assembly-CSharp::GroundMobController
+  facingside: 1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  grounddistance: 0.18
+  walldistance: 0.2
+  wallcheck1: {fileID: 0}
+  wallcheck2: {fileID: 0}
+  groundcheck: {fileID: 0}
+  generatedGrounding: 0
+  spriteRenderer: {fileID: 1277163464706132466}
+  attackBehaviour: {fileID: 547628630175558071}
+  attackClip: {fileID: 7400000, guid: 69b8faa2b1a723442886df0c54021f76, type: 2}
+  deathClip: {fileID: 7400000, guid: 4d279e256b4b4734daa7e529c87348d4, type: 2}
   patrolSpeed: 4
   chaseSpeed: 6
   patrolRange: 5
   detectionRange: 12
   stopDistance: 1.4
   idleDuration: 1.25
-  hurtDuration: 0.32
-  attackBehaviour: {fileID: 547628630175558071}
 --- !u!114 &265850216206327832
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -199,7 +209,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3616afd6ca1526d4f8cf890585dbd2a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MushroomPoisonAttack
-  visual: {fileID: 2004324188194899058}
   radius: 10
   windupDuration: 1.6
   cooldown: 2
@@ -451,7 +460,8 @@ GameObject:
   m_Component:
   - component: {fileID: 8231457034952570596}
   - component: {fileID: 1277163464706132466}
-  - component: {fileID: 2004324188194899058}
+  - component: {fileID: 3871643135767996267}
+  - component: {fileID: 9041741218167977516}
   m_Layer: 0
   m_Name: Visual
   m_TagString: Untagged
@@ -534,7 +544,29 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
---- !u!114 &2004324188194899058
+--- !u!95 &3871643135767996267
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8640660277481901335}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 811311db59db8334a86c37c094210e02, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &9041741218167977516
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -543,66 +575,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 8640660277481901335}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2abb4ed45da126d4b848cf7ef7b903d7, type: 3}
+  m_Script: {fileID: 11500000, guid: d34edd545f8d30342aa1adee048ae0c7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MobSpriteAnimator
-  idle:
-    frames:
-    - {fileID: 4723107735738678597, guid: f8b30c2afe165d645b54d500a9c30862, type: 3}
-    - {fileID: -7385789195546760866, guid: f8b30c2afe165d645b54d500a9c30862, type: 3}
-    - {fileID: 3234629978573100161, guid: f8b30c2afe165d645b54d500a9c30862, type: 3}
-    - {fileID: 6373048116405451881, guid: f8b30c2afe165d645b54d500a9c30862, type: 3}
-    framesPerSecond: 8
-    loop: 1
-  move:
-    frames:
-    - {fileID: 4944230376442633554, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: -2274363484027164459, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: 8284087734974297348, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: 5304202850863732263, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: 2833043080597125133, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: -2217414122262695004, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: -4440497016933152808, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    - {fileID: 8676454946275842879, guid: c6ac0078f39473048b9f54d791095f35, type: 3}
-    framesPerSecond: 12
-    loop: 1
-  hurt:
-    frames:
-    - {fileID: -7500690451134026123, guid: dcdda75e148449b4283619583230b32e, type: 3}
-    - {fileID: -889859373511162655, guid: dcdda75e148449b4283619583230b32e, type: 3}
-    - {fileID: -3088938797480143695, guid: dcdda75e148449b4283619583230b32e, type: 3}
-    - {fileID: -9206091644520726168, guid: dcdda75e148449b4283619583230b32e, type: 3}
-    framesPerSecond: 12
-    loop: 0
-  dead:
-    frames:
-    - {fileID: 6991849013916550155, guid: 895ce69a98d58464aaaf85c1f9ee9497, type: 3}
-    - {fileID: -276728812324164698, guid: 895ce69a98d58464aaaf85c1f9ee9497, type: 3}
-    - {fileID: 3156895337291164288, guid: 895ce69a98d58464aaaf85c1f9ee9497, type: 3}
-    - {fileID: 1400002288684528572, guid: 895ce69a98d58464aaaf85c1f9ee9497, type: 3}
-    framesPerSecond: 10
-    loop: 0
-  attackOne:
-    frames:
-    - {fileID: 1072991251, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: -452935534, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: -389891029, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: 498961217, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: -1741934772, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: 1672623870, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: -275385839, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    - {fileID: -272001064, guid: 5cdfcef2d5ef97347a8d7935407f81ab, type: 3}
-    framesPerSecond: 12
-    loop: 0
-  attackTwo:
-    frames:
-    - {fileID: 7441861488978599509, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: 8288915215451595207, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: 4668938655123782945, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: 5683539909772271658, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: 5764228812365489207, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: -1191510351576865934, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: -8937499057154260928, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    - {fileID: 5293088307283036655, guid: 179f77b4a77508644bb0e4717e8add6a, type: 3}
-    framesPerSecond: 12
-    loop: 0
+  m_EditorClassIdentifier: Assembly-CSharp::Entity_AniamtionTriggers

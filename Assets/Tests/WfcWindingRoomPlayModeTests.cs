@@ -24,7 +24,11 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
     public override void Setup()
     {
         base.Setup(); InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
-        keyboard = InputSystem.AddDevice<Keyboard>(); capture = Time.captureFramerate; Time.captureFramerate = 60;
+        keyboard = InputSystem.AddDevice<Keyboard>();
+        InputSystem.Update();
+        // Prime button history while the manual fixture has a valid dynamic state buffer.
+        foreach (var key in keyboard.allKeys) { _ = key.wasPressedThisFrame; _ = key.wasReleasedThisFrame; }
+        capture = Time.captureFramerate; Time.captureFramerate = 60;
     }
     [UnitySetUp]
     public IEnumerator Load()
@@ -96,6 +100,8 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
     }
     private IEnumerator JumpAction(object action, object budget)
     {
+        if (Field<object>(action, "Kind").ToString() == "WallJump")
+        { yield return ClimbAction(action, budget); yield break; }
         Vector2 end = Field<Vector2>(action, "Exit");
         Vector3 goal = (Vector3)Call(generator, "RootPosition", end);
         bool dashAction = Field<object>(action, "Kind").ToString() == "Dash";
@@ -132,6 +138,68 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         Assert.Fail($"Action {Field<object>(action, "Kind")} {Field<Vector2>(action, "Entry")} -> {end}: actual={body.position}, goal={goal}, peak={peak}, dash={fired}/{dashCount}, second={second}");
     }
     [UnityTest]
+    public IEnumerator RealHeroTraversesEveryBranchOutAndBack()
+    {
+        var layout = Get<object>(generator, "Layout");
+        var budget = Activator.CreateInstance(Type.GetType("WindingTraversalBudget, Assembly-CSharp"), Field<object>(layout,"Profile"), Time.fixedDeltaTime);
+        var branches = (IList)Field<object>(layout,"Branches");
+        Assert.That(branches.Count,Is.GreaterThan(0));
+        foreach(var branch in branches)
+        {
+            var actions = (IList)Field<object>(branch,"Actions");
+            yield return Place(Field<Vector2>(actions[0],"Entry"));
+            foreach(var action in actions) yield return JumpAction(action,budget);
+        }
+    }
+    [UnityTest]
+    public IEnumerator ChestEquipmentForgeAndRetryKeepTheirContracts()
+    {
+        yield return (IEnumerator)EditorCall("WfcDungeonGameplayRegression","Run",generator);
+    }
+    [UnityTest]
+    public IEnumerator CrimsonHeroTraversesIntegratedMainAndEveryBranch()
+    {
+        yield return (IEnumerator)EditorCall("WfcWallIntegrationRegression","GenerateCrimson",generator);
+        yield return Ready();
+        object profile=Field<object>(Get<object>(generator,"Layout"),"Profile");
+        var budget=Activator.CreateInstance(Type.GetType("WindingTraversalBudget, Assembly-CSharp"),profile,Time.fixedDeltaTime);
+        foreach(var action in (IList)Field<object>(Rooms()[0],"Actions")) yield return JumpAction(action,budget);
+        Assert.That(Get<bool>(generator,"Completed"),Is.True);
+        yield return RealHeroTraversesEveryBranchOutAndBack();
+    }
+    private IEnumerator ClimbAction(object action, object budget)
+    {
+        object layout = Get<object>(generator, "Layout");
+        int index = ((IList)Field<object>(Rooms()[0], "Actions")).IndexOf(action);
+        object wall = ((IList)Field<object>(layout, "RouteWalls")).Cast<object>()
+            .Single(w => Field<int>(w, "ActionIndex") == index && Field<object>(w, "Kind").ToString() == "Tall");
+        int side = Field<int>(wall, "Side"); Key toward = side > 0 ? Key.D : Key.A;
+        Vector2 end = Field<Vector2>(action, "Exit");
+        var capsule = hero.GetComponent<CapsuleCollider2D>();
+        Keys(); yield return new WaitForSeconds(.12f);
+        float start = Time.time, wallLaunch = -100; bool approachJump = false, returning = false, release = false;
+        int jumps = 0;
+        Keys(toward, Key.Space); yield return null;
+        while (Time.time - start < 12)
+        {
+            string state = Get<object>(Get<object>(hero, "stateMachine"), "currentState").GetType().Name;
+            if (jumps > 0 && capsule.bounds.min.y > end.y * Cell() + .05f)
+            { Keys(); yield return MoveTo(end, 4); yield break; }
+            if (release) { Keys(toward); release = false; }
+            else if (state == "Hero_wallslideState")
+            {
+                Keys(toward, Key.Space); wallLaunch = Time.time; returning = false; release = true; jumps++;
+            }
+            else if (jumps > 0 && !returning && Time.time - wallLaunch >= Field<float>(budget, "WallReturnTime"))
+            { Keys(toward, Key.Space); returning = true; release = true; }
+            else if (jumps == 0 && !approachJump && Time.time - start >= Field<float>(budget, "SecondJumpTime"))
+            { Keys(toward, Key.Space); approachJump = true; release = true; }
+            else Keys(toward);
+            yield return null;
+        }
+        Assert.Fail($"Climb {Field<Vector2>(action, "Entry")} -> {end}, position={body.position}, wall jumps={jumps}, state={Get<object>(Get<object>(hero, "stateMachine"), "currentState").GetType().Name}");
+    }
+    [UnityTest]
     public IEnumerator SingleRoomContractsFractionalCollidersAndRetry()
     {
         var layout = Get<object>(generator, "Layout");
@@ -144,9 +212,10 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         foreach (object cell in (Array)Field<object>(layout, "Cells")) Assert.That(cell.ToString(), Is.Not.EqualTo("Smooth"));
         var landings = (IList)Field<object>(layout, "Landings");
         var platforms = Get<Component>(generator, "Content").GetComponentsInChildren<BoxCollider2D>().Where(c => c.usedByEffector).ToArray();
-        Assert.That(platforms.Length, Is.EqualTo(landings.Count));
+        Assert.That(platforms.Length, Is.EqualTo(landings.Cast<object>().Count(l => !Field<bool>(l, "SolidTop"))));
         foreach (object landing in landings)
         {
+            if (Field<bool>(landing, "SolidTop")) continue;
             float top = Field<float>(landing, "Top");
             float centre = Field<float>(landing, "Left") + Field<int>(landing, "Width") * .5f;
             Assert.That(platforms.Any(c => Mathf.Abs(c.offset.x - centre) < .0001f && Mathf.Abs(c.offset.y + c.size.y * .5f - top) < .0001f), Is.True);
@@ -157,6 +226,67 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         Call(generator, "Retry"); yield return Ready();
         Assert.That(Call(Get<object>(generator, "Layout"), "Signature"), Is.EqualTo(signature));
         Assert.That(owned == null, Is.True);
+    }
+    [UnityTest]
+    public IEnumerator RouteWallsHaveCompleteSolidFacesAndNoDuplicateCaps()
+    {
+        object layout = Get<object>(generator, "Layout");
+        var content = Get<Component>(generator, "Content");
+        var walls = (IList)Field<object>(layout, "RouteWalls");
+        var landings = (IList)Field<object>(layout, "Landings");
+        var actions = (IList)Field<object>(Rooms()[0], "Actions");
+        var branches = (IList)Field<object>(layout,"Branches");
+        int sideShelves = branches.Cast<object>().Sum(b=>((IList)Field<object>(b,"Landings")).Count);
+        int auxiliary = ((IList)Field<object>(layout,"AuxiliaryLandings")).Count;
+        Assert.That(landings.Count, Is.EqualTo(actions.Count + sideShelves + auxiliary), "Only explicitly reserved branches may append shelves.");
+        Assert.That(walls.Count, Is.GreaterThanOrEqualTo(2));
+        foreach (object wall in walls)
+        {
+            Rect r = Field<Rect>(wall, "Bounds"); int index = Field<int>(wall, "Id");
+            string kind = Field<object>(wall, "Kind").ToString();
+            var collider = content.GetComponentsInChildren<CompositeCollider2D>().Single(c => c.name == $"Route {kind} Wall {index}");
+            Assert.That(collider.pathCount, Is.EqualTo(1));
+            Assert.That(collider.bounds.min.x, Is.EqualTo(r.xMin * Cell()).Within(.02f));
+            Assert.That(collider.bounds.max.y, Is.EqualTo(r.yMax * Cell()).Within(.02f));
+            Assert.That(collider.usedByEffector, Is.False);
+            var tiles = collider.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+            Assert.That(tiles.GetUsedTilesCount(), Is.GreaterThanOrEqualTo(6), "Corners and edges must use the wall palette.");
+            if (kind == "Wide")
+            {
+                Assert.That(landings.Cast<object>().Any(p=>Field<int>(p,"WallId")==index && Field<bool>(p,"SolidTop")), Is.True);
+                Assert.That(content.GetComponentsInChildren<BoxCollider2D>().Where(c => c.usedByEffector)
+                    .Any(c => Mathf.Abs(c.bounds.max.y - r.yMax * Cell()) < .01f && c.bounds.Intersects(collider.bounds)), Is.False);
+            }
+        }
+        EditorCall("WfcVarietyRegression", "Check", layout);
+        yield return null;
+    }
+    [UnityTest]
+    public IEnumerator MixedSettlementsSpawnAllFourSpeciesAndRegenerationRemovesThem()
+    {
+        object profile = Field<object>(Get<object>(generator, "Layout"), "Profile");
+        yield return (IEnumerator)Call(generator, "GenerateConfigured", 120, 80, 3, profile, 1f, 2f, true);
+        yield return Ready();
+        object map = Get<object>(generator, "Layout");
+        Assert.That(Field<float>(map, "Density"), Is.EqualTo(1));
+        var spawns = ((IList)Field<object>(map, "Spawns")).Cast<object>().ToArray();
+        Assert.That(spawns.Select(s => Field<object>(s, "Species").ToString()).Distinct(),
+            Is.EquivalentTo(new[] { "Orc", "FlyingEye", "Mushroom", "Skeleton" }));
+        EditorCall("WfcEncounterRegression", "Check", map, startupSettings);
+        var old = Get<Component>(generator, "Content");
+        var migrated = old.GetComponentsInChildren<MonoBehaviour>(true).Where(m => m.GetType().Name == "GroundMobController").ToArray();
+        Assert.That(migrated.Length, Is.EqualTo(spawns.Count(s => Field<object>(s, "Species").ToString() is "Mushroom" or "Skeleton")));
+        foreach (var actor in migrated)
+        {
+            Assert.That(actor.GetComponent("GeneratedEnemyBounds"), Is.Not.Null);
+            Assert.That(actor.GetComponent("MobStateMachine"), Is.Null);
+            Assert.That(actor.transform.Find("Visual").GetComponent<Animator>().runtimeAnimatorController, Is.Not.Null);
+            Assert.That(actor.GetComponent<Collider2D>().isTrigger, Is.False);
+        }
+        string signature = (string)Call(map, "Signature");
+        Call(generator, "Retry"); yield return Ready();
+        Assert.That(old == null && migrated.All(a => a == null), Is.True);
+        Assert.That(Call(Get<object>(generator, "Layout"), "Signature"), Is.EqualTo(signature));
     }
     [UnityTest]
     public IEnumerator BuilderAndSparseDataContractsUseInitializedHero()
@@ -195,6 +325,8 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         Assert.That(Field<object>(metrics[0], "HorizontalGap"), Is.Null, "Continuous ground has no launch edge.");
         for (int i = 1; i < metrics.Count; i++)
         {
+            if (Field<Vector2>(primaryActions[i], "Entry").y <= Field<Vector2>(normalized,"Spawn").y + .0001f)
+            { Assert.That(Field<object>(metrics[i], "HorizontalGap"), Is.Null); continue; }
             object from = landings[i - 1], to = landings[i];
             float direction = Field<Vector2>(primaryActions[i], "Exit").x - Field<Vector2>(primaryActions[i], "Entry").x;
             float gap = direction > 0 ? Field<float>(to, "Left") - Field<float>(from, "Left") - Field<int>(from, "Width")
@@ -221,7 +353,7 @@ public sealed class WfcWindingRoomPlayModeTests : InputTestFixture
         object dash = Action("Dash", start, end, 11f);
         object map = Activator.CreateInstance(Type.GetType("WfcDungeonLayout, Assembly-CSharp"));
         void Set(string name, object value) => map.GetType().GetField(name).SetValue(map, value);
-        Vector2 spawn = start - Vector2.up * (Field<float>(budget, "DoubleHeight") * .8f / cell);
+        Vector2 spawn = start - Vector2.up * (Field<float>(budget, "DoubleHeight") * .9f / cell);
         Set("Profile", profile); Set("CellSize", cell); Set("PhysicsStep", Time.fixedDeltaTime); Set("Spawn", spawn);
         object room = Activator.CreateInstance(Type.GetType("DungeonRoom, Assembly-CSharp"));
         ((IList)Field<object>(map, "Rooms")).Add(room);

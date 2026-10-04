@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>Orc health: shared pool plus the mob-specific aggro reaction.</summary>
+/// <summary>Shared mob health, controller notifications and once-only coin reward settlement.</summary>
 public sealed class Enemy_Health : Entity_Health
 {
     [SerializeField, Min(1)] private int coinReward = 20;
@@ -25,6 +25,7 @@ public sealed class Enemy_Health : Entity_Health
         base.OnDamaged(amount, source);
         GetComponent<MobStateMachine>()?.NotifyHurt();
         GetComponent<FlyingEyeController>()?.NotifyHurt();
+        GetComponent<GroundMobController>()?.NotifyHurt();
         if (source == null)
             return;
 

@@ -29,6 +29,7 @@ public sealed class GeneratedEnemyBounds : MonoBehaviour
     private Rigidbody2D body;
     private Collider2D hitbox;
     private Enemy groundEnemy;
+    private GroundMobController groundMob;
     private Transform coordinateRoot;
     private Vector2 campCentre, safeCentre;
     private float alertRadius, safeRadius, cellSize = 1f;
@@ -42,7 +43,7 @@ public sealed class GeneratedEnemyBounds : MonoBehaviour
 
     private void Awake() => Cache();
     private void Cache()
-    { body = GetComponent<Rigidbody2D>(); hitbox = GetComponent<Collider2D>(); groundEnemy = GetComponent<Enemy>(); }
+    { body = GetComponent<Rigidbody2D>(); hitbox = GetComponent<Collider2D>(); groundEnemy = GetComponent<Enemy>(); groundMob = GetComponent<GroundMobController>(); }
 
     public void Configure(Transform root, Rect patrol, bool isFlying, float scale,
         WfcEncounterPlan plan, DungeonEnemyPolicy? policy)
@@ -94,6 +95,7 @@ public sealed class GeneratedEnemyBounds : MonoBehaviour
             if (outward)
             {
                 if (groundEnemy != null && Mathf.Sign(velocity.x) == groundEnemy.facingside) groundEnemy.Flip();
+                if (groundMob != null && Mathf.Sign(velocity.x) == groundMob.facingside) groundMob.TurnAtBoundary();
                 velocity.x = 0;
             }
         }
@@ -120,6 +122,7 @@ public sealed class GeneratedEnemyBounds : MonoBehaviour
                 if (!Physics2D.Raycast(foot, Vector2.down, .65f, 1 << 6))
                 {
                     if (groundEnemy != null && Mathf.Sign(velocity.x) == groundEnemy.facingside) groundEnemy.Flip();
+                    if (groundMob != null && Mathf.Sign(velocity.x) == groundMob.facingside) groundMob.TurnAtBoundary();
                     velocity.x = 0;
                 }
             }

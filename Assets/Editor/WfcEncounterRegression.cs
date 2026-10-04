@@ -65,20 +65,8 @@ public static class WfcEncounterRegression
         var room = map.Rooms[0];
         Require(Mathf.Abs(map.ActualRouteLength - map.TargetRouteLength) < .1f, "Route-length contract changed.");
         Require(room.Actions.Count <= map.Landings.Count, "A required landing was deleted.");
-        // Compare with the original grammar on this exact profile and seed, not a guessed jump height.
-        var builder = typeof(WfcWindingRoomLayout).GetMethod("MakeRoutes", BindingFlags.NonPublic | BindingFlags.Static);
-        Require(builder != null, "Original-route comparison entry point is missing.");
-        int baseWidth = Mathf.Max(3, Mathf.CeilToInt((map.Profile.Size.x + 5f) / map.CellSize));
-        var originals = (System.Collections.IEnumerable)builder.Invoke(null, new object[]
-        { map, new WindingTraversalBudget(map.Profile, map.PhysicsStep), baseWidth, new System.Random(map.Seed), settings.solverBudget, false });
-        int originalFewest = int.MaxValue;
-        foreach (object route in originals)
-        {
-            var landings = (System.Collections.ICollection)route.GetType().GetField("Landings").GetValue(route);
-            originalFewest = Mathf.Min(originalFewest, landings.Count);
-        }
-        if (originalFewest != int.MaxValue)
-            Require(room.Actions.Count <= originalFewest, "The selected route uses more platforms than the original candidate pool minimum.");
+        // Sparsity is selected among complete main+branch+wall candidates. Raw pre-attachment minima are not comparable.
+        WfcWallIntegrationRegression.Check(map);
         Require(plan.TerrainRetained == room.Decorations.Count &&
             plan.TerrainRetained == Mathf.CeilToInt(plan.TerrainCandidates * WfcEncounterPlanner.TerrainRetention), "Whole-module thinning contract failed.");
         if (plan.SpaciousRoute)
@@ -89,7 +77,7 @@ public static class WfcEncounterRegression
         foreach (var wall in plan.Foundations)
         {
             var rect = new Rect(wall.position, wall.size);
-            Require(!room.Actions.Any(a => a.Clearance.Overlaps(rect)), "Camp floor blocks a mandatory flight corridor.");
+            Require(!map.AllActions.Any(a => a.Clearance.Overlaps(rect)), "Camp floor blocks a reserved flight corridor.");
             foreach (var cell in wall.allPositionsWithin)
                 Require(map.Cells[cell.x, cell.y] == DungeonCell.Wall, "Camp foundation is not a climbable solid wall.");
         }
@@ -98,6 +86,11 @@ public static class WfcEncounterRegression
         for (int i = 0; i < plan.Settlements.Count; i++)
         {
             var a = plan.Settlements[i];
+            Require(!map.Branches.Any(b=>b.Reservation.Overlaps(a.GroundPatrol) || b.Reservation.Overlaps(a.AirPatrol)),
+                "Camp intrudes on branch/chest movement space.");
+            Require(!room.Actions.Any(action => action.Kind == DungeonActionKind.WallJump &&
+                (action.Clearance.Overlaps(a.GroundPatrol) || action.Clearance.Overlaps(a.AirPatrol))),
+                "Camp occupies a reserved wall-climb corridor.");
             Require(a.AlertRadius > 0 && Vector2.Distance(a.Centre, plan.SafeCentre) > a.AlertRadius + plan.SafeRadius, "Camp aggro overlaps spawn safety.");
             for (int j = i + 1; j < plan.Settlements.Count; j++)
             {
@@ -114,7 +107,8 @@ public static class WfcEncounterRegression
             var spawn = map.Spawns[i]; var policy = plan.SpawnPolicies[i];
             Require(!plan.IsSafe(spawn.Feet), "An enemy spawned in the safe zone.");
             Require(policy.Settlement >= 0 && policy.Settlement < plan.Settlements.Count, "Invalid settlement id.");
-            Vector2 size = (spawn.Flying ? eye : orc) / map.CellSize;
+            WfcEnemyGeometry.Measure(settings.EnemyPrefab(spawn.Species), out var actualSize, out _);
+            Vector2 size = actualSize / map.CellSize;
             Rect body = new Rect(spawn.Feet.x - size.x * .5f, spawn.Feet.y - (spawn.Flying ? size.y * .5f : 0), size.x, size.y);
             Require(WfcEncounterPlanner.Clear(map, body), "Spawn body intersects terrain.");
             Require(body.xMin >= spawn.Patrol.xMin && body.xMax <= spawn.Patrol.xMax, "Actor footprint does not fit patrol surface.");

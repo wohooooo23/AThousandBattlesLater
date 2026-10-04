@@ -20,6 +20,7 @@ public static class Stage2MobCombatBuilder
     [MenuItem("Tools/Stage 2/Build Mushroom and Skeleton Combat")]
     public static void Build()
     {
+        GroundMobAnimatorBuilder.Migrate();
         ConfigureMushroomPrefab();
         ConfigureSkeletonPrefab();
         ReplaceStage2Orcs();
@@ -34,10 +35,10 @@ public static class Stage2MobCombatBuilder
         GameObject root = PrefabUtility.LoadPrefabContents(MushroomPath);
         try
         {
-            MobStateMachine machine = Require<MobStateMachine>(root);
-            MobSpriteAnimator visual = RequireInChildren<MobSpriteAnimator>(root);
+            GroundMobController machine = Require<GroundMobController>(root);
+
             MushroomPoisonAttack attack = root.GetComponent<MushroomPoisonAttack>() ?? root.AddComponent<MushroomPoisonAttack>();
-            SetObject(attack, "visual", visual);
+
             SetFloat(attack, "radius", 5f);
             SetFloat(attack, "windupDuration", 0.8f);
             SetFloat(attack, "cooldown", 1.35f);
@@ -56,12 +57,12 @@ public static class Stage2MobCombatBuilder
         GameObject root = PrefabUtility.LoadPrefabContents(SkeletonPath);
         try
         {
-            MobStateMachine machine = Require<MobStateMachine>(root);
-            MobSpriteAnimator visual = RequireInChildren<MobSpriteAnimator>(root);
+            GroundMobController machine = Require<GroundMobController>(root);
+
             SkeletonTripleSlashAttack attack = root.GetComponent<SkeletonTripleSlashAttack>() ??
                 root.AddComponent<SkeletonTripleSlashAttack>();
             SerializedObject data = new SerializedObject(attack);
-            data.FindProperty("visual").objectReferenceValue = visual;
+
             SerializedProperty radii = data.FindProperty("radii");
             radii.arraySize = 3;
             radii.GetArrayElementAtIndex(0).floatValue = 3.5f;
@@ -249,7 +250,7 @@ public static class Stage2MobCombatBuilder
             if (room.Count() > 1 && Mathf.Abs(roomMushrooms - roomSkeletons) > 1)
                 throw new InvalidOperationException($"{room.Key} is spatially unbalanced: {roomMushrooms} Mushroom, {roomSkeletons} Skeleton.");
         }
-        foreach (MobStateMachine machine in FindInScene<MobStateMachine>(scene))
+        foreach (GroundMobController machine in FindInScene<GroundMobController>(scene))
             if ((machine.GetComponent<MushroomPoisonAttack>() != null || machine.GetComponent<SkeletonTripleSlashAttack>() != null) &&
                 machine.AttackBehaviour == null)
                 throw new InvalidOperationException(machine.name + " has an attack component that is not wired into its FSM.");
@@ -272,7 +273,7 @@ public static class Stage2MobCombatBuilder
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         T attack = prefab != null ? prefab.GetComponent<T>() : null;
-        MobStateMachine machine = prefab != null ? prefab.GetComponent<MobStateMachine>() : null;
+        GroundMobController machine = prefab != null ? prefab.GetComponent<GroundMobController>() : null;
         if (attack == null || machine == null || machine.AttackBehaviour != attack || attack.AttackRange <= 0f)
             throw new InvalidOperationException(path + " does not contain a saved and wired attack.");
     }

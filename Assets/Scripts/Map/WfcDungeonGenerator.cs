@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Tilemaps;
@@ -29,7 +30,11 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     public double TileMilliseconds { get; private set; }
     public double CollisionMilliseconds { get; private set; }
     public double MonsterMilliseconds { get; private set; }
-    private bool overview, panel = true;
+    private bool overview, panel;
+    public bool InputBlocked => Busy || panel || (UIManager.Instance != null && (UIManager.Instance.HasOpenPanel || UIManager.Instance.IsPauseOpen));
+    public DungeonRewardSession Rewards { get; private set; }
+    private bool retryRequest, freshRunRequest;
+    private TraversalProfile initialProfile;
     private Vector2 settingsScroll;
     private string widthText, heightText, seedText, densityText, speedText, jumpText, multiplierText;
     private bool randomSize;
@@ -40,7 +45,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     private readonly Vector3 stagingOffset = new Vector3(20000, 0, 0);
 
     private void OnEnable() => Active = this;
-    private void OnDisable() { if (Active == this) Active = null; }
+    private void OnDisable() { if (Active == this) Active = null; if (UIManager.Instance != null) UIManager.Instance.SetExternalPanelOpen(false); }
     private IEnumerator Start()
     {
         // Role.Start and progression initialization finish before capturing effective values.
@@ -55,6 +60,13 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         randomSize = settings.randomizeRoomSize; multiplierText = settings.routeMultiplier.ToString(CultureInfo.InvariantCulture);
         TraversalProfile profile = null;
         try { profile = TraversalProfile.Capture(hero); } catch (Exception error) { Status = error.Message; }
+        initialProfile = profile;
+        if (profile != null && RunEquipment.Rune != null)
+            initialProfile = new TraversalProfile(profile.GroundSpeed / Role.CrimsonMoveMultiplier,
+                profile.AirSpeed / Role.CrimsonMoveMultiplier, profile.JumpSpeed / Role.CrimsonJumpMultiplier,
+                profile.Gravity, profile.Size, profile.Jumps, profile.Dash, profile.DashSpeed / Role.CrimsonDashMultiplier,
+                profile.DashDuration, profile.DashCooldown, profile.WallJump, profile.WallLock, profile.WallFall, profile.CombatAirSpeed);
+        if (settings.singleRoom) UnlockGeneratedAbilities();
         var size = settings.SizeForSeed(seed);
         if (profile != null) yield return Generate(size.x, size.y, seed, profile, settings.enemyDensity);
     }
@@ -62,10 +74,21 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     {
         var k = Keyboard.current;
         if (k == null) return;
-        if (k.f1Key.wasPressedThisFrame) panel = !panel;
+        if (k.f1Key.wasPressedThisFrame)
+        {
+            panel = !panel;
+            if (panel && Layout != null) RefreshFields();
+            if (panel && UIManager.Instance != null) UIManager.Instance.CloseAllPanels();
+        }
+        if (UIManager.Instance != null)
+        {
+            if (UIManager.Instance.HasOpenPanel || UIManager.Instance.IsPauseOpen) panel = false;
+            UIManager.Instance.SetExternalPanelOpen(panel);
+        }
+        hero.SetControlEnabled(!InputBlocked && !hero.IsDead);
         bool nextEditing = panel && textFocused;
-        if (editing != nextEditing) { editing = nextEditing; hero.SetControlEnabled(!editing && !Busy && !hero.IsDead); }
-        if (editing) return;
+        editing = nextEditing;
+        if (editing || InputBlocked) return;
         if (k.tabKey.wasPressedThisFrame) SetOverview(!overview);
         if (Busy) return;
         // F5 must also work after the very first generation failed (Layout is null).
@@ -84,13 +107,24 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     }
     public void Retry()
     {
-        if (!Busy && Layout != null) StartCoroutine(GenerateConfigured(Layout.Width, Layout.Height, seed, Layout.Profile, lastDensity, Layout.RouteMultiplier, Layout.Landings.Count > 0));
+        if (!Busy && Layout != null) { retryRequest = true; StartCoroutine(GenerateConfigured(Layout.Width, Layout.Height, seed, Layout.Profile, lastDensity, Layout.RouteMultiplier, Layout.Landings.Count > 0)); }
+    }
+    private static void UnlockGeneratedAbilities()
+    { RunProgress.MarkRunStarted(); RunProgress.Unlock(AbilityUnlockKind.DoubleJump); RunProgress.Unlock(AbilityUnlockKind.Dash); }
+    public void NewRun()
+    {
+        if (Busy || initialProfile == null) return;
+        freshRunRequest = true;
+        int nextSeed = timestampSeed ? WfcDungeonSeed.Next() : seed;
+        var size = settings.SizeForSeed(nextSeed, randomSize);
+        StartCoroutine(GenerateConfigured(size.x, size.y, nextSeed, initialProfile, settings.enemyDensity, settings.routeMultiplier, settings.singleRoom));
     }
     public IEnumerator Generate(int width, int height, int nextSeed, TraversalProfile profile, float density)
         => GenerateConfigured(width, height, nextSeed, profile, density, settings.routeMultiplier, settings.singleRoom);
     public IEnumerator GenerateConfigured(int width, int height, int nextSeed, TraversalProfile profile, float density, float multiplier, bool singleRoom)
     {
         if (Busy) yield break;
+        bool retry = retryRequest, fresh = freshRunRequest; retryRequest = freshRunRequest = false;
         if (singleRoom) width = WfcDungeonSettings.NormalizeRoomWidth(width);
         Busy = true;
         bool simulated = hero.GetComponent<Rigidbody2D>().simulated;
@@ -102,7 +136,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         var watch = Stopwatch.StartNew();
         var request = Instantiate(settings);
         request.singleRoom = singleRoom; request.routeMultiplier = multiplier;
-        try { next = WfcDungeonLayout.Generate(request, width, height, nextSeed, profile, density); }
+        try { next = retry ? Layout : WfcDungeonLayout.Generate(request, width, height, nextSeed, profile, density); }
         catch (Exception error) { Status = $"Attempt {width} x {height}, seed {nextSeed}: {error.Message}"; }
         Destroy(request);
         SolveMilliseconds = watch.Elapsed.TotalMilliseconds;
@@ -114,6 +148,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         watch.Restart();
         TileMilliseconds = CollisionMilliseconds = MonsterMilliseconds = 0;
         bool success = true;
+        DungeonRewardSession nextRewards = null;
         foreach (var room in next.Rooms)
         {
             try { pending.Add((room, BuildRoom(staging.transform, next, room))); }
@@ -121,6 +156,17 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             if (!success) break;
             Status = $"Building room {room.Id + 1}/{next.Rooms.Count}";
             yield return null;
+        }
+        if (success)
+        {
+            try
+            {
+                nextRewards = retry ? Rewards : settings.loot != null ? settings.loot.Allocate(next.Branches.Count, nextSeed, fresh) : null;
+                if (next.Branches.Count > 0 && nextRewards == null) throw new MissingReferenceException("Dungeon loot table is required.");
+                BuildChests(staging.transform, next, nextRewards);
+                CreateDoor(staging.transform, next);
+            }
+            catch (Exception error) { Status = error.Message; success = false; }
         }
         if (!success)
         {
@@ -132,10 +178,13 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         Content = staging.GetComponent<GeneratedMapContent>();
         staging.name = "Generated Dungeon"; staging.transform.position = Vector3.zero;
         Layout = next; seed = nextSeed; lastDensity = density;
+        Rewards = nextRewards;
         populations.Clear(); populations.AddRange(pending);
-        CreateDoor(staging.transform, next);
         foreach (var renderer in staging.GetComponentsInChildren<TilemapRenderer>()) renderer.enabled = true;
-        hero.ApplyTraversalProfile(profile);
+        if (fresh) { RunInventory.Reset(); RunEquipment.Reset(); RunProgress.Reset(); }
+        if (singleRoom) UnlockGeneratedAbilities();
+        // A layout snapshot belongs to the map; retry must not overwrite newly earned rune movement.
+        if (!retry) hero.ApplyTraversalProfile(profile);
         hero.ResetForGeneratedMap();
         follow.Configure(hero.transform, Vector2.zero, new Vector2(next.GridWidth, next.GridHeight) * settings.cellSize);
         SetOverview(false);
@@ -155,13 +204,15 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
                 if (action.Exit.y < action.Entry.y - .05f) dips++;
             }
             Status += $"\nGenerator r{WfcWindingRoomLayout.Revision} | seed {seed} | {next.Landings.Count} platforms";
+            Status += $"\n{next.Width} x {next.Height} -> {next.TargetBranches} branches (policy v{DungeonBranchPolicy.Version})\n{next.BranchReason}";
             Status += $"\n{turns} turns / {dips} descents" + (dips == 0 ? " (compact route fallback)" : "");
         }
         if (next.Encounters != null)
         {
             var encounters = next.Encounters;
             Status += $"\nCamps {encounters.Settlements.Count}/{encounters.RequestedCount} | spawn safe radius {encounters.SafeRadius:F0} cells";
-            Status += $"\nOld wall modules {encounters.TerrainRetained}/{encounters.TerrainCandidates} | camp foundations {encounters.Foundations.Count}";
+            Status += $"\nBarriers {encounters.TerrainRetained}/{encounters.TerrainCandidates} | camp foundations {encounters.Foundations.Count}";
+            Status += $"\nRoute walls: {next.RouteWalls.Count(w => w.Kind == DungeonRouteWallKind.Wide)} wide / {next.RouteWalls.Count(w => w.Kind == DungeonRouteWallKind.Tall)} climb";
             Status += encounters.SpaciousRoute ? "\nSpacious platform fit" : "\nCompact platform fit (fewest valid landings)";
             foreach (string warning in encounters.Warnings) Status += "\nWARNING: " + warning;
             if (encounters.Warnings.Count > 0) Debug.LogWarning($"[WFC Encounters] seed {next.Seed}: " + string.Join("; ", encounters.Warnings));
@@ -177,11 +228,35 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         foreach (var room in next.Rooms) BuildRoom(root.transform, next, room);
         Content = root.GetComponent<GeneratedMapContent>(); Layout = next;
         foreach (var renderer in root.GetComponentsInChildren<TilemapRenderer>()) renderer.enabled = true;
+        if (settings.loot != null) { Rewards = settings.loot.Allocate(next.Branches.Count, next.Seed, true); BuildChests(root.transform, next, Rewards); }
         CreateDoor(root.transform, next);
         hero.transform.position = RootPosition(next.Spawn);
         if (next.Encounters != null && next.Encounters.Warnings.Count > 0)
             Debug.LogWarning($"[WFC Preview] seed {next.Seed}: " + string.Join("; ", next.Encounters.Warnings));
         follow.Configure(hero.transform, Vector2.zero, new Vector2(next.GridWidth, next.GridHeight) * settings.cellSize);
+    }
+    private void BuildChests(Transform root, WfcDungeonLayout map, DungeonRewardSession rewards)
+    {
+        foreach (var branch in map.Branches)
+        {
+            var instance = Instantiate(settings.loot.chestPrefab, root);
+            instance.name = "Branch Chest " + branch.Id;
+            // Scale the frame to the configured width, then align visible feet (excluding transparent padding).
+            instance.transform.localPosition = branch.Chest * map.CellSize;
+            var renderer = instance.GetComponent<SpriteRenderer>();
+            float scale = settings.loot.chestWidthCells * map.CellSize / renderer.sprite.bounds.size.x;
+            instance.transform.localScale = Vector3.one * scale;
+            instance.transform.position += Vector3.up * (root.position.y + branch.Chest.y * map.CellSize - renderer.bounds.min.y - renderer.bounds.size.y * settings.loot.chestBottomPadding + .04f);
+            var chest = instance.GetComponent<TreasureChest2D>();
+            var trigger = instance.GetComponent<BoxCollider2D>();
+            trigger.size = new Vector2(2.5f * map.CellSize, 1.5f * map.CellSize) / scale;
+            trigger.offset = new Vector2(renderer.sprite.bounds.center.x, trigger.size.y * .5f + renderer.sprite.bounds.min.y);
+            chest.SpawnPoint.localPosition = new Vector3(renderer.sprite.bounds.center.x, renderer.sprite.bounds.max.y + .5f / scale, 0);
+            var prompt = chest.InteractionUI.transform;
+            prompt.localScale = Vector3.one * (.007f * map.CellSize / scale);
+            prompt.localPosition = new Vector3(renderer.sprite.bounds.center.x, renderer.sprite.bounds.max.y + map.CellSize * .6f / scale, 0);
+            chest.ConfigureGenerated(rewards.Chests[branch.Id]);
+        }
     }
     private GameObject BuildRoom(Transform root, WfcDungeonLayout map, DungeonRoom room)
     {
@@ -217,6 +292,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         background.SetTilesBlock(bounds, back); walls.SetTilesBlock(bounds, solid); if (smooth != null) smooth.SetTilesBlock(bounds, white); platforms.SetTilesBlock(bounds, ledges);
         foreach (var landing in map.Landings)
         {
+            if (landing.SolidTop) continue;
             int left = Mathf.FloorToInt(landing.Left), row = Mathf.FloorToInt(landing.Top - 1);
             for (int i = 0; i < landing.Width; i++)
             {
@@ -226,8 +302,24 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
                 platforms.SetTransformMatrix(pos, Matrix4x4.Translate(new Vector3(landing.Left - left, landing.Top - 1 - row, 0)));
             }
         }
+        var solidMaps = new List<Tilemap> { walls, smooth };
+        foreach (var routeWall in map.RouteWalls)
+        {
+            Rect r = routeWall.Bounds;
+            var tilemap = MakeMap($"Route {routeWall.Kind} Wall {routeWall.Id}", grid.transform, 0, TraversalSurfaceKind.Wall);
+            tilemap.transform.localPosition = new Vector3(r.x, r.y, 0);
+            tilemap.GetComponent<TilemapRenderer>().sharedMaterial = settings.wallMaterial;
+            tilemap.color = walls.color;
+            int width = Mathf.RoundToInt(r.width), height = Mathf.RoundToInt(r.height);
+            var tiles = new TileBase[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    tiles[y * width + x] = settings.wallTiles[(y == 0 ? 0 : y == height - 1 ? 2 : 1) * 3 + (x == 0 ? 0 : x == width - 1 ? 2 : 1)];
+            tilemap.SetTilesBlock(new BoundsInt(0, 0, 0, width, height, 1), tiles);
+            solidMaps.Add(tilemap);
+        }
         TileMilliseconds += timing.Elapsed.TotalMilliseconds; timing.Restart();
-        foreach (var tilemap in new[] { walls, smooth })
+        foreach (var tilemap in solidMaps)
         { if (tilemap == null) continue; tilemap.GetComponent<TilemapCollider2D>().ProcessTilemapChanges(); tilemap.GetComponent<CompositeCollider2D>().GenerateGeometry(); }
         BuildPlatformColliders(platforms, map, b);
         CollisionMilliseconds += timing.Elapsed.TotalMilliseconds; timing.Restart();
@@ -236,10 +328,10 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         {
             var spawn = map.Spawns[spawnIndex];
             if (spawn.Room != room.Id) continue;
-            var prefab = spawn.Flying ? settings.eyePrefab : settings.orcPrefab;
+            var prefab = settings.EnemyPrefab(spawn.Species);
             WfcEnemyGeometry.Measure(prefab, out var bodySize, out var bodyOffset);
             if (!spawn.Flying && prefab.GetComponent<Collider2D>().isTrigger)
-                throw new InvalidOperationException("Orc needs a non-trigger body collider for physical floor support.");
+                throw new InvalidOperationException(spawn.Species + " needs a non-trigger body collider for physical floor support.");
             if (bodySize.x + .12f >= spawn.Patrol.width * map.CellSize ||
                 (spawn.Flying && bodySize.y + .12f >= spawn.Patrol.height * map.CellSize))
                 throw new InvalidOperationException($"Enemy collider does not fit spawn {spawnIndex}, seed {map.Seed}.");
@@ -286,6 +378,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         {
             foreach (var landing in map.Landings)
             {
+                if (landing.SolidTop) continue;
                 var collider = visual.gameObject.AddComponent<BoxCollider2D>();
                 collider.size = new Vector2(landing.Width, thickness);
                 collider.offset = new Vector2(landing.Centre.x, landing.Top - thickness * .5f);
@@ -318,7 +411,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
         door.transform.SetParent(root, false);
         var renderer = door.GetComponent<SpriteRenderer>(); renderer.sprite = settings.art.bossDoor; renderer.sortingOrder = 3;
         float scale = 2 * settings.cellSize / renderer.sprite.bounds.size.y; door.transform.localScale = Vector3.one * scale;
-        door.transform.position = (Vector3)(map.Exit * settings.cellSize) - new Vector3(renderer.sprite.bounds.center.x * scale, renderer.sprite.bounds.min.y * scale, 0);
+        door.transform.localPosition = (Vector3)(map.Exit * settings.cellSize) - new Vector3(renderer.sprite.bounds.center.x * scale, renderer.sprite.bounds.min.y * scale, 0);
         var trigger = door.GetComponent<BoxCollider2D>(); trigger.size = renderer.sprite.bounds.size; trigger.offset = renderer.sprite.bounds.center; trigger.isTrigger = true;
         door.GetComponent<WfcDungeonExit>().owner = this;
     }
@@ -342,7 +435,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     private void RefreshFields()
     {
         widthText = Layout.Width.ToString(); heightText = Layout.Height.ToString(); seedText = seed.ToString(); densityText = lastDensity.ToString(CultureInfo.InvariantCulture);
-        speedText = Layout.Profile.GroundSpeed.ToString(CultureInfo.InvariantCulture); jumpText = Layout.Profile.JumpSpeed.ToString(CultureInfo.InvariantCulture);
+        speedText = hero.speed.ToString(CultureInfo.InvariantCulture); jumpText = hero.jumpForce.ToString(CultureInfo.InvariantCulture);
         doubleJump = Layout.Profile.Jumps > 1; dash = Layout.Profile.Dash;
         multiplierText = Layout.RouteMultiplier.ToString(CultureInfo.InvariantCulture);
     }
@@ -373,6 +466,7 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
             else { doubleJump = GUILayout.Toggle(doubleJump, "Double jump"); dash = GUILayout.Toggle(dash, "Dash"); }
             if (GUILayout.Button("Apply and regenerate")) ApplyFields();
             if (GUILayout.Button("Repeat current map")) Retry();
+            if (GUILayout.Button("New run (reset inventory and forge)")) NewRun();
             GUI.enabled = true;
             GUILayout.Label("Ordinary walls: wall jump allowed\nTab: overview / follow camera\nF1: hide settings\nF5: timestamp map | F6: retry\nHome: return to spawn");
         }
@@ -385,8 +479,9 @@ public sealed class WfcDungeonGenerator : MonoBehaviour
     {
         try
         {
-            var old = Layout != null ? Layout.Profile : TraversalProfile.Capture(hero);
-            float speed = float.Parse(speedText, CultureInfo.InvariantCulture), jump = float.Parse(jumpText, CultureInfo.InvariantCulture);
+            var old = TraversalProfile.Capture(hero);
+            float speed = forceTimestamp ? hero.speed : float.Parse(speedText, CultureInfo.InvariantCulture);
+            float jump = forceTimestamp ? hero.jumpForce : float.Parse(jumpText, CultureInfo.InvariantCulture);
             var next = new TraversalProfile(speed, speed * old.AirSpeed / old.GroundSpeed, jump, old.Gravity, old.Size,
                 settings.singleRoom || doubleJump ? 2 : 1, settings.singleRoom || dash, old.DashSpeed, old.DashDuration, old.DashCooldown, old.WallJump, old.WallLock, old.WallFall,
                 Mathf.Max(old.CombatAirSpeed * speed / old.GroundSpeed, old.CombatAirSpeed));

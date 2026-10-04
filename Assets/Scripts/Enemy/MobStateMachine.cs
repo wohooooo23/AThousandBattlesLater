@@ -12,8 +12,7 @@ public enum MobState
 }
 
 /// <summary>
-/// Shared non-attacking AI for Goblin, Mushroom, Flying Eye and Skeleton.
-/// Orc keeps its mature combat state machine; these mobs share the same health/reward contract.
+/// Legacy Goblin AI. Flying Eye, Mushroom and Skeleton now use EntityState/Animator controllers.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D), typeof(Enemy_Health))]
 public sealed class MobStateMachine : MonoBehaviour

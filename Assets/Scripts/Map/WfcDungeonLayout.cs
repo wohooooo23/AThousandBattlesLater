@@ -7,12 +7,41 @@ using UnityEngine;
 public enum DungeonRoomKind { Start, Combat, Traverse, DoubleJump, Dash, WallJump }
 public enum DungeonCell : byte { Empty, Wall, Smooth, Platform }
 public enum DungeonActionKind { Walk, Jump, DoubleJump, Dash, WallJump }
+public enum DungeonRouteWallKind { Wide, Tall }
+public enum DungeonSupportKind { Independent, Ground, WallTop, WallSide }
+public enum DungeonEnemyKind { Orc, FlyingEye, Mushroom, Skeleton }
+
+/// <summary>A rectangle admitted together with the route; coordinates remain fractional cells.</summary>
+public sealed class DungeonRouteWall
+{
+    public readonly DungeonRouteWallKind Kind;
+    public readonly Rect Bounds;
+    // Side is the tall wall relative to the climber: +1 right, -1 left; wide walls use zero.
+    public readonly int ActionIndex, Side;
+    public int Id = -1, RouteId = -1; // -1 main, >=0 branch, -2 auxiliary
+    public int[] ServedActions = Array.Empty<int>();
+    public DungeonRouteWall(DungeonRouteWallKind kind, Rect bounds, int actionIndex, int side = 0)
+    { Kind = kind; Bounds = bounds; ActionIndex = actionIndex; Side = side; }
+}
 
 public readonly struct DungeonLanding
 {
     public readonly float Left, Top;
     public readonly int Width;
-    public DungeonLanding(float left, float top, int width) { Left = left; Top = top; Width = width; }
+    // A wide wall already supplies this support: do not draw/add a one-way platform here.
+    public readonly bool SolidTop;
+    public readonly DungeonSupportKind Support;
+    public readonly int WallId, ContactSide;
+    public DungeonLanding(float left, float top, int width) : this(left, top, width, false) { }
+    public DungeonLanding(float left, float top, int width, bool solidTop)
+    { Left = left; Top = top; Width = width; SolidTop = solidTop;
+      Support = solidTop ? (top <= 1.0001f ? DungeonSupportKind.Ground : DungeonSupportKind.WallTop) : DungeonSupportKind.Independent;
+      WallId = -1; ContactSide = 0; }
+    public DungeonLanding Attached(DungeonSupportKind support, int wallId, int side = 0)
+        => new DungeonLanding(this, support, wallId, side);
+    private DungeonLanding(DungeonLanding p, DungeonSupportKind support, int wallId, int side)
+    { Left = p.Left; Top = p.Top; Width = p.Width; Support = support; WallId = wallId; ContactSide = side;
+      SolidTop = support == DungeonSupportKind.Ground || support == DungeonSupportKind.WallTop; }
     public Vector2 Centre => new Vector2(Left + Width * .5f, Top);
 }
 
@@ -52,9 +81,13 @@ public readonly struct DungeonSpawn
 {
     public readonly int Room;
     public readonly bool Flying;
+    public readonly DungeonEnemyKind Species;
     public readonly Vector2 Feet;
     public readonly Rect Patrol;
-    public DungeonSpawn(int room, bool flying, Vector2 feet, Rect patrol) { Room = room; Flying = flying; Feet = feet; Patrol = patrol; }
+    public DungeonSpawn(int room, bool flying, Vector2 feet, Rect patrol)
+        : this(room, flying ? DungeonEnemyKind.FlyingEye : DungeonEnemyKind.Orc, feet, patrol) { }
+    public DungeonSpawn(int room, DungeonEnemyKind species, Vector2 feet, Rect patrol)
+    { Room = room; Species = species; Flying = species == DungeonEnemyKind.FlyingEye; Feet = feet; Patrol = patrol; }
 }
 
 /// <summary>Room graph and local module WFC. The graph is a tree by construction; no finished-map path search.</summary>
@@ -74,10 +107,18 @@ public sealed class WfcDungeonLayout
     public readonly List<DungeonConnection> Connections = new();
     public readonly List<DungeonSpawn> Spawns = new();
     public readonly List<DungeonLanding> Landings = new();
+    public readonly List<DungeonRouteWall> RouteWalls = new();
+    public readonly List<DungeonBranch> Branches = new();
+    public readonly List<DungeonLanding> AuxiliaryLandings = new();
+    public readonly List<DungeonAction> AuxiliaryActions = new();
+    public int TargetBranches;
+    public string BranchReason;
+    public IEnumerable<DungeonAction> AllActions => Rooms.SelectMany(r => r.Actions)
+        .Concat(Branches.SelectMany(b => b.Actions)).Concat(AuxiliaryActions);
     public Vector2 Spawn, Exit;
     public WfcEncounterPlan Encounters;
     public string ReproductionId => FormattableString.Invariant($"v{Version}:{Seed}:{Width}x{Height}:cell={CellSize}:density={Density}:route={RouteMultiplier}:dt={PhysicsStep}:{Profile.Signature}") +
-        (Encounters == null ? "" : $":winding-r{WfcWindingRoomLayout.Revision}");
+        (Encounters == null ? "" : $":winding-r{WfcWindingRoomLayout.Revision}:branches-v{DungeonBranchPolicy.Version}:{TargetBranches}");
     private int rise, platformWidth;
     private System.Random random;
 
@@ -407,9 +448,13 @@ public sealed class WfcDungeonLayout
         foreach (var r in Rooms) text.Append($"|{r.Id}:{r.Kind}:{r.Bounds}");
         foreach (var c in Connections) text.Append($"|{c.A}>{c.B}:{c.PortA}:{c.PortB}");
         for (int y = 0; y < GridHeight; y++) for (int x = 0; x < GridWidth; x++) text.Append((char)('0' + (byte)Cells[x, y]));
-        foreach (var s in Spawns) text.Append($"|{s.Room}:{s.Flying}:{s.Feet}");
-        foreach (var p in Landings) text.Append(FormattableString.Invariant($"|P:{p.Left:R}:{p.Top:R}:{p.Width}"));
+        foreach (var s in Spawns) text.Append($"|{s.Room}:{s.Species}:{s.Feet}");
+        foreach (var p in Landings) text.Append(FormattableString.Invariant($"|P:{p.Left:R}:{p.Top:R}:{p.Width}:{p.SolidTop}:{p.Support}:{p.WallId}:{p.ContactSide}"));
+        foreach (var w in RouteWalls) text.Append(FormattableString.Invariant($"|RW:{w.Id}:{w.RouteId}:{string.Join(",",w.ServedActions)}:{w.Kind}:{w.ActionIndex}:{w.Side}:{w.Bounds.x:R}:{w.Bounds.y:R}:{w.Bounds.width:R}:{w.Bounds.height:R}"));
         if (Encounters != null) text.Append(Encounters.Signature());
+        if (Encounters != null) text.Append($"|branch-policy:{DungeonBranchPolicy.Version}:{TargetBranches}");
+        foreach (var branch in Branches) text.Append(branch.Signature());
+        foreach (var p in AuxiliaryLandings) text.Append(FormattableString.Invariant($"|A:{p.Left:R}:{p.Top:R}:{p.Width}"));
         return text.ToString();
     }
 }

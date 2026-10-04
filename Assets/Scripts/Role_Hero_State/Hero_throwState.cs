@@ -21,6 +21,7 @@ public sealed class Hero_throwState : RoleState
     private float animationElapsed;
     private float cooldownRemaining;
     private float originalGravity;
+    public float MovementGravityScale => originalGravity;
 
     public Hero_throwState(StateMachine stateMachine, string animBool, Role role)
         : base(stateMachine, animBool, role) { }

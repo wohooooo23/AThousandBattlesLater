@@ -28,6 +28,11 @@ public static class WfcEncounterPlanner
         plan.SafeCentre = map.Spawn;
         if (map.Density <= 0) return;
         WfcEnemyGeometry.Measure(settings.orcPrefab, out var orcWorld, out _);
+        foreach (var species in new[] { DungeonEnemyKind.Mushroom, DungeonEnemyKind.Skeleton })
+        {
+            WfcEnemyGeometry.Measure(settings.EnemyPrefab(species), out var size, out _);
+            orcWorld = Vector2.Max(orcWorld, size);
+        }
         WfcEnemyGeometry.Measure(settings.eyePrefab, out var eyeWorld, out _);
         Vector2 orc = orcWorld / map.CellSize, eye = eyeWorld / map.CellSize;
         float head = Mathf.Max(3f, orc.y + .75f);
@@ -46,7 +51,9 @@ public static class WfcEncounterPlanner
             var envelope = Rect.MinMaxRect(Mathf.Min(ground.xMin, air.xMin), newWall ? wall.y : top,
                 Mathf.Max(ground.xMax, air.xMax), air.yMax);
             var centre = new Vector2(left + width * .5f, top + head * .5f);
+            if (map.Branches.Any(b => b.Reservation.Overlaps(envelope)) || map.AuxiliaryActions.Any(a=>a.Clearance.Overlaps(envelope))) return;
             if (!Inside(map, envelope) || !Clear(map, ground) || !Clear(map, air)) return;
+            if (room.Actions.Any(a => a.Kind == DungeonActionKind.WallJump && a.Clearance.Overlaps(envelope))) return;
             // Preserve not only the spawn point but a genuine calm area around it.
             if (DistanceToRect(plan.SafeCentre, envelope) <= plan.SafeRadius + 2f ||
                 Vector2.Distance(centre, map.Exit) < 9f) return;
@@ -56,7 +63,7 @@ public static class WfcEncounterPlanner
             if (newWall)
             {
                 var solid = new Rect(wall.position, wall.size);
-                if (!Clear(map, solid) || room.Actions.Any(a => a.Clearance.Overlaps(solid))) return;
+                if (!Clear(map, solid) || map.AllActions.Any(a => a.Clearance.Overlaps(solid))) return;
                 // Also protect headroom of every old shelf, not only its thin collider.
                 if (map.Landings.Any(p => new Rect(p.Left, p.Top - .03f, p.Width, head + .03f).Overlaps(solid))) return;
             }
@@ -127,10 +134,11 @@ public static class WfcEncounterPlanner
             for (int i = 0; i < settlement.GroundCount; i++)
             {
                 float x = candidate.Ground.center.x + (i - (settlement.GroundCount - 1) * .5f) * separation;
-                AddSpawn(false, new Vector2(x, candidate.Ground.y), candidate.Ground, settlement);
+                var kinds = new[] { DungeonEnemyKind.Orc, DungeonEnemyKind.Mushroom, DungeonEnemyKind.Skeleton };
+                AddSpawn(kinds[(settlement.Id + i + (map.Seed & int.MaxValue) % 3) % 3], new Vector2(x, candidate.Ground.y), candidate.Ground, settlement);
             }
             if (settlement.GroundCount < desiredGround)
-                plan.Warnings.Add($"Camp {settlement.Id + 1}: {settlement.GroundCount}/{desiredGround} Orcs fit the actual collider width.");
+                plan.Warnings.Add($"Camp {settlement.Id + 1}: {settlement.GroundCount}/{desiredGround} ground enemies fit the actual collider width.");
             int desiredFlying = Mathf.Clamp(Mathf.CeilToInt(map.Density), 1, 3);
             float eyeSpacing = eye.x + .5f;
             int eyeCapacity = Mathf.Max(0, Mathf.FloorToInt((candidate.Air.width - eye.x - .2f) / eyeSpacing) + 1);
@@ -138,7 +146,7 @@ public static class WfcEncounterPlanner
             for (int i = 0; i < settlement.FlyingCount; i++)
             {
                 var centre = candidate.Air.center + Vector2.right * ((i - (settlement.FlyingCount - 1) * .5f) * eyeSpacing);
-                AddSpawn(true, centre, candidate.Air, settlement);
+                AddSpawn(DungeonEnemyKind.FlyingEye, centre, candidate.Air, settlement);
             }
             if (settlement.FlyingCount < desiredFlying)
                 plan.Warnings.Add($"Camp {settlement.Id + 1}: {settlement.FlyingCount}/{desiredFlying} Flying Eyes fit the air patrol bay.");
@@ -146,10 +154,10 @@ public static class WfcEncounterPlanner
         if (plan.Settlements.Count < plan.RequestedCount)
             plan.Warnings.Add($"Only {plan.Settlements.Count}/{plan.RequestedCount} separated camps fit without changing the route or existing walls.");
 
-        void AddSpawn(bool flying, Vector2 feet, Rect patrol, DungeonSettlement settlement)
+        void AddSpawn(DungeonEnemyKind species, Vector2 feet, Rect patrol, DungeonSettlement settlement)
         {
             plan.SpawnPolicies.Add(map.Spawns.Count, new DungeonEnemyPolicy(settlement.Id, settlement.Centre, settlement.AlertRadius));
-            map.Spawns.Add(new DungeonSpawn(room.Id, flying, feet, patrol));
+            map.Spawns.Add(new DungeonSpawn(room.Id, species, feet, patrol));
         }
     }
 
@@ -159,6 +167,8 @@ public static class WfcEncounterPlanner
     public static bool Clear(WfcDungeonLayout map, Rect area)
     {
         if (!Inside(map, area)) return false;
+        if (map.RouteWalls.Any(w => w.Bounds.xMin < area.xMax && w.Bounds.xMax > area.xMin &&
+            w.Bounds.yMax > area.yMin + .001f && w.Bounds.yMin < area.yMax)) return false;
         for (int x = Mathf.FloorToInt(area.xMin); x < Mathf.CeilToInt(area.xMax); x++)
             for (int y = Mathf.FloorToInt(area.yMin + .001f); y < Mathf.CeilToInt(area.yMax); y++)
                 if (map.Cells[x, y] is DungeonCell.Wall or DungeonCell.Smooth) return false;

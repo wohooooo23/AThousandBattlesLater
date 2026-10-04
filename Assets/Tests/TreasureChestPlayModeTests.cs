@@ -22,13 +22,15 @@ public sealed class TreasureChestPlayModeTests : InputTestFixture
     public IEnumerator ChestWaitsForFThenAnimatesAndDropsThroughItemPickup()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("stage1");
+        SceneManager.LoadScene("stage1_full");
         yield return null;
         yield return null;
 
         System.Type inventoryType = FindRuntimeType("RunInventory");
         inventoryType.GetMethod("Reset").Invoke(null, null);
         GameObject hero = GameObject.Find("Hero");
+        hero.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+        GameObject.Find("Mobs")?.SetActive(false);
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
             "Assets/Resources/Prefabs/TreasureChest.prefab");
         Assert.That(hero, Is.Not.Null);

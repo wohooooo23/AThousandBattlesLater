@@ -4,13 +4,14 @@ using UnityEngine;
 
 /// <summary>Circular melee slash followed by a one-second poison cloud occupying the same area.</summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Enemy_Health), typeof(MobStateMachine))]
+[RequireComponent(typeof(Enemy_Health), typeof(GroundMobController))]
 public sealed class MushroomPoisonAttack : MobAttackBehaviour
 {
     private static readonly Color WarningRangeColor = new Color(0.34f, 0.015f, 0.02f, 0.82f);
     private static readonly Color WarningProgressColor = new Color(1f, 0.22f, 0.24f, 0.9f);
     private static readonly Color StrikeColor = new Color(0.95f, 0.08f, 0.1f, 0.78f);
-    [SerializeField] private MobSpriteAnimator visual;
+    private GroundMobController controller;
+    private Enemy_Health ownerHealth;
     [SerializeField, Min(0.5f)] private float radius = 5f;
     [SerializeField, Min(0.01f)] private float windupDuration = 0.8f;
     [SerializeField, Min(0f)] private float cooldown = 1.35f;
@@ -26,12 +27,14 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
     public override float AttackRange => radius;
     public override float PreferredDistance => radius * 0.62f;
     public override bool IsAttacking => routine != null;
-    public override bool CanAttack => !IsAttacking && Time.time >= nextAttackTime;
+    public override bool CanAttack => isActiveAndEnabled && controller != null && controller.isActiveAndEnabled &&
+        ownerHealth != null && !ownerHealth.IsDead && !GameManager.MatchIsOver && !IsAttacking && Time.time >= nextAttackTime;
     public override bool PatrolDuringCooldown => true;
 
     private void Awake()
     {
-        visual ??= GetComponentInChildren<MobSpriteAnimator>(true);
+        controller = GetComponent<GroundMobController>();
+        ownerHealth = GetComponent<Enemy_Health>();
         slashDamage *= Difficulty.MobDamageScale;
         poisonDamage *= Difficulty.MobDamageScale;
         cooldown *= Difficulty.MobAttackIntervalScale;
@@ -40,7 +43,7 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
 
     public override bool BeginAttack(Transform target)
     {
-        if (!CanAttack || target == null || Vector2.Distance(transform.position, target.position) > radius)
+        if (!CanAttack || !controller.AllowsTarget(target) || GetComponent<Enemy_Health>().IsDead || Vector2.Distance(transform.position, target.position) > radius)
             return false;
         routine = StartCoroutine(AttackSequence(target));
         return true;
@@ -57,12 +60,13 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
     private IEnumerator AttackSequence(Transform target)
     {
         IDamageable owner = GetComponent<IDamageable>();
-        visual?.Play(MobAnimationState.AttackOne, true);
+        controller.SetStrike(1);
         SceneArt.EnsureSprites();
         // Identical to the established radial slash: full dark range plus a bright disc expanding
         // from the attacker to the outer edge over the whole wind-up.
         activeEffect = SceneArt.CreateDisc("Mushroom Slash Warning", transform.position, radius * 2f,
             WarningRangeColor, 28);
+        GeneratedMapContent.Adopt(transform, activeEffect);
         Transform fill = SceneArt.CreateChildSprite(activeEffect.transform, "Windup Fill", SceneArt.CircleSprite,
             WarningProgressColor, 29).transform;
         fill.localScale = Vector3.zero;
@@ -74,7 +78,7 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
             activeEffect.transform.position = transform.position;
             float progress = Mathf.Clamp01(elapsed / windupDuration);
             fill.localScale = new Vector3(progress, progress, 1f);
-            if (target != null) visual?.Face(target.position.x - transform.position.x);
+            if (target != null) controller.Face(target.position.x - transform.position.x);
             yield return null;
         }
 
@@ -87,19 +91,22 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
         }
 
         DamagePlayersInCircle(transform.position, radius, slashDamage, null);
-        GameObject slash = SceneArt.CreateDisc("Mushroom Circular Slash", transform.position, radius * 2f,
+        activeEffect = SceneArt.CreateDisc("Mushroom Circular Slash", transform.position, radius * 2f,
             StrikeColor, 30);
-        yield return FadeDisc(slash, 0.18f);
+        GeneratedMapContent.Adopt(transform, activeEffect);
+        yield return FadeDisc(activeEffect, 0.18f);
+        activeEffect = null;
 
         GameObject cloud = SceneArt.CreateDisc("Mushroom Poison Cloud", transform.position, radius * 2f,
             new Color(0.10f, 0.85f, 0.18f, 0.42f), 27);
         poisonClouds.Add(cloud);
+        GeneratedMapContent.Adopt(transform, cloud);
 
         // The attack ends at cloud creation. The cloud owns a separate lifetime coroutine, while
         // the FSM sees IsAttacking=false on the next frame and lets the Mushroom move immediately.
         StartCoroutine(PoisonCloudLifetime(cloud));
         nextAttackTime = Time.time + cooldown;
-        visual?.Play(MobAnimationState.Idle, true);
+        controller.SetStrike(0);
         routine = null;
     }
 
@@ -123,7 +130,7 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
         foreach (Collider2D hit in Physics2D.OverlapCircleAll(center, range))
         {
             IDamageable target = hit.GetComponentInParent<IDamageable>();
-            if (target == null || target.IsDead || target.Faction != CombatFaction.Player ||
+            if (target == null || target.IsDead || target.Faction != CombatFaction.Player || !controller.AllowsDamage(target.transform, center) ||
                 !alreadyHit.Add(target))
                 continue;
             target.ApplyDamage(damage, transform);
@@ -151,6 +158,7 @@ public sealed class MushroomPoisonAttack : MobAttackBehaviour
     private void OnDisable()
     {
         CancelAttack();
+        StopAllCoroutines();
         foreach (GameObject cloud in poisonClouds)
             if (cloud != null) Destroy(cloud);
         poisonClouds.Clear();

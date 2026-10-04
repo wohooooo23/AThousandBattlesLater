@@ -10,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public static class WfcWindingRoomLayout
 {
-    public const int Revision = 4;
+    public const int Revision = 8;
     public const float MinimumShelfGap = 3.25f;
 
     private sealed class RouteOption
@@ -19,19 +19,24 @@ public static class WfcWindingRoomLayout
         public readonly List<DungeonActionKind> Kinds = new();
         public readonly List<DungeonLanding> Landings = new();
         public readonly List<DungeonAction> Actions = new();
+        public readonly List<DungeonRouteWall> Walls = new();
         public int Bends;
         public bool Spacious;
+        public List<DungeonBranch> Branches;
     }
-    // Collapse walls and their attached shelves as ONE domain value, not separate passes.
+    // Optional rectangular barriers have no automatic cap or wing platforms.
     private sealed class TerrainOption
     {
         public RectInt Wall;
-        public readonly List<DungeonLanding> Shelves = new();
         public Rect Footprint;
         public bool Empty => Wall.width == 0;
     }
 
     public static WfcDungeonLayout Generate(WfcDungeonSettings settings, int width, int height, int seed, TraversalProfile profile, float density)
+        => GenerateWithBranchCount(settings, width, height, seed, profile, density, null);
+
+    // Explicit override is used by development capacity experiments, never by the runtime panel.
+    public static WfcDungeonLayout GenerateWithBranchCount(WfcDungeonSettings settings, int width, int height, int seed, TraversalProfile profile, float density, int? calibrationBranchCount)
     {
         width = WfcDungeonSettings.NormalizeRoomWidth(width);
         if (width > WfcDungeonSettings.MaximumRoomWidth || height < 50 || height > 100)
@@ -40,6 +45,7 @@ public static class WfcWindingRoomLayout
             !float.IsFinite(settings.cellSize) || settings.cellSize <= 0 || !float.IsFinite(density) || density < 0 || density > 3)
             throw new InvalidOperationException("Route multiplier must be 1–10, density 0–3, and cell size positive.");
         var budget = new WindingTraversalBudget(profile, Time.fixedDeltaTime);
+        if (!budget.CanClimb) throw new InvalidOperationException("This profile cannot gain safe height by wall launch, spare jump and return after the input lock.");
         if (!float.IsFinite(budget.DoubleHeight + budget.FlatDistance) || budget.DoubleHeight <= 0)
             throw new InvalidOperationException("Movement values exceed the finite route-generation budget.");
         var map = new WfcDungeonLayout { Width = width, Height = height, Seed = seed, CellSize = settings.cellSize,
@@ -48,10 +54,13 @@ public static class WfcWindingRoomLayout
         map.Encounters = new WfcEncounterPlan { SafeCentre = map.Spawn };
         map.DirectDistance = Vector2.Distance(map.Spawn, map.Exit);
         map.TargetRouteLength = map.DirectDistance * map.RouteMultiplier;
+        map.TargetBranches = calibrationBranchCount ?? DungeonBranchPolicy.Count(width, height, map.TargetRouteLength, profile, map.CellSize, out map.BranchReason);
         var random = new System.Random(seed);
         int platformWidth = Mathf.Max(3, Mathf.CeilToInt((profile.Size.x + 5f) / map.CellSize));
         var routes = MakeRoutes(map, budget, platformWidth, random, settings.solverBudget, false);
         routes.AddRange(MakeRoutes(map, budget, platformWidth, new System.Random(seed), settings.solverBudget, true));
+        routes = routes.Where((r, i) => DungeonBranchPlanner.TryPlan(map, r.Actions, r.Landings, r.Walls,
+            map.TargetBranches, i, out r.Branches)).ToList();
         // Never remove a required landing after generation. Choose the sparsest complete valid contract.
         if (routes.Count > 0)
         {
@@ -68,7 +77,23 @@ public static class WfcWindingRoomLayout
         map.Rooms.Add(room);
         room.Route.AddRange(chosen[0].Points);
         map.Landings.AddRange(chosen[0].Landings);
+        map.RouteWalls.AddRange(chosen[0].Walls);
         room.Actions.AddRange(chosen[0].Actions);
+        map.Branches.AddRange(chosen[0].Branches);
+        foreach (var branch in map.Branches) { map.Landings.AddRange(branch.Landings); map.RouteWalls.AddRange(branch.Walls); }
+        // Optional side shelves share the same round-trip admission; they have no chest or marker.
+        int auxiliaryBudget = Mathf.Max(0, 4 - map.TargetBranches);
+        for (int attempt = 0; attempt < 8 && map.AuxiliaryLandings.Count == 0 && auxiliaryBudget >= 2; attempt++)
+        {
+            if (!DungeonBranchPlanner.TryPlan(map, room.Actions, chosen[0].Landings, map.RouteWalls, 1, 3100 + attempt, out var auxiliary)) continue;
+            var extra = auxiliary[0];
+            if (extra.Landings.Count > auxiliaryBudget || map.Branches.Any(b => Expand(b.Reservation, 2).Overlaps(extra.Reservation) ||
+                extra.Walls.Any(w=>b.Actions.Any(a=>SolidBlocks(map,budget,a,w.Bounds))))) continue;
+            foreach(var wall in extra.Walls) wall.RouteId=-2;
+            map.RouteWalls.AddRange(extra.Walls);
+            map.AuxiliaryLandings.AddRange(extra.Landings); map.AuxiliaryActions.AddRange(extra.Actions);
+            map.Landings.AddRange(extra.Landings);
+        }
         foreach (var action in room.Actions) map.ActualRouteLength += Vector2.Distance(action.Entry, action.Exit);
         for (int x = 0; x < map.GridWidth; x++) { map.Cells[x, 0] = DungeonCell.Wall; map.Cells[x, map.GridHeight - 1] = DungeonCell.Wall; }
         for (int y = 0; y < map.GridHeight; y++) { map.Cells[0, y] = DungeonCell.Wall; map.Cells[map.GridWidth - 1, y] = DungeonCell.Wall; }
@@ -81,7 +106,7 @@ public static class WfcWindingRoomLayout
     {
         var options = new List<RouteOption>();
         float cell = map.CellSize, h = budget.DoubleHeight / cell, dy = map.Exit.y - map.Spawn.y;
-        for (int variant = 0; variant < 192 && options.Count < 12; variant++)
+        for (int variant = 0; variant < 768 && options.Count < 16; variant++)
         {
             float[] rises = MakeVerticalSteps(dy, h, random, variant, spacious);
             if (rises == null) continue;
@@ -94,12 +119,12 @@ public static class WfcWindingRoomLayout
             for (int i = 0; i < count % legs; i++) counts[(offset + i) % legs]++;
             float spread = .08f * ((variant / 4) % 4);
             bool useDash = spacious ? variant % 4 != 3 : variant % 3 == 0;
-            float flat = useDash ? budget.FlatDistance / cell * ((spacious ? .83f : .78f) + (float)random.NextDouble() * (spacious ? .06f : .11f)) + platformWidth
-                : budget.HighJumpDistance(0) / cell * (.78f + (float)random.NextDouble() * .10f);
+            float flat = useDash ? budget.FlatDistance / cell * (.88f + (float)random.NextDouble() * .04f) + platformWidth
+                : budget.HighJumpDistance(0) / cell * (.88f + (float)random.NextDouble() * .04f);
             if (useDash)
             {
                 flat = Mathf.Max(flat, (budget.DashCount * map.Profile.DashSpeed * map.Profile.DashDuration + map.Profile.Size.x + 2f) / cell);
-                if ((flat - platformWidth) * cell > budget.FlatDistance * .90f) continue;
+                if ((flat - platformWidth) * cell > budget.FlatDistance * .95f) continue;
             }
             if (flat < platformWidth + 2) continue;
             var heights = new float[legs]; var caps = new float[legs];
@@ -129,7 +154,7 @@ public static class WfcWindingRoomLayout
             var flatCounts = new int[legs];
             void Enumerate(int leg, float low, float high)
             {
-                if (options.Count >= 12 || options.Count >= optionsBefore + 2 || ++work > Mathf.Clamp(solverBudget, 512, 8192)) return;
+                if (options.Count >= 16 || options.Count >= optionsBefore + 2 || ++work > Mathf.Clamp(solverBudget, 512, 8192)) return;
                 if (leg == legs)
                 {
                     float Length(float amplitude)
@@ -154,13 +179,15 @@ public static class WfcWindingRoomLayout
                         float endX = Mathf.Lerp(baseX[i + 1], extreme[i + 1], amplitude);
                         float direction = i % 2 == 0 ? 1 : -1;
                         float remaining = Mathf.Abs(endX - route.Points[^1].x) - flatCounts[i] * flat;
-                        // Flat actions occur inside each nontrivial leg, never at its start or end.
-                        int insert = counts[i] > 1 ? random.Next(1, counts[i]) : 0;
+                        var flatWidths = Enumerable.Range(0, flatCounts[i]).Select(_ => .985f + .03f * (float)random.NextDouble()).ToArray();
+                        float average = flatWidths.Length == 0 ? 1 : flatWidths.Average();
+                        // Distribute flat actions across each leg; floor-level contacts reuse the solid floor.
                         for (int j = 0; j < counts[i]; j++)
                         {
-                            if (j == insert)
-                                for (int n = 0; n < flatCounts[i]; n++)
-                                { route.Points.Add(route.Points[^1] + new Vector2(direction * flat, 0)); route.Kinds.Add(useDash ? DungeonActionKind.Dash : DungeonActionKind.DoubleJump); }
+                            // Spread horizontal crossings through the leg, instead of a row of identical shelves.
+                            int before = j * flatCounts[i] / counts[i], after = (j + 1) * flatCounts[i] / counts[i];
+                            for (int n = before; n < after; n++)
+                            { route.Points.Add(route.Points[^1] + new Vector2(direction * flat * flatWidths[n] / average, 0)); route.Kinds.Add(useDash ? DungeonActionKind.Dash : DungeonActionKind.DoubleJump); }
                             float rise = rises[index++];
                             route.Points.Add(route.Points[^1] + new Vector2(direction * remaining * Mathf.Abs(rise) / travel[i], rise));
                             route.Kinds.Add(DungeonActionKind.DoubleJump);
@@ -192,9 +219,9 @@ public static class WfcWindingRoomLayout
     private static float[] MakeVerticalSteps(float dy, float h, System.Random random, int variant, bool spacious)
     {
         // Signed vertical travel fixes the old empty integer interval for some heights.
-        // Spacious candidates use 83--89%; the original 77--86% contracts remain available for compact fits.
+        // Both candidate families target 88--95% ascent; compact fits vary descent and shelf spacing.
         int dips = variant < 160 ? 1 + variant % (spacious ? 2 : 3) : 0;
-        float lowerRise = spacious ? .83f : .77f, upperRise = spacious ? .89f : .86f;
+        float lowerRise = .88f, upperRise = .95f;
         float minDrop = (spacious ? .45f : .30f) * h * dips, maxDrop = .75f * h * dips;
         int minimum = Mathf.Max(3, Mathf.CeilToInt((dy + minDrop) / (h * upperRise)));
         int maximum = Mathf.Min(96, Mathf.FloorToInt((dy + maxDrop) / (h * lowerRise)));
@@ -246,7 +273,7 @@ public static class WfcWindingRoomLayout
         {
             Vector2 point = route.Points[i];
             int roll = random.Next(100);
-            int desired = roll < 20 ? random.Next(4, 7) : roll < 80 ? random.Next(7, 13) : random.Next(13, 21);
+            int desired = roll < 65 ? minimumWidth : random.Next(6, 9);
             // Bound both ends before fitting, so an early long shelf cannot consume the
             // space needed by a later shelf in the same visual tile row.
             for (int j = 1; j < route.Points.Count; j++)
@@ -256,7 +283,7 @@ public static class WfcWindingRoomLayout
             for (int width = desired; width >= minimumWidth; width--)
             {
                 float left = Mathf.Clamp(point.x - width * .5f, 1, map.Width + 1 - width);
-                var landing = new DungeonLanding(left, point.y, width);
+                var landing = new DungeonLanding(left, point.y, width, point.y <= map.Spawn.y + .0001f);
                 if (VisualOverlap(route.Landings, landing) || (route.Spacious && route.Landings.Any(p => ShelfGap(p, landing) < MinimumShelfGap)) || BlocksFlight(map, budget, route.Actions, landing)) continue;
                 route.Landings.Add(landing);
                 var action = route.Actions[i - 1];
@@ -265,7 +292,140 @@ public static class WfcWindingRoomLayout
             }
             if (!fitted) return false;
         }
+        return FitRouteWalls(map, budget, route);
+    }
+
+    private static bool FitRouteWalls(WfcDungeonLayout map, WindingTraversalBudget budget, RouteOption route)
+    {
+        // Walls are part of each candidate BEFORE route collapse. Endpoints and length are unchanged.
+        // Tall side walls sit at outward bends; the next action leaves on the open side.
+        for (int i = 1; i + 1 < route.Actions.Count && route.Walls.Count(w => w.Kind == DungeonRouteWallKind.Tall) < Mathf.Max(1, Mathf.RoundToInt(route.Landings.Count * .08f)); i++)
+        {
+            var action = route.Actions[i]; var next = route.Actions[i + 1];
+            if (action.Exit.y <= action.Entry.y + 1 || (action.Exit.x - action.Entry.x) * (next.Exit.x - next.Entry.x) > .001f) continue;
+            int side = next.Exit.x > next.Entry.x ? -1 : 1;
+            float face = action.Exit.x + side;
+            var wall = new Rect(side > 0 ? face : face - 2, action.Entry.y - 1, 2,
+                Mathf.CeilToInt(action.Exit.y - action.Entry.y) + 4);
+            var oldEntry = route.Landings[i - 1]; var oldExit = route.Landings[i];
+            DungeonLanding Beside(DungeonLanding p) => new DungeonLanding(side > 0 ? Mathf.Min(p.Left, face - p.Width)
+                : Mathf.Max(p.Left, face), p.Top, p.Width, p.SolidTop);
+            route.Landings[i - 1] = Beside(oldEntry); route.Landings[i] = Beside(oldExit);
+            float outward = budget.WallOutwardDistance / map.CellSize + map.Profile.Size.x / map.CellSize + .8f;
+            var clearance = Rect.MinMaxRect(Mathf.Min(action.Entry.x, face - (side > 0 ? outward : 0)) - .3f,
+                action.Entry.y - .1f, Mathf.Max(action.Entry.x, face + (side < 0 ? outward : 0)) + .3f,
+                action.Exit.y + (map.Profile.JumpHeight + map.Profile.Size.y) / map.CellSize + .5f);
+            var candidate = new DungeonRouteWall(DungeonRouteWallKind.Tall, wall, i, side);
+            bool fits = clearance.yMax < map.Height && WallFits(map, budget, route, candidate) &&
+                LandingContains(route.Landings[i - 1], action.Entry, map) && LandingContains(route.Landings[i], action.Exit, map) &&
+                !route.Landings.Where((_, index) => index != i && index != i - 1).Any(p =>
+                    p.Top > action.Entry.y && p.Top <= action.Exit.y + .05f &&
+                    new Rect(p.Left, p.Top - .02f, p.Width, .04f).Overlaps(clearance));
+            if (fits)
+                route.Actions[i] = new DungeonAction(DungeonActionKind.WallJump, action.Entry, action.Exit, action.LandingWidth, clearance);
+            if (fits && PlatformsFit(map, budget, route))
+            {
+                candidate.Id=route.Walls.Count; candidate.ServedActions=new[]{i-1,i,i+1};
+                route.Walls.Add(candidate);
+                for(int k=i-1;k<=i;k++)
+                {
+                    var shelf=route.Landings[k];
+                    float edge=side>0?shelf.Left+shelf.Width:shelf.Left;
+                    if(shelf.Top>map.Spawn.y+.001f && Mathf.Abs(edge-face)<.001f) route.Landings[k]=shelf.Attached(DungeonSupportKind.WallSide,candidate.Id,side);
+                }
+            }
+            else { route.Landings[i - 1] = oldEntry; route.Landings[i] = oldExit; route.Actions[i] = action; }
+        }
+        if (!route.Walls.Any(w => w.Kind == DungeonRouteWallKind.Tall)) return false;
+        // Wall-top supports participate in the candidate, including non-flat arrivals when the body arc clears them.
+        var eligible=Enumerable.Range(0,route.Landings.Count-1).Where(i=>route.Landings[i].Top>map.Spawn.y+.001f).ToArray();
+        int target=Mathf.RoundToInt(eligible.Length*.5f);
+        int AttachedCount()=>eligible.Count(i=>route.Landings[i].WallId>=0);
+        var order=eligible.OrderBy(i=>i%3).ThenBy(i=>((i*15427)^map.Seed)&0x7fffffff).ToArray();
+        // Seed each third first, then fill to half. Contacts count once, including walls serving two actions.
+        for(int pass=0;pass<2;pass++) foreach(int i in order)
+        {
+            if(AttachedCount()>=target) break;
+            if(route.Landings[i].WallId>=0) continue;
+            int third=Third(route.Actions,i);
+            if(pass==0 && eligible.Any(j=>Third(route.Actions,j)==third && route.Landings[j].WallId>=0)) continue;
+            var shelf=route.Landings[i];
+            if(route.Actions[i].Kind==DungeonActionKind.WallJump) continue;
+            for(int depth=Mathf.Min(3,Mathf.Max(2,shelf.Width/2));depth>=2;depth--)
+            {
+                var candidate=new DungeonRouteWall(DungeonRouteWallKind.Wide,new Rect(shelf.Left,shelf.Top-depth,shelf.Width,depth),i)
+                    {Id=route.Walls.Count,ServedActions=new[]{i,i+1}};
+                if(!WallFits(map,budget,route,candidate)) continue;
+                route.Walls.Add(candidate); route.Landings[i]=shelf.Attached(DungeonSupportKind.WallTop,candidate.Id); break;
+            }
+        }
+        float ratio=(float)AttachedCount()/Mathf.Max(1,eligible.Length);
+        return ratio>=.4f && ratio<=.6f && Enumerable.Range(0,3).All(third=>
+            eligible.Any(i=>Third(route.Actions,i)==third && route.Landings[i].WallId>=0));
+    }
+    public static int Third(IReadOnlyList<DungeonAction> actions,int index)
+    {
+        float total=0,at=0;
+        for(int i=0;i<actions.Count;i++) {float d=Vector2.Distance(actions[i].Entry,actions[i].Exit);total+=d;if(i<=index) at+=d;}
+        return Mathf.Min(2,Mathf.FloorToInt(at/Mathf.Max(.001f,total)*3));
+    }
+
+    private static bool LandingContains(DungeonLanding shelf, Vector2 point, WfcDungeonLayout map)
+    {
+        float half = map.Profile.Size.x / map.CellSize * .5f + .08f;
+        return shelf.Left >= 1 && shelf.Left + shelf.Width <= map.Width + 1 &&
+            point.x >= shelf.Left + half && point.x <= shelf.Left + shelf.Width - half;
+    }
+
+    private static bool PlatformsFit(WfcDungeonLayout map, WindingTraversalBudget budget, RouteOption route)
+    {
+        for (int i = 0; i < route.Landings.Count; i++)
+        {
+            var shelf = route.Landings[i];
+            if (route.Walls.Any(w => new Rect(shelf.Left, shelf.Top + .001f, shelf.Width,
+                map.Profile.Size.y / map.CellSize + .3f).Overlaps(w.Bounds))) return false;
+            if (VisualOverlap(route.Landings.Take(i), shelf) || BlocksFlight(map, budget, route.Actions, shelf)) return false;
+            if (route.Spacious && route.Landings.Take(i).Any(p => ShelfGap(p, shelf) < MinimumShelfGap)) return false;
+        }
         return true;
+    }
+
+    private static bool WallFits(WfcDungeonLayout map, WindingTraversalBudget budget, RouteOption route, DungeonRouteWall wall)
+    {
+        Rect r = wall.Bounds;
+        if (r.xMin < 1 || r.yMin < 1 || r.xMax > map.Width + 1 || r.yMax > map.Height ||
+            r.Overlaps(new Rect(1, 1, 6, 4)) || r.Overlaps(new Rect(map.Exit - new Vector2(3, 1), new Vector2(6, 5))) ||
+            route.Walls.Any(w => Expand(w.Bounds, 1).Overlaps(r))) return false;
+        float head = map.Profile.Size.y / map.CellSize + .3f;
+        if (route.Landings.Any(p => new Rect(p.Left, p.Top + .001f, p.Width, head).Overlaps(r))) return false;
+        for (int j = 0; j < route.Actions.Count; j++)
+        {
+            if (wall.Kind == DungeonRouteWallKind.Tall && j == wall.ActionIndex)
+            {
+                if(!ValidClimbContact(map,route.Actions[j],wall)) return false;
+                continue;
+            }
+            if (SolidBlocks(map, budget, route.Actions[j], r)) return false;
+        }
+        return true;
+    }
+
+    public static bool ValidClimbContact(WfcDungeonLayout map,DungeonAction action,DungeonRouteWall wall)
+    {
+        float face=wall.Side>0?wall.Bounds.xMin:wall.Bounds.xMax;
+        float body=map.Profile.Size.x/map.CellSize*.5f;
+        // Only the designated side is touchable; keep the body, launch and exit on its open side.
+        return Mathf.Abs(wall.Side)==1 && (action.Exit.x-face)*wall.Side<=-body &&
+            (action.Entry.x-face)*wall.Side<=-body && wall.Bounds.yMin<=action.Entry.y &&
+            wall.Bounds.yMax>=action.Exit.y+map.Profile.Size.y/map.CellSize;
+    }
+
+    public static bool SolidBlocks(WfcDungeonLayout map, WindingTraversalBudget budget, DungeonAction action, Rect wall)
+    {
+        if (wall.yMax <= Mathf.Min(action.Entry.y, action.Exit.y) + .001f) return false;
+        if (action.Kind == DungeonActionKind.WallJump) return action.Clearance.Overlaps(wall);
+        if (!action.Clearance.Overlaps(wall)) return false;
+        return budget.Envelope(action, map.CellSize).Any(part => part.Overlaps(wall));
     }
 
     private static bool VisualOverlap(IEnumerable<DungeonLanding> existing, DungeonLanding candidate)
@@ -277,7 +437,7 @@ public static class WfcWindingRoomLayout
 
     // One-way shelves may occupy an ascending arc, but must not intercept a descending one.
     // This analytical admission check is not a substitute for the real-hero PlayMode tests.
-    private static bool BlocksFlight(WfcDungeonLayout map, WindingTraversalBudget budget,
+    public static bool BlocksFlight(WfcDungeonLayout map, WindingTraversalBudget budget,
         IEnumerable<DungeonAction> actions, DungeonLanding shelf)
     {
         var p = map.Profile;
@@ -290,6 +450,11 @@ public static class WfcWindingRoomLayout
             if (shelf.Top < action.Exit.y - .05f) continue;
             if (Mathf.Abs(shelf.Top - action.Exit.y) < .05f &&
                 action.Exit.x >= shelf.Left && action.Exit.x <= shelf.Left + shelf.Width) continue;
+            if (action.Kind == DungeonActionKind.WallJump)
+            {
+                if (action.Clearance.Overlaps(new Rect(shelf.Left, shelf.Top - .02f, shelf.Width, .04f))) return true;
+                continue;
+            }
             if (action.Kind == DungeonActionKind.Dash)
             {
                 if (Mathf.Abs(shelf.Top - action.Exit.y) < .05f)
@@ -322,7 +487,9 @@ public static class WfcWindingRoomLayout
     private static void FillTerrain(WfcDungeonLayout map, DungeonRoom room, WindingTraversalBudget budget, int solverBudget, System.Random random)
     {
         float head = Mathf.Max(3, map.Profile.Size.y / map.CellSize + .5f);
-        bool Reserved(Rect r) => room.Actions.Any(a => a.Clearance.Overlaps(r)) ||
+        bool Reserved(Rect r) => map.AllActions.Any(a => SolidBlocks(map,budget,a,r)) ||
+            map.Branches.Any(b => b.Reservation.Overlaps(r)) ||
+            map.RouteWalls.Any(w => Expand(w.Bounds, 2).Overlaps(r)) ||
             r.Overlaps(new Rect(1, 1, 6, 4)) || r.Overlaps(new Rect(map.Exit - new Vector2(3, 1), new Vector2(6, 5)));
         var primary = map.Landings.ToArray();
         var domains = new List<List<TerrainOption>>();
@@ -332,31 +499,16 @@ public static class WfcWindingRoomLayout
                 var choices = new List<TerrainOption> { new TerrainOption() };
                 for (int variant = 0; variant < 5; variant++)
                 {
-                    var wall = new RectInt(x + random.Next(4), y + random.Next(3), random.Next(3, 9), random.Next(4, 12));
+                    bool wide = variant % 2 == 0;
+                    var wall = new RectInt(x + random.Next(4), y + random.Next(3),
+                        wide ? random.Next(8, 15) : random.Next(2, 5), wide ? random.Next(2, 5) : random.Next(8, 15));
                     var rect = new Rect(wall.position, wall.size);
                     if (wall.xMax >= map.Width || wall.yMax + head >= map.Height || Reserved(rect) ||
                         primary.Any(p => LandingBay(p, head).Overlaps(rect))) continue;
                     var module = new TerrainOption { Wall = wall };
-                    int left = random.Next(3, 9), right = random.Next(3, 9);
-                    // Wide cap + an alternating mid-height wing: L, T and staggered wall/platform groups.
-                    module.Shelves.Add(new DungeonLanding(wall.x - left, wall.yMax, wall.width + left + right));
-                    int wing = random.Next(5, 12);
-                    bool leftWing = random.Next(2) == 0;
-                    module.Shelves.Add(new DungeonLanding(leftWing ? wall.x - wing : wall.xMax,
-                        wall.y + Mathf.Max(2, wall.height / 2), wing));
-                    bool valid = true;
-                    Rect envelope = rect;
-                    for (int i = 0; i < module.Shelves.Count; i++)
-                    {
-                        var shelf = module.Shelves[i]; var bay = LandingBay(shelf, head);
-                        if (shelf.Left < 1 || shelf.Left + shelf.Width > map.Width + 1 || shelf.Top + head > map.Height ||
-                            BlocksFlight(map, budget, room.Actions, shelf) || VisualOverlap(primary, shelf) ||
-                            bay.Overlaps(rect) || module.Shelves.Take(i).Any(p => LandingBay(p, head).Overlaps(bay))) { valid = false; break; }
-                        envelope = Rect.MinMaxRect(Mathf.Min(envelope.xMin, bay.xMin), Mathf.Min(envelope.yMin, shelf.Top - 1),
-                            Mathf.Max(envelope.xMax, bay.xMax), Mathf.Max(envelope.yMax, bay.yMax));
-                    }
-                    if (!valid) continue;
-                    module.Footprint = envelope;
+                    // Optional barriers have no automatic platform caps or side wings.
+                    // Route-functional support and climb walls were admitted with the route itself.
+                    module.Footprint = new Rect(rect.x, rect.y, rect.width, rect.height + head);
                     choices.Add(module);
                 }
                 if (choices.Count > 1) domains.Add(choices);
@@ -370,7 +522,7 @@ public static class WfcWindingRoomLayout
                 .ToArray()).ToArray();
             var solver = new WfcConstraintSolver<TerrainOption>(domains.ToArray(), neighbours,
                 (_, a, _, b) => a.Empty || b.Empty || !Expand(a.Footprint, 2).Overlaps(b.Footprint),
-                a => a.Empty ? 1 : 5, map.Seed ^ 0x1724, solverBudget);
+                a => a.Empty ? 3 : 2, map.Seed ^ 0x1724, solverBudget);
             bool solved = solver.Solve(out var terrain);
             map.Observations += solver.Observations;
             if (!solved)
@@ -383,8 +535,7 @@ public static class WfcWindingRoomLayout
                     $"domains {domains.Count}, solverBudget {solverBudget}, observations {solver.Observations}. " +
                     "Generation aborted before applying optional terrain. Increase solverBudget or try another seed.");
             }
-            // Retain a spatially spread subset of complete old modules. Shapes, caps, wings,
-            // compatibility, WFC weights and flight checks above are deliberately unchanged.
+            // Retain a spatially spread subset of complete rectangular barriers.
             var modules = terrain.Where(m => !m.Empty).ToList();
             int retain = Mathf.CeilToInt(modules.Count * WfcEncounterPlanner.TerrainRetention);
             if (map.Encounters != null) map.Encounters.TerrainCandidates = modules.Count;
@@ -401,7 +552,6 @@ public static class WfcWindingRoomLayout
             {
                 room.Decorations.Add(module.Wall);
                 foreach (var cell in module.Wall.allPositionsWithin) map.Cells[cell.x, cell.y] = DungeonCell.Wall;
-                map.Landings.AddRange(module.Shelves);
             }
         }
         // Encounter sites, not scattered singleton spawns, are added in a separate pass.

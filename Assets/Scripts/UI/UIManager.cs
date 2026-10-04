@@ -20,6 +20,9 @@ public sealed class UIManager : MonoBehaviour
     private ForgeButton forgeButton;
     private GameObject minimapHud;
     private bool minimapAllowed = true;
+    private bool externalPanel;
+    public void SetExternalPanelOpen(bool value)
+    { if (externalPanel == value) return; externalPanel = value; UpdatePauseState(); }
 
     [Header("Gameplay HUD visibility")]
     [Tooltip("HUD element hidden while inventory, forge or pause UI is open.")]
@@ -232,7 +235,7 @@ public sealed class UIManager : MonoBehaviour
 
     private void UpdatePauseState()
     {
-        bool anyOpen = openPanels.Count > 0 || IsPauseOpen;
+        bool anyOpen = externalPanel || openPanels.Count > 0 || IsPauseOpen;
         Time.timeScale = anyOpen ? 0f : 1f;
         if (kunaiHud != null)
             kunaiHud.SetActive(!anyOpen);

@@ -33,4 +33,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9d0fb1ba560a7bc428c3eaeda5d51cfa, type: 2}
   orcPrefab: {fileID: 4227865167630211472, guid: a88e7cc32b7a1984d977179709730e95, type: 3}
   eyePrefab: {fileID: 1070820740835900666, guid: 5d932d95a8f44774a8c9c6cb1520f0e3, type: 3}
+  mushroomPrefab: {fileID: 2070476683772620297, guid: 9ccde58b4f75732479fdb5a625f1ae22, type: 3}
+  skeletonPrefab: {fileID: 8926785359793046969, guid: 81c2d04655548254f9f448d2ec1dba1d, type: 3}
   wallMaterial: {fileID: 2100000, guid: 7446aa6ee66441c4e9af414dfb86261e, type: 2}
+  loot: {fileID: 11400000, guid: cd7928c4408b9ae4eac064b77680a2fc, type: 2}

@@ -99,6 +99,11 @@ public static class EnemyContentBuilder
 
     private static void BuildMobPrefab(MobDefinition mob, float maximumHealth, int coinReward)
     {
+        if (mob.name is "Mushroom" or "Skeleton")
+        {
+            GroundMobAnimatorBuilder.EnsurePrefab(mob.name);
+            return;
+        }
         if (mob.name == "FlyingEye")
         {
             FlyingEyeAnimatorBuilder.EnsurePrefab();
@@ -327,6 +332,11 @@ public static class EnemyContentBuilder
         {
             string path = EnemyRoot + "/Mobs/" + mob.name + "/Mob_" + mob.name + ".prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (mob.name is "Mushroom" or "Skeleton")
+            {
+                GroundMobAnimatorBuilder.ValidateRoot(prefab);
+                continue;
+            }
             if (mob.name == "FlyingEye")
             {
                 FlyingEyeAnimatorBuilder.ValidateRoot(prefab);
